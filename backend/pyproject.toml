@@ -1,0 +1,26 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi~=0.115.8",
+    "loguru~=0.7.3",
+    "passlib>=1.7.4",
+    "pydantic[email]~=2.10.6",
+    "pydantic-settings~=2.7.1",
+    "python-jose[cryptography]~=3.3.0",
+    "schedule~=1.2.2",
+    "sqlalchemy~=2.0.38",
+    "starlette~=0.45.3",
+    "uvicorn~=0.34.0",
+    "python-multipart>=0.0.20",
+    "aiomysql>=0.2.0",
+    "bcrypt>=4.3.0",
+    "redis>=5.0.0",
+]
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
