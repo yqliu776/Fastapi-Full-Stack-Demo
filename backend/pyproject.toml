@@ -17,8 +17,10 @@ dependencies = [
     "uvicorn~=0.34.0",
     "python-multipart>=0.0.20",
     "aiomysql>=0.2.0",
+    "asyncpg>=0.29.0",
     "bcrypt>=4.3.0",
     "redis>=5.0.0",
+    "psutil>=7.0.0",
 ]
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
