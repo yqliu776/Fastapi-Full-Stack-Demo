@@ -1,7 +1,7 @@
 import redis
 from redis.asyncio import Redis, ConnectionPool
 from app.core.settings import settings
-from app.core.tools import logger
+from app.core.utils import logger
 
 
 class RedisClient:

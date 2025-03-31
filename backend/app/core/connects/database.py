@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.ext.declarative import declarative_base
 
 from app.core.settings import settings
-from app.core.tools import logger
+from app.core.utils import logger
 
 
 class Database:
@@ -12,7 +12,7 @@ class Database:
     
     该类负责管理SQLAlchemy的异步数据库连接，提供数据库会话管理和连接池配置。
     使用懒加载模式，仅在首次使用时初始化数据库连接。
-    支持MySQL和PostgreSQL。
+    支持MySQL和PostgresSQL。
     
     属性:
         engine: SQLAlchemy异步引擎实例

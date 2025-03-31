@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from app.core.settings import settings
 
-class TimeZoneTool:
+class TimeZoneUtil:
     """
     时区工具类，支持可配置时区的时间操作
     """
@@ -50,8 +50,9 @@ class TimeZoneTool:
             dt = dt.replace(tzinfo=self.default_timezone)
             
         return dt.astimezone(target_timezone)
-    
-    def format_time(self, dt, format_str="%Y-%m-%d %H:%M:%S"):
+
+    @staticmethod
+    def format_time(dt, format_str="%Y-%m-%d %H:%M:%S"):
         """
         格式化时间为字符串
         
@@ -122,9 +123,9 @@ class TimeZoneTool:
         创建中国时区工具实例
         
         Returns:
-            TimeZoneTool: 中国时区工具实例
+            TimeZoneUtil: 中国时区工具实例
         """
-        return cls(cls.CHINA_TIMEZONE)
+        return cls.CHINA_TIMEZONE
     
     @classmethod
     def utc_timezone(cls):
@@ -132,9 +133,9 @@ class TimeZoneTool:
         创建UTC时区工具实例
         
         Returns:
-            TimeZoneTool: UTC时区工具实例
+            TimeZoneUtil: UTC时区工具实例
         """
-        return cls(cls.UTC_TIMEZONE) 
+        return cls.UTC_TIMEZONE
     
 
-tzt = TimeZoneTool(settings.USE_CHINA_TIMEZONE)
+tzu = TimeZoneUtil(settings.USE_CHINA_TIMEZONE)

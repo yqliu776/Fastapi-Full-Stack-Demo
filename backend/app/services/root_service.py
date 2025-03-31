@@ -31,18 +31,18 @@ class RootService(BaseService):
     async def _get_runtime_info(self):
         import psutil
         from datetime import datetime
-        from app.core.tools import tzt
+        from app.core.utils import tzu
         
         # 获取系统启动时间和当前时间计算运行时间
         boot_time = datetime.fromtimestamp(psutil.boot_time())
-        now = tzt.get_now()
+        now = tzu.get_now()
 
-        uptime = tzt.time_diff(now, boot_time)
+        uptime = tzu.time_diff(now, boot_time)
         
         return {
             "system_uptime": str(uptime),
-            "boot_time": tzt.format_time(boot_time),
-            "current_time": tzt.format_time(now)
+            "boot_time": tzu.format_time(boot_time),
+            "current_time": tzu.format_time(now)
         }
     
     def _get_status_info(self):

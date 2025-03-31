@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from typing import Callable, Awaitable, Optional
 from fastapi import FastAPI
 from app.core.connects import db, redis_client
-from app.core.tools import logger_manager, logger
+from app.core.utils import logger_manager, logger
 from app.core.middleware.log_middleware import LoggingMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.settings import settings

@@ -5,11 +5,10 @@ import schedule
 import threading
 import datetime
 from loguru import logger
-from app.core.settings import settings
-from app.core.tools.timezone_tool import tzt
+from app.core.utils.timezone_util import tzu
 
 
-class LogTool:
+class LogUtil:
     """
     日志管理工具类，实现单例模式的日志管理系统。
     
@@ -21,7 +20,7 @@ class LogTool:
     
     Attributes:
         project_root (str): 项目根目录的绝对路径
-        _instance (LogTool): 单例实例
+        _instance (LogUtil): 单例实例
         _initialized (bool): 初始化标志
         archive_thread (threading.Thread): 归档任务线程
         _should_stop (bool): 控制归档线程停止的标志
@@ -137,7 +136,7 @@ class LogTool:
         try:
             # 如果未指定日期，使用前一天的日期
             if target_date is None:
-                yesterday = tzt.get_now() - datetime.timedelta(days=1)
+                yesterday = tzu.get_now() - datetime.timedelta(days=1)
                 target_date = yesterday.strftime("%Y-%m-%d")
             
             target_log_dir = os.path.join(self.base_log_dir, target_date)
@@ -207,7 +206,7 @@ class LogTool:
             logger: loguru.logger实例，用于记录日志的统一接口
             
         Example:
-            >>> logger = LogTool.get_logger()
+            >>> logger = LogUtil.get_logger()
             >>> logger.info("这是一条信息日志")
             >>> logger.error("这是一条错误日志")
         """
@@ -220,5 +219,5 @@ class LogTool:
         self.stop_archive_thread()
 
 # 实例化
-logger_manager = LogTool()
+logger_manager = LogUtil()
 logger = logger_manager.get_logger()
