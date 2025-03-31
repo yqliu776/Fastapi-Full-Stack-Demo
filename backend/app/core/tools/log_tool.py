@@ -5,6 +5,8 @@ import schedule
 import threading
 import datetime
 from loguru import logger
+from app.core.settings import settings
+from app.core.tools.timezone_tool import tzt
 
 
 class LogTool:
@@ -123,10 +125,10 @@ class LogTool:
 
     def archive_logs(self, target_date=None):
         """
-        归档指定日期的日志文件。
+        归档指定日期的日志。
         
         Args:
-            target_date (str, optional): 要归档的日期，格式为'YYYY-MM-DD'。
+            target_date (str, optional): 要归档的日期，格式为YYYY-MM-DD。
                                         如果不指定，默认归档前一天的日志。
         
         Returns:
@@ -135,7 +137,7 @@ class LogTool:
         try:
             # 如果未指定日期，使用前一天的日期
             if target_date is None:
-                yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
+                yesterday = tzt.get_now() - datetime.timedelta(days=1)
                 target_date = yesterday.strftime("%Y-%m-%d")
             
             target_log_dir = os.path.join(self.base_log_dir, target_date)

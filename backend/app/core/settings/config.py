@@ -8,6 +8,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "fastApi_demo"
     VERSION: str = "0.1.0"
     DEBUG: bool = True
+    FORMATTED_OUTPUT: bool = True  # 是否使用格式化的 JSON 输出
+    SIMPLIFY_RESPONSE_BODY: bool = True  # 是否简化响应体
+    
+    # 时区设置
+    USE_CHINA_TIMEZONE: bool = True  # 是否使用中国时区（UTC+8）
     
     # 数据库类型选择
     DATABASE_TYPE: Literal["mysql", "postgresql"] = "mysql"

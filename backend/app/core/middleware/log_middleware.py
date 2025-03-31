@@ -4,7 +4,6 @@ from time import time
 from typing import Callable
 import json
 
-
 class LoggingMiddleware:
     """FastAPI 日志中间件，用于记录请求和响应的详细信息。
 
@@ -18,7 +17,9 @@ class LoggingMiddleware:
         exclude_paths (list): 不需要记录日志的路径列表
     """
 
-    def __init__(self, app, logger_manager, formatted_output=True):
+    def __init__(self, app, logger_manager,
+                 formatted_output=True,
+                 simplify_response_body=True):
         """初始化日志中间件。
 
         Args:
@@ -30,7 +31,7 @@ class LoggingMiddleware:
         self.logger_manager = logger_manager
         self.logger = logger_manager.get_logger()
         self.formatted_output = formatted_output
-        
+        self.simplify_response_body = simplify_response_body
         # 定义不需要记录日志的路径
         self.exclude_paths = [
             "/health",
@@ -91,14 +92,17 @@ class LoggingMiddleware:
             response.body_iterator = iterate_in_threadpool(iter(response_body))
 
             try:
-                body = json.loads(response_body[0].decode()) if response_body else None
-                # 如果响应体是字典或列表，检查大小并可能截断
-                if isinstance(body, dict):
-                    body = self._simplify_response_body(body)
-                elif isinstance(body, list) and len(body) > 5:
-                    # 如果是列表且元素超过5个，只保留前5个
-                    body = body[:5]
-                    body.append({"truncated": f"...and {len(body) - 5} more items"})
+                if self.simplify_response_body:
+                    body = json.loads(response_body[0].decode()) if response_body else None
+                    # 如果响应体是字典或列表，检查大小并可能截断
+                    if isinstance(body, dict):
+                        body = self._simplify_response_body(body)
+                    elif isinstance(body, list) and len(body) > 5:
+                        # 如果是列表且元素超过5个，只保留前5个
+                        body = body[:5]
+                        body.append({"truncated": f"...and {len(body) - 5} more items"})
+                else:
+                    body = json.loads(response_body[0].decode())
             except (json.JSONDecodeError, UnicodeDecodeError):
                 body = "<non-JSON response>"
 

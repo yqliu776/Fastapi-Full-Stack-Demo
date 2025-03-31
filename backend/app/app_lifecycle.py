@@ -4,7 +4,8 @@ from fastapi import FastAPI
 from app.core.connects import db, redis_client
 from app.core.tools import logger_manager, logger
 from app.core.middleware.log_middleware import LoggingMiddleware
-
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.settings import settings
 from app.routers import root_router
 
 
@@ -114,6 +115,15 @@ class AppLifecycle:
         lifecycle = AppLifecycle(on_startup=AppLifecycle.on_startup, on_shutdown=AppLifecycle.shutdown)
         app = FastAPI(lifespan=lifecycle.lifespan)
 
+        # 添加CORS中间件
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.BACKEND_CORS_ORIGINS,  # 允许所有源，生产环境中应该限制为特定域名
+            allow_credentials=True,
+            allow_methods=["*"],  # 允许所有HTTP方法
+            allow_headers=["*"],  # 允许所有HTTP头
+        )
+
         # 添加路由
         router_list = [root_router]
         for router in router_list:
@@ -121,6 +131,10 @@ class AppLifecycle:
 
         # 添加中间件
         # app.middleware("http")(ErrorHandler(app))
-        app.middleware("http")(LoggingMiddleware(app, logger_manager, formatted_output=True))
+        app.middleware("http")(LoggingMiddleware(app,
+                                                 logger_manager,
+                                                 formatted_output=settings.FORMATTED_OUTPUT,
+                                                 simplify_response_body=settings.SIMPLIFY_RESPONSE_BODY
+                                                 ))
         
         return app 
