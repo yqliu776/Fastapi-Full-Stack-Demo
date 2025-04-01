@@ -114,7 +114,43 @@ class AppLifecycle:
             FastAPI: 配置好生命周期管理和中间件的 FastAPI 应用实例
         """
         lifecycle = AppLifecycle(on_startup=AppLifecycle.on_startup, on_shutdown=AppLifecycle.shutdown)
-        app = FastAPI(lifespan=lifecycle.lifespan)
+        
+        # 创建FastAPI应用，配置Swagger和OpenAPI
+        app = FastAPI(
+            lifespan=lifecycle.lifespan,
+            # 应用基本信息配置
+            title="fast-full-stack-backend",  # API文档标题
+            description="框架后端服务API文档，提供所有接口的详细说明和测试功能",  # API文档描述
+            version="0.1.0",  # API版本
+            
+            # OpenAPI配置
+            openapi_url="/api/v1/openapi.json",  # OpenAPI JSON的访问路径
+            openapi_tags=[  # API标签分组信息
+                {
+                    "name": "auth",
+                    "description": "认证相关接口",
+                },
+                # 可以添加更多标签分组
+            ],
+            
+            # Swagger UI配置
+            docs_url="/api/docs",  # Swagger UI访问路径
+            swagger_ui_parameters={
+                "defaultModelsExpandDepth": -1,  # 默认模型展开深度，-1表示不展开
+                "persistAuthorization": True,  # 保存授权信息
+                "syntaxHighlight.theme": "obsidian",  # 语法高亮主题
+                "docExpansion": "none",  # 文档默认展开状态，none表示折叠所有
+            },
+            
+            # Redoc UI配置
+            redoc_url="/api/redoc",  # ReDoc文档访问路径
+            
+            # 是否开启OpenAPI和文档
+            # 可以根据环境变量控制是否在生产环境禁用
+            # openapi_url=None if settings.ENVIRONMENT == "production" else "/api/v1/openapi.json",
+            # docs_url=None if settings.ENVIRONMENT == "production" else "/api/docs", 
+            # redoc_url=None if settings.ENVIRONMENT == "production" else "/api/redoc",
+        )
 
         # 添加路由
         router_list = [auth_router]
