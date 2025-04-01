@@ -4,8 +4,8 @@ from typing import Any, Callable, Dict, Optional, TypeVar, Union, cast
 from fastapi import Response, status
 from fastapi.responses import JSONResponse
 
-from app.core.models import ResponseModel
-from app.core.tools import logger
+from app.core.models import ResponseModel, AppException
+from app.core.utils import logger
 
 F = TypeVar('F', bound=Callable[..., Any])
 
@@ -64,6 +64,9 @@ def response_wrapper(
                     status_code=code,
                     content=response_data.model_dump()
                 )
+            except AppException:
+                # 让自定义应用异常继续传播到全局中间件
+                raise
             except Exception as e:
                 # 记录异常
                 logger.error(f"路由处理发生异常: {str(e)}")

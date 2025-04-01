@@ -3,7 +3,8 @@ from typing import Callable, Awaitable, Optional
 from fastapi import FastAPI
 from app.core.connects import db, redis_client
 from app.core.utils import logger_manager, logger
-from app.core.middleware.log_middleware import LoggingMiddleware
+from app.core.middleware import LoggingMiddleware
+from app.core.middleware import ErrorHandlerMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.settings import settings
 from app.routers import root_router
@@ -130,7 +131,7 @@ class AppLifecycle:
             app.include_router(router)
 
         # 添加中间件
-        # app.middleware("http")(ErrorHandler(app))
+        app.middleware("http")(ErrorHandlerMiddleware(app))
         app.middleware("http")(LoggingMiddleware(app,
                                                  logger_manager,
                                                  formatted_output=settings.FORMATTED_OUTPUT,

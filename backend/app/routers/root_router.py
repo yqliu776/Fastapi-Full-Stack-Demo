@@ -17,7 +17,5 @@ async def root():
 @root_router.get("/info")
 @response_wrapper(message="获取系统信息成功")
 async def info(field: Optional[str] = Query(None, description="要过滤的字段名称")):
-    try:
-        return await service.get_info(field)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return await service.get_info(field)
+

@@ -1,5 +1,6 @@
 from .base_service import BaseService
 from typing import Optional, Dict, Any
+from app.core.models import NotFoundException
 
 class RootService(BaseService):
 
@@ -26,7 +27,7 @@ class RootService(BaseService):
         elif field == "resources":
             return await self._get_resources_info()
         else:
-            return {"Error": f"{field}:参数不可用！"}
+            raise NotFoundException(f"{field}:请求的资源不存在!")
         
     async def _get_runtime_info(self):
         import psutil
