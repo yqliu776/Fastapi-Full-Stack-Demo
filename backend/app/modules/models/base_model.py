@@ -24,6 +24,6 @@ class BaseModel(Base):
     version_num = Column(Integer, nullable=False, default=1, comment="版本号")
     
     @declared_attr
-    def __tablename__(cls) -> str:
+    def __tablename__(self) -> str:
         """自动根据类名生成表名"""
-        return cls.__name__.lower() 
+        return self.__name__.lower()

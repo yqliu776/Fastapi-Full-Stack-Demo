@@ -40,7 +40,7 @@ class Database:
             - 连接超时时间
             - SQL语句回显设置
         
-        支持的数据库类型：MySQL和PostgreSQL
+        支持的数据库类型：MySQL和PostgresSQL
         """
         db_type = settings.DATABASE_TYPE
         logger.info(f"初始化{db_type.upper()}连接...")
@@ -62,7 +62,7 @@ class Database:
                     pool_size = settings.POSTGRES_POOL_SIZE
                     max_overflow = settings.POSTGRES_MAX_OVERFLOW
                     pool_timeout = settings.POSTGRES_POOL_TIMEOUT
-                    # PostgreSQL已经使用asyncpg作为异步驱动
+                    # PostgresSQL已经使用asyncpg作为异步驱动
                 else:
                     raise ValueError(f"不支持的数据库类型: {db_type}")
                 

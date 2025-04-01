@@ -20,5 +20,6 @@ class ResponseModel(BaseModel):
     data: Any = Field(None, description="返回数据")
     timestamp: int = Field(default_factory=lambda: int(time.time()), description="时间戳")
     
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = {
+        "arbitrary_types_allowed": True
+    }

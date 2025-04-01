@@ -21,17 +21,17 @@ class Settings(BaseSettings):
     MYSQL_SERVER: str = "localhost:3306"
     MYSQL_USER: str = "root"
     MYSQL_PASSWORD: str = ""  # 移除硬编码的密码
-    MYSQL_DB: str = "fatest"
+    MYSQL_DB: str = "full-stack-demo"
     MYSQL_ECHO_SQL: bool = False  # 是否打印SQL语句
     MYSQL_POOL_SIZE: int = 5  # 连接池大小
     MYSQL_MAX_OVERFLOW: int = 10  # 连接池最大溢出大小
     MYSQL_POOL_TIMEOUT: int = 30  # 连接池超时时间（秒）
     
-    # PostgreSQL设置
+    # PostgresSQL设置
     POSTGRES_SERVER: str = "localhost:5432"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = ""  # 移除硬编码的密码
-    POSTGRES_DB: str = "fatest"
+    POSTGRES_DB: str = "full-stack-demo"
     POSTGRES_ECHO_SQL: bool = False  # 是否打印SQL语句
     POSTGRES_POOL_SIZE: int = 5  # 连接池大小
     POSTGRES_MAX_OVERFLOW: int = 10  # 连接池最大溢出大小

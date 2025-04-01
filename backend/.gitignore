@@ -15,3 +15,4 @@ wheels/
 # Env files
 .env
 /app/logs/archives/
+/.cursorignore

@@ -75,4 +75,4 @@ class ExternalServiceException(AppException):
 class RateLimitException(AppException):
     """请求频率限制异常"""
     def __init__(self, message: str = "请求频率超出限制", data=None):
-        super().__init__(message=message, code=status.HTTP_429_TOO_MANY_REQUESTS, data=data) 
+        super().__init__(message=message, code=status.HTTP_429_TOO_MANY_REQUESTS, data=data)

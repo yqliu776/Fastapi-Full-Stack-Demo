@@ -1,5 +1,5 @@
-from .root_service import RootService
+from app.services.base_service import BaseService
 
-__all__ = ["RootService"]
+__all__ = ["BaseService"]
 
 

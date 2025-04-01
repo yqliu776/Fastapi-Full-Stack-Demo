@@ -1,6 +1,6 @@
 import time
 import uvicorn
-from app.app_lifecycle import AppLifecycle
+from app import AppLifecycle
 
 # 创建应用实例
 app = AppLifecycle.create_app()
