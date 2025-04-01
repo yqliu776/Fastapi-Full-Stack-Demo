@@ -80,7 +80,7 @@ class LoggingMiddleware:
                 "query_params": dict(request.query_params) if request.query_params else None,
                 "client_ip": request.client.host,
                 # 精简请求头信息，只保留关键头部并精简内容
-                "headers": self._get_simplified_headers(request.headers)
+                "headers": self._get_simplified_headers(dict(request.headers))
             }
         }
 
@@ -133,7 +133,8 @@ class LoggingMiddleware:
             self.logger.error(error_message)
             raise
 
-    def _get_simplified_headers(self, headers):
+    @staticmethod
+    def _get_simplified_headers(headers):
         """精简请求头信息，只保留关键头部并缩短内容。
 
         Args:

@@ -47,6 +47,13 @@ class LogUtil:
         current_file_path = os.path.abspath(__file__)
         self.project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file_path)))
         
+        # 初始化日志目录相关属性
+        self.base_log_dir = os.path.join(self.project_root, 'logs')
+        self.current_date = time.strftime("%Y-%m-%d")
+        self.daily_log_dir = os.path.join(self.base_log_dir, self.current_date)
+        self.archive_dir = os.path.join(self.base_log_dir, 'archives')
+        self.log_handler_id = None
+        
         # 初始化日志记录器
         self.setup_logger()
 
@@ -63,13 +70,9 @@ class LogUtil:
         - 设置日志格式和轮转策略
         - 配置日志保留策略
         """
-        # 基础日志目录
-        self.base_log_dir = os.path.join(self.project_root, 'logs')
         # 当天日志目录
         self.current_date = time.strftime("%Y-%m-%d")
         self.daily_log_dir = os.path.join(self.base_log_dir, self.current_date)
-        # 归档目录
-        self.archive_dir = os.path.join(self.base_log_dir, 'archives')
 
         # 创建所需目录
         for dir_path in [self.daily_log_dir, self.archive_dir]:
@@ -204,11 +207,6 @@ class LogUtil:
         
         Returns:
             logger: loguru.logger实例，用于记录日志的统一接口
-            
-        Example:
-            >>> logger = LogUtil.get_logger()
-            >>> logger.info("这是一条信息日志")
-            >>> logger.error("这是一条错误日志")
         """
         return logger
     
@@ -218,6 +216,5 @@ class LogUtil:
         """
         self.stop_archive_thread()
 
-# 实例化
+# 实例化日志管理器
 logger_manager = LogUtil()
-logger = logger_manager.get_logger()

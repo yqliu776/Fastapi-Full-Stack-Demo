@@ -66,8 +66,9 @@ class ErrorHandlerMiddleware:
         except Exception as e:
             # 处理所有其他异常
             return self._handle_internal_exception(e, request)
-    
-    def _handle_app_exception(self, exc: AppException) -> JSONResponse:
+
+    @staticmethod
+    def _handle_app_exception(exc: AppException) -> JSONResponse:
         """处理自定义应用异常
         
         Args:
@@ -87,8 +88,9 @@ class ErrorHandlerMiddleware:
             status_code=exc.code,
             content=response.model_dump()
         )
-    
-    def _handle_http_exception(self, exc: StarletteHTTPException) -> JSONResponse:
+
+    @staticmethod
+    def _handle_http_exception(exc: StarletteHTTPException) -> JSONResponse:
         """处理HTTP异常
         
         Args:
@@ -108,8 +110,9 @@ class ErrorHandlerMiddleware:
             status_code=exc.status_code,
             content=response.model_dump()
         )
-    
-    def _handle_validation_exception(self, exc: RequestValidationError) -> JSONResponse:
+
+    @staticmethod
+    def _handle_validation_exception(exc: RequestValidationError) -> JSONResponse:
         """处理请求验证错误
         
         Args:
@@ -138,8 +141,9 @@ class ErrorHandlerMiddleware:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=response.model_dump()
         )
-    
-    def _handle_pydantic_validation(self, exc: ValidationError) -> JSONResponse:
+
+    @staticmethod
+    def _handle_pydantic_validation(exc: ValidationError) -> JSONResponse:
         """处理Pydantic验证错误
         
         Args:
@@ -161,8 +165,9 @@ class ErrorHandlerMiddleware:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=response.model_dump()
         )
-    
-    def _handle_database_exception(self, exc: SQLAlchemyError) -> JSONResponse:
+
+    @staticmethod
+    def _handle_database_exception(exc: SQLAlchemyError) -> JSONResponse:
         """处理数据库异常
         
         Args:

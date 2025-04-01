@@ -71,14 +71,14 @@ def response_wrapper(
                 # 记录异常
                 logger.error(f"路由处理发生异常: {str(e)}")
                 # 返回统一的错误响应
-                error_response = ResponseModel(
+                _error_response = ResponseModel(
                     code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     message=f"服务器内部错误: {str(e)}",
                     data=None
                 )
                 return JSONResponse(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    content=error_response.model_dump()
+                    content=_error_response.model_dump()
                 )
         
         return cast(F, wrapper)

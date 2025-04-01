@@ -1,7 +1,6 @@
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, BigInteger
+from sqlalchemy import Column, Integer, String, DateTime, BigInteger
 from sqlalchemy.ext.declarative import declared_attr
 
 from app.core.connects.database import Base
