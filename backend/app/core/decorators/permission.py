@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from jose import jwt, JWTError
 
 from app.core.settings import settings
-from app.modules.schemas import TokenData
+from app.modules.schemas.auth_schema import TokenData
 from app.services import oauth2_scheme
 
 

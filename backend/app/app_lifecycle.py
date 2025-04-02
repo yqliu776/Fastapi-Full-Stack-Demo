@@ -127,7 +127,7 @@ class AppLifecycle:
             openapi_url="/api/v1/openapi.json",  # OpenAPI JSON的访问路径
             openapi_tags=[  # API标签分组信息
                 {
-                    "name": "auth",
+                    "name": "认证",
                     "description": "认证相关接口",
                 },
                 # 可以添加更多标签分组

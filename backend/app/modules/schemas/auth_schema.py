@@ -15,6 +15,7 @@ class TokenPayload(BaseModel):
 class TokenResponse(BaseModel):
     """令牌响应模型"""
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     expires_in: int
 
@@ -37,6 +38,13 @@ class LoginRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("密码不能为空")
         return v
+
+
+class TokenData(BaseModel):
+    """令牌数据模型"""
+    user_id: int
+    user_name: str
+    permissions: List[str] = []
 
 
 class PasswordChangeRequest(BaseModel):

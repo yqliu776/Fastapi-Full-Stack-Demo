@@ -29,7 +29,7 @@ class UserRepository(BaseRepository[SysUser]):
         query = select(SysUser).where(
             and_(
                 SysUser.user_name == username,
-                SysUser.delete_flag.is_("N")
+                SysUser.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
@@ -48,7 +48,7 @@ class UserRepository(BaseRepository[SysUser]):
         query = select(SysUser).where(
             and_(
                 SysUser.id == user_id,
-                SysUser.delete_flag.is_("N")
+                SysUser.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
@@ -76,7 +76,7 @@ class UserRepository(BaseRepository[SysUser]):
         role_query = select(SysRole).where(
             and_(
                 SysRole.role_code == role_code,
-                SysRole.delete_flag.is_("N")
+                SysRole.delete_flag == 'N'
             )
         )
         role_result = await self.db.execute(role_query)
@@ -108,7 +108,7 @@ class UserRepository(BaseRepository[SysUser]):
         query = select(SysUser.id).where(
             and_(
                 SysUser.user_name == username,
-                SysUser.delete_flag.is_("N")
+                SysUser.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
