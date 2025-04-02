@@ -1,25 +1,24 @@
-from typing import Callable, Dict, Any
+from typing import Dict, Any, Coroutine
 import traceback
 import json
 from fastapi import Request, FastAPI, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.responses import JSONResponse, Response
 
 from app.core.utils import logger
 from app.core.models import ResponseModel
 from app.core.models.exceptions import AppException
 
 
-class ErrorHandlerMiddleware:
+class ErrorHandlerMiddleware(BaseHTTPMiddleware):
     """全局错误处理中间件
     
     用于捕获和处理应用中的各种异常，提供统一的错误响应格式。
-    
-    Attributes:
-        app: FastAPI应用实例
     """
     
     def __init__(self, app: FastAPI):
@@ -28,9 +27,10 @@ class ErrorHandlerMiddleware:
         Args:
             app: FastAPI应用实例
         """
+        super().__init__(app)
         self.app = app
     
-    async def __call__(self, request: Request, call_next: Callable) -> JSONResponse:
+    async def dispatch(self, request: Request, call_next) -> JSONResponse | Response:
         """处理请求并捕获可能发生的异常。
         
         Args:

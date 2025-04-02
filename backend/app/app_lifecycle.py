@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 from typing import Callable, Awaitable, Optional
-from fastapi import FastAPI
-from starlette.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, APIRouter
+from fastapi.security import OAuth2PasswordBearer
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.connects import db, redis_client
 from app.core.utils import logger_manager, logger
 from app.core.middleware import LoggingMiddleware
@@ -135,6 +136,7 @@ class AppLifecycle:
             
             # Swagger UI配置
             docs_url="/api/docs",  # Swagger UI访问路径
+            swagger_ui_oauth2_redirect_url="/api/docs/oauth2-redirect",  # OAuth2重定向URL
             swagger_ui_parameters={
                 "defaultModelsExpandDepth": -1,  # 默认模型展开深度，-1表示不展开
                 "persistAuthorization": True,  # 保存授权信息
@@ -145,33 +147,96 @@ class AppLifecycle:
             # Redoc UI配置
             redoc_url="/api/redoc",  # ReDoc文档访问路径
             
-            # 是否开启OpenAPI和文档
-            # 可以根据环境变量控制是否在生产环境禁用
-            # openapi_url=None if settings.ENVIRONMENT == "production" else "/api/v1/openapi.json",
-            # docs_url=None if settings.ENVIRONMENT == "production" else "/api/docs", 
-            # redoc_url=None if settings.ENVIRONMENT == "production" else "/api/redoc",
+            # 安全定义
+            swagger_ui_init_oauth={
+                "usePkceWithAuthorizationCodeGrant": False,
+                "clientId": "",
+                "clientSecret": "",
+                "realm": "",
+                "appName": "后端API认证",
+                "scopeSeparator": " ",
+                "scopes": "",
+                "useBasicAuthenticationWithAccessCodeGrant": True,
+            },
         )
 
-        # 添加路由
+        # 配置OAuth2安全定义 - 在路由前设置
+        oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/oauth")
+        
+        # 修改OpenAPI架构，添加安全定义
+        def custom_openapi():
+            if not hasattr(app, 'openapi_schema') or app.openapi_schema is None:
+                # 保存原始的方法引用
+                original_openapi = app.openapi
+                
+                # 创建一个新的函数以避免递归
+                def get_openapi():
+                    from fastapi.openapi.utils import get_openapi
+                    
+                    return get_openapi(
+                        title=app.title,
+                        version=app.version,
+                        description=app.description,
+                        routes=app.routes,
+                        tags=app.openapi_tags,
+                        servers=app.servers,
+                    )
+                
+                # 获取基础OpenAPI架构
+                openapi_schema = get_openapi()
+                
+                # 安全方案定义
+                security_schemes = {
+                    "OAuth2PasswordBearer": {
+                        "type": "oauth2",
+                        "flows": {
+                            "password": {
+                                "tokenUrl": "/auth/login/oauth",
+                                "scopes": {}
+                            }
+                        }
+                    }
+                }
+                
+                # 全局安全需求
+                security_requirement = [{"OAuth2PasswordBearer": []}]
+                
+                # 添加安全方案
+                if "components" not in openapi_schema:
+                    openapi_schema["components"] = {}
+                    
+                openapi_schema["components"]["securitySchemes"] = security_schemes
+                openapi_schema["security"] = security_requirement
+                
+                # 缓存结果
+                app.openapi_schema = openapi_schema
+                
+            return app.openapi_schema
+        
+        # 替换OpenAPI生成函数
+        app.openapi = custom_openapi
+        
+        # 添加路由 - 需要在定义openapi后添加路由
         router_list = [auth_router]
         for router in router_list:
             app.include_router(router)
-
-        # 添加中间件
-        app.middleware("http")(ErrorHandlerMiddleware(app))
-        app.middleware("http")(LoggingMiddleware(app,
-                                                 logger_manager,
-                                                 formatted_output=settings.FORMATTED_OUTPUT,
-                                                 simplify_response_body=settings.SIMPLIFY_RESPONSE_BODY
-                                                 ))
         
-        # 添加CORS中间件（放在其他中间件之后）
-        app = CORSMiddleware(
-            app=app,
+        # 添加中间件 - 标准ASGI中间件的添加方式
+        app.add_middleware(ErrorHandlerMiddleware)
+        app.add_middleware(
+            LoggingMiddleware,
+            logger_manager=logger_manager,
+            formatted_output=settings.FORMATTED_OUTPUT,
+            simplify_response_body=settings.SIMPLIFY_RESPONSE_BODY
+        )
+        
+        # 添加CORS中间件
+        app.add_middleware(
+            CORSMiddleware,
             allow_origins=settings.BACKEND_CORS_ORIGINS,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
         )
         
-        return app 
+        return app

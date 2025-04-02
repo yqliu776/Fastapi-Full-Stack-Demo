@@ -1,33 +1,31 @@
 from starlette.concurrency import iterate_in_threadpool
-from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import Request, Response
 from time import time
-from typing import Callable
 import json
 
-class LoggingMiddleware:
+class LoggingMiddleware(BaseHTTPMiddleware):
     """FastAPI 日志中间件，用于记录请求和响应的详细信息。
 
     该中间件可以记录请求的方法、路径、查询参数、客户端IP、请求头信息，
     以及响应的状态码、响应体和处理时间等信息。支持格式化和非格式化的日志输出。
 
     Attributes:
-        app: FastAPI 应用实例
         logger_manager: 日志管理器实例
         formatted_output (bool): 是否使用格式化的 JSON 输出
         exclude_paths (list): 不需要记录日志的路径列表
     """
 
-    def __init__(self, app, logger_manager,
-                 formatted_output=True,
-                 simplify_response_body=True):
+    def __init__(self, app, logger_manager, formatted_output=True, simplify_response_body=True):
         """初始化日志中间件。
 
         Args:
             app: FastAPI 应用实例
             logger_manager: LogTool 日志工具实例
             formatted_output (bool, optional): 是否使用格式化的 JSON 输出。默认为 True。
+            simplify_response_body (bool, optional): 是否简化响应体。默认为 True。
         """
-        self.app = app
+        super().__init__(app)
         self.logger_manager = logger_manager
         self.logger = logger_manager.get_logger()
         self.formatted_output = formatted_output
@@ -52,12 +50,12 @@ class LoggingMiddleware:
         """
         return not any(path.startswith(exclude) for exclude in self.exclude_paths)
 
-    async def __call__(self, request: Request, call_next: Callable):
+    async def dispatch(self, request: Request, call_next):
         """处理请求并记录日志的主要方法。
 
         Args:
             request (Request): FastAPI 请求对象
-            call_next (Callable): 处理下一个中间件的可调用对象
+            call_next: 处理下一个中间件的可调用对象
 
         Returns:
             响应对象
