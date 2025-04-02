@@ -3,7 +3,7 @@ from typing import Optional, List
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.models.rbac_model import SysMenu, SysRole
+from app.modules.models.rbac_model import SysMenu, SysRoleMenu
 from app.modules.repositories.base_repository import BaseRepository
 
 
@@ -16,7 +16,7 @@ class MenuRepository(BaseRepository[SysMenu]):
         """初始化菜单仓储"""
         super().__init__(db_session, SysMenu)
     
-    async def get_by_code(self, menu_code: str) -> Optional[SysMenu]:
+    async def get_by_menu_code(self, menu_code: str) -> Optional[SysMenu]:
         """
         通过菜单代码获取菜单
         
@@ -29,120 +29,83 @@ class MenuRepository(BaseRepository[SysMenu]):
         query = select(SysMenu).where(
             and_(
                 SysMenu.menu_code == menu_code,
-                SysMenu.delete_flag.is_("N")
+                SysMenu.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
     
-    async def get_menus_by_role(self, role_id: int) -> List[SysMenu]:
+    async def get_menu_with_roles(self, menu_id: int) -> Optional[SysMenu]:
         """
-        获取角色拥有的所有菜单
+        获取菜单及其角色信息
         
         Args:
-            role_id: 角色ID
+            menu_id: 菜单ID
             
         Returns:
-            菜单模型实例列表
-        """
-        query = select(SysRole).where(
-            and_(
-                SysRole.id == role_id,
-                SysRole.delete_flag.is_("N")
-            )
-        )
-        result = await self.db.execute(query)
-        role = result.scalar_one_or_none()
-        
-        if not role:
-            return []
-        
-        # 加载角色菜单关系
-        await self.db.refresh(role, ["menus"])
-        return role.menus
-    
-    async def get_menus_by_role_code(self, role_code: str) -> List[SysMenu]:
-        """
-        通过角色代码获取所有菜单
-        
-        Args:
-            role_code: 角色代码
-            
-        Returns:
-            菜单模型实例列表
-        """
-        query = select(SysRole).where(
-            and_(
-                SysRole.role_code == role_code,
-                SysRole.delete_flag.is_("N")
-            )
-        )
-        result = await self.db.execute(query)
-        role = result.scalar_one_or_none()
-        
-        if not role:
-            return []
-        
-        # 加载角色菜单关系
-        await self.db.refresh(role, ["menus"])
-        return role.menus
-    
-    async def get_submenus(self, parent_id: int) -> List[SysMenu]:
-        """
-        获取子菜单列表
-        
-        Args:
-            parent_id: 父菜单ID
-            
-        Returns:
-            子菜单模型实例列表
+            包含角色关联的菜单模型实例或None
         """
         query = select(SysMenu).where(
             and_(
-                SysMenu.parent_id == parent_id,
-                SysMenu.delete_flag.is_("N")
+                SysMenu.id == menu_id,
+                SysMenu.delete_flag == 'N'
             )
-        ).order_by(SysMenu.sort_order)
+        )
+        result = await self.db.execute(query)
+        menu = result.scalar_one_or_none()
+        
+        if menu:
+            # 加载角色关系
+            await self.db.refresh(menu, ["roles"])
+            
+        return menu
+    
+    async def get_menu_tree(self) -> List[SysMenu]:
+        """
+        获取所有菜单，按照树形结构排序
+        
+        Returns:
+            菜单模型实例列表，顶级菜单在前
+        """
+        query = select(SysMenu).where(
+            SysMenu.delete_flag == 'N'
+        ).order_by(
+            # MySQL不支持nulls_first()语法，使用CASE表达式来实现相同功能
+            SysMenu.parent_id.is_(None).desc(),
+            SysMenu.parent_id,
+            SysMenu.sort_order
+        )
         
         result = await self.db.execute(query)
         return list(result.scalars().all())
     
-    async def get_menu_tree(self, parent_id: Optional[int] = None) -> List[SysMenu]:
+    async def get_menus_by_parent_id(self, parent_id: Optional[int] = None) -> List[SysMenu]:
         """
-        获取菜单树，递归查询子菜单
+        获取指定父菜单下的所有子菜单
         
         Args:
-            parent_id: 父菜单ID，默认为None表示获取顶级菜单
+            parent_id: 父菜单ID，如果为None则获取所有顶级菜单
             
         Returns:
-            菜单树列表
+            菜单模型实例列表
         """
         if parent_id is None:
-            # 获取顶级菜单（parent_id为空的菜单）
             query = select(SysMenu).where(
                 and_(
                     SysMenu.parent_id.is_(None),
-                    SysMenu.delete_flag.is_("N")
+                    SysMenu.delete_flag == 'N'
                 )
             ).order_by(SysMenu.sort_order)
         else:
-            # 获取指定父ID的子菜单
             query = select(SysMenu).where(
                 and_(
                     SysMenu.parent_id == parent_id,
-                    SysMenu.delete_flag.is_("N")
+                    SysMenu.delete_flag == 'N'
                 )
             ).order_by(SysMenu.sort_order)
-        
-        result = await self.db.execute(query)
-        menus = list(result.scalars().all())
-        
-        # 递归获取每个菜单的子菜单
-        for menu in menus:
-            children = await self.get_menu_tree(menu.id)
-            menu.children = children
             
-        return menus
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
     
     async def check_menu_code_exists(self, menu_code: str) -> bool:
         """
@@ -157,42 +120,43 @@ class MenuRepository(BaseRepository[SysMenu]):
         query = select(SysMenu.id).where(
             and_(
                 SysMenu.menu_code == menu_code,
-                SysMenu.delete_flag.is_("N")
+                SysMenu.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none() is not None
     
-    async def get_menus_by_filter(
-        self, 
-        skip: int = 0, 
-        limit: int = 100, 
-        menu_name: Optional[str] = None,
-        menu_code: Optional[str] = None,
-        menu_path: Optional[str] = None
-    ) -> List[SysMenu]:
+    async def get_menus_by_role_id(self, role_id: int) -> List[SysMenu]:
         """
-        根据过滤条件获取菜单列表
+        获取角色拥有的所有菜单
         
         Args:
-            skip: 跳过的记录数
-            limit: 返回的记录数
-            menu_name: 菜单名称过滤条件
-            menu_code: 菜单代码过滤条件
-            menu_path: 菜单路径过滤条件
+            role_id: 角色ID
             
         Returns:
             菜单模型实例列表
         """
-        filters = []
+        from sqlalchemy import join
         
-        if menu_name:
-            filters.append(SysMenu.menu_name.like(f"%{menu_name}%"))
-            
-        if menu_code:
-            filters.append(SysMenu.menu_code.like(f"%{menu_code}%"))
-            
-        if menu_path:
-            filters.append(SysMenu.menu_path.like(f"%{menu_path}%"))
-            
-        return await self.get_multi(skip=skip, limit=limit, filters=filters) 
+        # 使用JOIN查询角色的菜单
+        query = select(SysMenu).select_from(
+            join(
+                SysMenu,
+                SysRoleMenu,
+                SysMenu.id == SysRoleMenu.menu_id
+            )
+        ).where(
+            and_(
+                SysRoleMenu.role_id == role_id,
+                SysMenu.delete_flag == 'N'
+            )
+        ).order_by(
+            # MySQL不支持nulls_first()语法，使用CASE表达式来实现相同功能
+            # 如果parent_id为NULL, 则排在前面
+            SysMenu.parent_id.is_(None).desc(),
+            SysMenu.parent_id,
+            SysMenu.sort_order
+        )
+        
+        result = await self.db.execute(query)
+        return list(result.scalars().all())

@@ -64,7 +64,7 @@ class BaseRepository(Generic[T]):
         query = select(self.model_class).where(
             and_(
                 self.model_class.id == id_,
-                self.model_class.delete_flag.is_("N")
+                self.model_class.delete_flag == "N"
             )
         )
         result = await self.db.execute(query)
@@ -89,7 +89,7 @@ class BaseRepository(Generic[T]):
             数据库模型实例列表
         """
         query = select(self.model_class).where(
-            self.model_class.delete_flag.is_("N")
+            self.model_class.delete_flag == "N"
         )
         
         if filters:
@@ -112,7 +112,7 @@ class BaseRepository(Generic[T]):
             记录总数
         """
         query = select(func.count(self.model_class.id)).where(
-            self.model_class.delete_flag.is_("N")
+            self.model_class.delete_flag == "N"
         )
         
         if filters:
@@ -138,6 +138,10 @@ class BaseRepository(Generic[T]):
         Returns:
             更新后的数据库模型实例或None
         """
+        db_obj = await self.get(id_)
+        if not db_obj:
+            return None
+            
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
@@ -145,17 +149,18 @@ class BaseRepository(Generic[T]):
             
         if "id" in update_data:
             del update_data["id"]
-            
+
         query = update(self.model_class).where(
             and_(
                 self.model_class.id == id_,
-                self.model_class.delete_flag.is_("N")
+                self.model_class.delete_flag == "N"
             )
-        ).values(**update_data).returning(self.model_class)
+        ).values(**update_data)
         
-        result = await self.db.execute(query)
+        await self.db.execute(query)
         await self.db.commit()
-        return result.scalar_one_or_none()
+
+        return await self.get(id_)
     
     async def delete(self, *, id_: Any) -> Optional[T]:
         """
@@ -167,16 +172,21 @@ class BaseRepository(Generic[T]):
         Returns:
             删除的数据库模型实例或None
         """
+        obj = await self.get(id_)
+        if not obj:
+            return None
+
         query = update(self.model_class).where(
             and_(
                 self.model_class.id == id_,
-                self.model_class.delete_flag.is_("N")
+                self.model_class.delete_flag == "N"
             )
-        ).values(delete_flag="Y").returning(self.model_class)
+        ).values(delete_flag="Y")
         
-        result = await self.db.execute(query)
+        await self.db.execute(query)
         await self.db.commit()
-        return result.scalar_one_or_none()
+
+        return obj
     
     async def hard_delete(self, *, id_: Any) -> Optional[T]:
         """
@@ -188,10 +198,18 @@ class BaseRepository(Generic[T]):
         Returns:
             删除的数据库模型实例或None
         """
+        # 先获取要删除的对象
+        obj = await self.get(id_)
+        if not obj:
+            return None
+            
+        # 执行删除操作，不使用RETURNING子句
         query = delete(self.model_class).where(
             self.model_class.id == id_
-        ).returning(self.model_class)
+        )
         
-        result = await self.db.execute(query)
+        await self.db.execute(query)
         await self.db.commit()
-        return result.scalar_one_or_none() 
+        
+        # 返回之前查询的对象
+        return obj 

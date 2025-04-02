@@ -1,6 +1,6 @@
 from .response_decorators import response_wrapper
-from .permission import require_permissions, is_super_admin
+from .permission import has_permission, require_permission
 
-__all__ = ["response_wrapper", "require_permissions", "is_super_admin"]
+__all__ = ["response_wrapper", "require_permission", "has_permission"]
 
 

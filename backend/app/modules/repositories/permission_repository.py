@@ -3,7 +3,7 @@ from typing import Optional, List
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.models.rbac_model import SysPermission, SysRole
+from app.modules.models.rbac_model import SysPermission
 from app.modules.repositories.base_repository import BaseRepository
 
 
@@ -16,7 +16,7 @@ class PermissionRepository(BaseRepository[SysPermission]):
         """初始化权限仓储"""
         super().__init__(db_session, SysPermission)
     
-    async def get_by_code(self, permission_code: str) -> Optional[SysPermission]:
+    async def get_by_permission_code(self, permission_code: str) -> Optional[SysPermission]:
         """
         通过权限代码获取权限
         
@@ -29,63 +29,36 @@ class PermissionRepository(BaseRepository[SysPermission]):
         query = select(SysPermission).where(
             and_(
                 SysPermission.permission_code == permission_code,
-                SysPermission.delete_flag.is_("N")
+                SysPermission.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
     
-    async def get_permissions_by_role(self, role_id: int) -> List[SysPermission]:
+    async def get_permission_with_roles(self, permission_id: int) -> Optional[SysPermission]:
         """
-        获取角色拥有的所有权限
+        获取权限及其角色信息
         
         Args:
-            role_id: 角色ID
+            permission_id: 权限ID
             
         Returns:
-            权限模型实例列表
+            包含角色关联的权限模型实例或None
         """
-        query = select(SysRole).where(
+        query = select(SysPermission).where(
             and_(
-                SysRole.id == role_id,
-                SysRole.delete_flag.is_("N")
+                SysPermission.id == permission_id,
+                SysPermission.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
-        role = result.scalar_one_or_none()
+        permission = result.scalar_one_or_none()
         
-        if not role:
-            return []
-        
-        # 加载角色权限关系
-        await self.db.refresh(role, ["permissions"])
-        return role.permissions
-    
-    async def get_permissions_by_role_code(self, role_code: str) -> List[SysPermission]:
-        """
-        通过角色代码获取所有权限
-        
-        Args:
-            role_code: 角色代码
+        if permission:
+            # 加载角色关系
+            await self.db.refresh(permission, ["roles"])
             
-        Returns:
-            权限模型实例列表
-        """
-        query = select(SysRole).where(
-            and_(
-                SysRole.role_code == role_code,
-                SysRole.delete_flag.is_("N")
-            )
-        )
-        result = await self.db.execute(query)
-        role = result.scalar_one_or_none()
-        
-        if not role:
-            return []
-        
-        # 加载角色权限关系
-        await self.db.refresh(role, ["permissions"])
-        return role.permissions
+        return permission
     
     async def check_permission_code_exists(self, permission_code: str) -> bool:
         """
@@ -100,7 +73,7 @@ class PermissionRepository(BaseRepository[SysPermission]):
         query = select(SysPermission.id).where(
             and_(
                 SysPermission.permission_code == permission_code,
-                SysPermission.delete_flag.is_("N")
+                SysPermission.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
@@ -133,4 +106,34 @@ class PermissionRepository(BaseRepository[SysPermission]):
         if permission_code:
             filters.append(SysPermission.permission_code.like(f"%{permission_code}%"))
             
-        return await self.get_multi(skip=skip, limit=limit, filters=filters) 
+        return await self.get_multi(skip=skip, limit=limit, filters=filters)
+        
+    async def get_permissions_by_role_id(self, role_id: int) -> List[SysPermission]:
+        """
+        获取角色拥有的所有权限
+        
+        Args:
+            role_id: 角色ID
+            
+        Returns:
+            权限模型实例列表
+        """
+        from sqlalchemy import join
+        from app.modules.models.rbac_model import SysRolePermission
+        
+        # 使用JOIN查询角色的权限
+        query = select(SysPermission).select_from(
+            join(
+                SysPermission,
+                SysRolePermission,
+                SysPermission.id == SysRolePermission.permission_id
+            )
+        ).where(
+            and_(
+                SysRolePermission.role_id == role_id,
+                SysPermission.delete_flag == 'N'
+            )
+        )
+        
+        result = await self.db.execute(query)
+        return list(result.scalars().all()) 

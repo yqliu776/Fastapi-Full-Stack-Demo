@@ -34,7 +34,7 @@ class LogUtil:
 
     def __init__(self):
         """
-        初始化 LogTool 实例
+        初始化 LogUtil 实例
         """
         # 确保只初始化一次
         if hasattr(self, '_initialized'):
@@ -57,12 +57,12 @@ class LogUtil:
         # 初始化日志记录器
         self.setup_logger()
 
-    def setup_logger(self, rotation_size="1 MB", retention="1 day"):
+    def setup_logger(self, rotation_size="100 MB", retention="1 day"):
         """
         配置日志记录器的核心方法。
         
         Args:
-            rotation_size (str): 日志文件轮转大小，默认为1MB
+            rotation_size (str): 日志文件轮转大小，默认为100MB
             retention (str): 日志保留期，默认为1天
         
         配置内容包括：
@@ -170,9 +170,8 @@ class LogUtil:
             if os.path.exists(archive_path):
                 logger.info(f"成功创建归档文件: {archive_path}")
                 
-                # 删除原始日志目录
-                shutil.rmtree(target_log_dir)
-                logger.info(f"已删除原始日志目录: {target_log_dir}")
+                # 删除原始日志目录，使用安全的方式
+                self._safe_remove_directory(target_log_dir)
                 return True
             else:
                 logger.error(f"归档文件创建失败: {archive_path}")
@@ -181,6 +180,66 @@ class LogUtil:
         except Exception as e:
             logger.exception(f"日志归档过程出错: {str(e)}")
             return False
+
+    @staticmethod
+    def _safe_remove_directory(directory_path, max_retries=3, retry_delay=2):
+        """
+        安全地删除目录，处理文件占用的情况。
+        
+        Args:
+            directory_path (str): 要删除的目录路径
+            max_retries (int): 最大重试次数
+            retry_delay (int): 重试间隔（秒）
+            
+        Returns:
+            bool: 删除操作是否完全成功
+        """
+        files_not_removed = []
+        
+        # 尝试删除每个文件
+        for root, dirs, files in os.walk(directory_path, topdown=False):
+            for file in files:
+                file_path = os.path.join(root, file)
+                removed = False
+                
+                # 尝试删除文件，有多次重试机会
+                for attempt in range(max_retries):
+                    try:
+                        os.unlink(file_path)
+                        removed = True
+                        break
+                    except PermissionError as e:
+                        if attempt < max_retries - 1:
+                            logger.warning(f"文件占用，无法删除: {file_path}，将在 {retry_delay} 秒后重试...")
+                            time.sleep(retry_delay)
+                        else:
+                            logger.warning(f"文件占用，跳过删除: {file_path}")
+                            files_not_removed.append(file_path)
+                    except Exception as e:
+                        logger.error(f"删除文件时发生错误: {file_path}, 错误: {str(e)}")
+                        files_not_removed.append(file_path)
+                        break
+            
+            # 删除空目录
+            for dir_name in dirs:
+                dir_path = os.path.join(root, dir_name)
+                try:
+                    if os.path.exists(dir_path) and not os.listdir(dir_path):
+                        os.rmdir(dir_path)
+                except Exception as e:
+                    logger.error(f"删除目录时发生错误: {dir_path}, 错误: {str(e)}")
+        
+        # 最后尝试删除主目录
+        try:
+            if os.path.exists(directory_path) and not os.listdir(directory_path):
+                os.rmdir(directory_path)
+                logger.info(f"已删除原始日志目录: {directory_path}")
+            elif files_not_removed:
+                logger.warning(f"无法完全删除目录 {directory_path}，{len(files_not_removed)} 个文件被跳过")
+        except Exception as e:
+            logger.error(f"删除主目录时发生错误: {directory_path}, 错误: {str(e)}")
+        
+        return len(files_not_removed) == 0
 
     def reset_logger(self, rotation_size="1 MB", retention="1 day"):
         """

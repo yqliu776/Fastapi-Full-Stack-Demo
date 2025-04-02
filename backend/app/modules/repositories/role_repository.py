@@ -3,7 +3,7 @@ from typing import Optional, List
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.models.rbac_model import SysRole
+from app.modules.models.rbac_model import SysRole, SysPermission, SysMenu, SysRolePermission, SysRoleMenu
 from app.modules.repositories.base_repository import BaseRepository
 
 
@@ -16,7 +16,7 @@ class RoleRepository(BaseRepository[SysRole]):
         """初始化角色仓储"""
         super().__init__(db_session, SysRole)
     
-    async def get_by_code(self, role_code: str) -> Optional[SysRole]:
+    async def get_by_role_code(self, role_code: str) -> Optional[SysRole]:
         """
         通过角色代码获取角色
         
@@ -29,7 +29,7 @@ class RoleRepository(BaseRepository[SysRole]):
         query = select(SysRole).where(
             and_(
                 SysRole.role_code == role_code,
-                SysRole.delete_flag.is_("N")
+                SysRole.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
@@ -48,7 +48,7 @@ class RoleRepository(BaseRepository[SysRole]):
         query = select(SysRole).where(
             and_(
                 SysRole.id == role_id,
-                SysRole.delete_flag.is_("N")
+                SysRole.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
@@ -73,7 +73,7 @@ class RoleRepository(BaseRepository[SysRole]):
         query = select(SysRole).where(
             and_(
                 SysRole.id == role_id,
-                SysRole.delete_flag.is_("N")
+                SysRole.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
@@ -84,29 +84,29 @@ class RoleRepository(BaseRepository[SysRole]):
             await self.db.refresh(role, ["menus"])
             
         return role
-    
-    async def get_role_with_relations(self, role_id: int) -> Optional[SysRole]:
+        
+    async def get_role_with_all_relations(self, role_id: int) -> Optional[SysRole]:
         """
-        获取角色及其所有关联数据（用户、权限、菜单）
+        获取角色及其所有关联信息（权限、菜单、用户）
         
         Args:
             role_id: 角色ID
             
         Returns:
-            包含所有关联数据的角色模型实例或None
+            包含所有关联的角色模型实例或None
         """
         query = select(SysRole).where(
             and_(
                 SysRole.id == role_id,
-                SysRole.delete_flag.is_("N")
+                SysRole.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
         role = result.scalar_one_or_none()
         
         if role:
-            # 加载所有关系
-            await self.db.refresh(role, ["users", "permissions", "menus"])
+            # 加载所有关联关系
+            await self.db.refresh(role, ["permissions", "menus", "users"])
             
         return role
     
@@ -123,37 +123,116 @@ class RoleRepository(BaseRepository[SysRole]):
         query = select(SysRole.id).where(
             and_(
                 SysRole.role_code == role_code,
-                SysRole.delete_flag.is_("N")
+                SysRole.delete_flag == 'N'
             )
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none() is not None
     
-    async def get_roles_by_filter(
-        self, 
-        skip: int = 0, 
-        limit: int = 100, 
-        role_name: Optional[str] = None,
-        role_code: Optional[str] = None
-    ) -> List[SysRole]:
+    async def add_permissions_to_role(self, role_id: int, permission_ids: List[int], audit_info: dict) -> bool:
         """
-        根据过滤条件获取角色列表
+        为角色添加权限
         
         Args:
-            skip: 跳过的记录数
-            limit: 返回的记录数
-            role_name: 角色名称过滤条件
-            role_code: 角色代码过滤条件
+            role_id: 角色ID
+            permission_ids: 权限ID列表
+            audit_info: 审计信息，包含创建人、最后更新人等
             
         Returns:
-            角色模型实例列表
+            添加成功返回True
         """
-        filters = []
+        # 首先检查角色是否存在
+        role = await self.get(role_id)
+        if not role:
+            return False
+            
+        # 添加权限关联
+        for permission_id in permission_ids:
+            role_permission = SysRolePermission(
+                role_id=role_id,
+                permission_id=permission_id,
+                **audit_info
+            )
+            self.db.add(role_permission)
+            
+        await self.db.commit()
+        return True
+    
+    async def remove_permissions_from_role(self, role_id: int, permission_ids: List[int]) -> bool:
+        """
+        从角色移除权限
         
-        if role_name:
-            filters.append(SysRole.role_name.like(f"%{role_name}%"))
+        Args:
+            role_id: 角色ID
+            permission_ids: 权限ID列表
             
-        if role_code:
-            filters.append(SysRole.role_code.like(f"%{role_code}%"))
+        Returns:
+            移除成功返回True
+        """
+        from sqlalchemy import delete as sql_delete
+        
+        # 删除指定的角色-权限关联
+        delete_query = sql_delete(SysRolePermission).where(
+            and_(
+                SysRolePermission.role_id == role_id,
+                SysRolePermission.permission_id.in_(permission_ids)
+            )
+        )
+        
+        await self.db.execute(delete_query)
+        await self.db.commit()
+        return True
+    
+    async def add_menus_to_role(self, role_id: int, menu_ids: List[int], audit_info: dict) -> bool:
+        """
+        为角色添加菜单
+        
+        Args:
+            role_id: 角色ID
+            menu_ids: 菜单ID列表
+            audit_info: 审计信息，包含创建人、最后更新人等
             
-        return await self.get_multi(skip=skip, limit=limit, filters=filters)
+        Returns:
+            添加成功返回True
+        """
+        # 首先检查角色是否存在
+        role = await self.get(role_id)
+        if not role:
+            return False
+            
+        # 添加菜单关联
+        for menu_id in menu_ids:
+            role_menu = SysRoleMenu(
+                role_id=role_id,
+                menu_id=menu_id,
+                **audit_info
+            )
+            self.db.add(role_menu)
+            
+        await self.db.commit()
+        return True
+    
+    async def remove_menus_from_role(self, role_id: int, menu_ids: List[int]) -> bool:
+        """
+        从角色移除菜单
+        
+        Args:
+            role_id: 角色ID
+            menu_ids: 菜单ID列表
+            
+        Returns:
+            移除成功返回True
+        """
+        from sqlalchemy import delete as sql_delete
+        
+        # 删除指定的角色-菜单关联
+        delete_query = sql_delete(SysRoleMenu).where(
+            and_(
+                SysRoleMenu.role_id == role_id,
+                SysRoleMenu.menu_id.in_(menu_ids)
+            )
+        )
+        
+        await self.db.execute(delete_query)
+        await self.db.commit()
+        return True

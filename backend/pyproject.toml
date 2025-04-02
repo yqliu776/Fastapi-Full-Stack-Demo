@@ -18,7 +18,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "aiomysql>=0.2.0",
     "asyncpg>=0.29.0",
-    "bcrypt>=4.3.0",
+    "bcrypt==4.0.1",
     "redis>=5.0.0",
     "psutil>=7.0.0",
 ]

@@ -8,7 +8,7 @@ from app.core.utils import logger_manager, logger
 from app.core.middleware import LoggingMiddleware
 from app.core.middleware import ErrorHandlerMiddleware
 from app.core.settings import settings
-from app.routers import auth_router
+from app.routers import auth_router, role_router, permission_router, menu_router
 
 
 class AppLifecycle:
@@ -131,6 +131,18 @@ class AppLifecycle:
                     "name": "认证",
                     "description": "认证相关接口",
                 },
+                {
+                    "name": "角色管理",
+                    "description": "角色管理相关接口",
+                },
+                {
+                    "name": "权限管理",
+                    "description": "权限管理相关接口",
+                },
+                {
+                    "name": "菜单管理",
+                    "description": "菜单管理相关接口",
+                },
                 # 可以添加更多标签分组
             ],
             
@@ -217,7 +229,12 @@ class AppLifecycle:
         app.openapi = custom_openapi
         
         # 添加路由 - 需要在定义openapi后添加路由
-        router_list = [auth_router]
+        router_list = [
+            auth_router,
+            role_router,
+            permission_router,
+            menu_router
+        ]
         for router in router_list:
             app.include_router(router)
         

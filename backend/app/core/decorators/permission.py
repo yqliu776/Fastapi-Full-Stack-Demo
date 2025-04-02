@@ -1,85 +1,129 @@
 from functools import wraps
-from typing import List, Callable, Optional
+from typing import List, Optional, Callable
 
 from fastapi import Depends, HTTPException, status
-from jose import jwt, JWTError
+from jose import jwt
 
 from app.core.settings import settings
-from app.modules.schemas.auth_schema import TokenData
 from app.services import oauth2_scheme
 
 
-def require_permissions(required_permissions: List[str]):
+def has_permission(required_permissions: List[str]):
     """
-    权限控制装饰器
-    
-    验证当前用户是否拥有所需的权限。
+    权限验证装饰器，检查当前用户是否拥有所需权限
     
     Args:
-        required_permissions: 所需权限代码列表，满足其中任一权限即可访问
-        
-    Example:
-        ```python
-        @router.get("/users")
-        @require_permissions(["user:list"])
-        async def get_users():
-            # 只有拥有"user:list"权限的用户才能访问
-            pass
-        ```
+        required_permissions: 所需的权限代码列表，用户必须拥有所有列出的权限
+    
+    Returns:
+        依赖函数，用于FastAPI路由的权限验证
     """
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        async def wrapper(*args, token: str = Depends(oauth2_scheme), **kwargs):
-            # 验证令牌并检查权限
-            credentials_exception = HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="权限不足",
+    
+    def permission_checker(token: str = Depends(oauth2_scheme)) -> bool:
+        """
+        检查用户权限
+        
+        Args:
+            token: JWT令牌
+            
+        Returns:
+            如果权限验证通过，返回True
+            
+        Raises:
+            HTTPException: 权限验证失败时抛出异常
+        """
+        # 如果没有要求任何权限，直接通过
+        if not required_permissions:
+            return True
+            
+        try:
+            # 解析令牌
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+            permissions: Optional[List[str]] = payload.get("permissions")
+            
+            # 检查用户是否拥有超级管理员权限
+            if "ROLE_SUPER_ADMIN" in permissions:
+                return True
+                
+            # 检查用户是否拥有所需权限
+            for permission in required_permissions:
+                if permission not in permissions:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="您没有执行此操作的权限"
+                    )
+                    
+            return True
+            
+        except jwt.JWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效的身份凭证",
                 headers={"WWW-Authenticate": "Bearer"},
             )
             
-            try:
-                # 解析令牌
-                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-                user_id: Optional[int] = payload.get("user_id")
-                if user_id is None:
-                    raise credentials_exception
-                    
-                token_data = TokenData(
-                    user_id=user_id,
-                    user_name=payload.get("user_name", ""),
-                    permissions=payload.get("permissions", [])
-                )
-                
-                # 检查权限
-                user_permissions = token_data.permissions or []
-                has_permission = False
-                
-                for permission in required_permissions:
-                    if permission in user_permissions:
-                        has_permission = True
-                        break
-                
-                if not has_permission:
-                    raise credentials_exception
-                    
-            except JWTError:
-                raise credentials_exception
-                
-            return await func(*args, **kwargs)
-        return wrapper
-    return decorator
+    return permission_checker
 
 
-def is_super_admin(token_data: TokenData) -> bool:
+def require_permission(*permissions: str) -> Callable:
     """
-    检查用户是否为超级管理员
+    权限验证装饰器，用于路由处理函数
     
     Args:
-        token_data: 令牌数据
-        
+        permissions: 所需的权限代码，用户必须拥有所有列出的权限
+    
     Returns:
-        bool: 是超级管理员返回True，否则返回False
+        装饰器函数
     """
-    # 可以根据实际需求定义超级管理员的判断条件
-    # 例如：特定的角色码或权限码
-    return "admin:all" in (token_data.permissions or []) 
+    
+    def decorator(func: Callable) -> Callable:
+        # 定义具有相同签名的包装函数
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # 获取当前请求的token
+            token = kwargs.get("token") if "token" in kwargs else None
+            
+            if not token:
+                for arg in args:
+                    # 尝试从位置参数中找到token
+                    if isinstance(arg, str) and arg.startswith("eyJ"):
+                        token = arg
+                        break
+                        
+            if not token:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="未提供身份凭证",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+                
+            # 解析token
+            try:
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+                user_permissions: Optional[List[str]] = payload.get("permissions", [])
+                
+                # 检查超级管理员权限
+                if "ROLE_SUPER_ADMIN" in user_permissions:
+                    return await func(*args, **kwargs)
+                    
+                # 检查具体权限
+                for permission in permissions:
+                    if permission not in user_permissions:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="您没有执行此操作的权限"
+                        )
+                        
+                # 所有权限验证通过
+                return await func(*args, **kwargs)
+                
+            except jwt.JWTError:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="无效的身份凭证",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+                
+        return wrapper
+        
+    return decorator 
