@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, field_validator, Field
 
@@ -14,10 +14,11 @@ class TokenPayload(BaseModel):
 
 class TokenResponse(BaseModel):
     """令牌响应模型"""
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    expires_in: int
+    access_token: str = Field(..., description="访问令牌")
+    refresh_token: str = Field(..., description="刷新令牌")
+    token_type: str = Field(..., description="令牌类型")
+    expires_in: int = Field(..., description="过期时间（秒）")
+    session_id: Optional[str] = Field(None, description="会话ID")
 
 
 class LoginRequest(BaseModel):
@@ -42,9 +43,9 @@ class LoginRequest(BaseModel):
 
 class TokenData(BaseModel):
     """令牌数据模型"""
-    user_id: int
-    user_name: str
-    permissions: List[str] = []
+    user_id: int = Field(..., description="用户ID")
+    user_name: str = Field(..., description="用户名")
+    permissions: list = Field(..., description="权限列表")
 
 
 class PasswordChangeRequest(BaseModel):

@@ -1,7 +1,9 @@
 import json
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 
 from redis.asyncio import Redis
+from sqlalchemy.ext.declarative import DeclarativeMeta
 
 from app.core.connects import redis_client
 
@@ -30,7 +32,20 @@ class RedisUtil:
         """
         if isinstance(value, (str, int, float, bool)):
             return str(value)
-        return json.dumps(value, ensure_ascii=False)
+        elif isinstance(value, datetime):
+            return value.isoformat()
+        elif isinstance(value, (list, tuple)):
+            return json.dumps([RedisUtil._serialize(v) for v in value], ensure_ascii=False)
+        elif isinstance(value, dict):
+            return json.dumps({k: RedisUtil._serialize(v) for k, v in value.items()}, ensure_ascii=False)
+        elif isinstance(value.__class__, DeclarativeMeta):
+            # 处理 SQLAlchemy 模型对象
+            return json.dumps({
+                col.name: RedisUtil._serialize(getattr(value, col.name))
+                for col in value.__table__.columns
+            }, ensure_ascii=False)
+        else:
+            return json.dumps(value, ensure_ascii=False)
     
     @staticmethod
     def _deserialize(value: Optional[str]) -> Any:

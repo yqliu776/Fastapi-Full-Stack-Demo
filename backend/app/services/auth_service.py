@@ -1,5 +1,6 @@
 from datetime import timedelta
 from typing import Optional, Tuple
+from sqlalchemy import select, join
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,8 +10,12 @@ from app.core.connects.database import db
 from app.core.settings import settings
 from app.core.utils import verify_password, create_access_token, create_refresh_token
 from app.modules.repositories.user_repository import UserRepository
+from app.modules.repositories.role_repository import RoleRepository
+from app.modules.repositories.permission_repository import PermissionRepository
 from app.modules.schemas.auth_schema import TokenResponse, LoginRequest, TokenData
-from app.modules.models.rbac_model import SysUser
+from app.modules.models.rbac_model import SysUser, SysPermission, SysRolePermission
+from app.core.utils.redis_util import RedisUtil
+from app.services.session_service import session_service
 
 
 class AuthService:
@@ -19,6 +24,9 @@ class AuthService:
     def __init__(self, db_session: AsyncSession = Depends(db.get_db)):
         self.db = db_session
         self.user_repository = UserRepository(db_session)
+        self.role_repository = RoleRepository(db_session)
+        self.permission_repository = PermissionRepository(db_session)
+        self.redis_util = RedisUtil()
     
     async def authenticate_user(self, username: str, password: str) -> Optional[SysUser]:
         """
@@ -65,8 +73,6 @@ class AuthService:
         # 构建权限列表
         permissions = []
         for role in user_with_roles.roles:
-            # 避免在这里使用 role.permissions，因为这会触发额外的数据库查询
-            # 改为使用专门的方法来获取角色权限
             role_permissions = await self._get_role_permissions(role.id)
             permissions.extend([p.permission_code for p in role_permissions])
         
@@ -87,16 +93,30 @@ class AuthService:
             expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         )
         
+        # 创建用户会话
+        user_data = {
+            "user_id": user.id,
+            "username": user.user_name,
+            "permissions": token_data["permissions"],
+            "roles": [role.role_code for role in user_with_roles.roles]
+        }
+        session_id = await session_service.create_session(
+            user.id,
+            user_data,
+            expire=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",
-            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60  # 转换为秒
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 转换为秒
+            session_id=session_id  # 添加会话ID到响应中
         )
     
     async def _get_role_permissions(self, role_id: int):
         """
-        获取角色的权限列表
+        获取角色的权限列表，使用Redis缓存优化
         
         Args:
             role_id: 角色ID
@@ -104,10 +124,18 @@ class AuthService:
         Returns:
             权限列表
         """
-        from sqlalchemy import select, join
-        from app.modules.models.rbac_model import SysPermission, SysRolePermission
+        # 构建缓存键
+        cache_key = f"role_permissions:{role_id}"
         
-        # 使用显式JOIN查询权限
+        # 尝试从缓存获取
+        cached_permission_codes = await self.redis_util.get(cache_key)
+        if cached_permission_codes is not None:
+            # 从缓存中获取权限代码，需要转换为权限对象
+            query = select(SysPermission).where(SysPermission.permission_code.in_(cached_permission_codes))
+            result = await self.db.execute(query)
+            return result.scalars().all()
+            
+        # 缓存未命中，从数据库查询
         query = select(SysPermission).select_from(
             join(
                 SysPermission,
@@ -117,7 +145,25 @@ class AuthService:
         ).where(SysRolePermission.role_id == role_id)
         
         result = await self.db.execute(query)
-        return result.scalars().all()
+        permissions = result.scalars().all()
+        
+        # 只缓存权限代码
+        permission_codes = [p.permission_code for p in permissions]
+        
+        # 将结果存入缓存，设置过期时间为1小时
+        await self.redis_util.set(cache_key, permission_codes, ex=3600)
+        
+        return permissions
+    
+    async def _invalidate_role_permissions_cache(self, role_id: int):
+        """
+        使角色权限缓存失效
+        
+        Args:
+            role_id: 角色ID
+        """
+        cache_key = f"role_permissions:{role_id}"
+        await self.redis_util.delete(cache_key)
     
     async def refresh_token(self, refresh_token: str) -> TokenResponse:
         """

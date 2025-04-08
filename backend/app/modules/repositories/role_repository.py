@@ -1,10 +1,11 @@
 from typing import Optional, List
 
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.models.rbac_model import SysRole, SysPermission, SysMenu, SysRolePermission, SysRoleMenu
 from app.modules.repositories.base_repository import BaseRepository
+from app.core.utils.redis_util import RedisUtil
 
 
 class RoleRepository(BaseRepository[SysRole]):
@@ -15,6 +16,7 @@ class RoleRepository(BaseRepository[SysRole]):
     def __init__(self, db_session: AsyncSession):
         """初始化角色仓储"""
         super().__init__(db_session, SysRole)
+        self.redis_util = RedisUtil()
     
     async def get_by_role_code(self, role_code: str) -> Optional[SysRole]:
         """
@@ -236,3 +238,64 @@ class RoleRepository(BaseRepository[SysRole]):
         await self.db.execute(delete_query)
         await self.db.commit()
         return True
+    
+    async def update_role_permissions(self, role_id: int, permission_ids: List[int]) -> bool:
+        """
+        更新角色的权限列表
+        
+        Args:
+            role_id: 角色ID
+            permission_ids: 新的权限ID列表
+            
+        Returns:
+            bool: 更新是否成功
+        """
+        try:
+            # 删除现有权限关联
+            await self.db.execute(
+                delete(SysRolePermission).where(SysRolePermission.role_id == role_id)
+            )
+            
+            # 添加新的权限关联
+            for permission_id in permission_ids:
+                role_permission = SysRolePermission(
+                    role_id=role_id,
+                    permission_id=permission_id
+                )
+                self.db.add(role_permission)
+            
+            await self.db.commit()
+            
+            # 使权限缓存失效
+            await self.redis_util.delete(f"role_permissions:{role_id}")
+            
+            return True
+        except Exception as e:
+            await self.db.rollback()
+            raise e
+    
+    async def delete_role(self, role_id: int) -> bool:
+        """
+        删除角色（软删除）
+        
+        Args:
+            role_id: 角色ID
+            
+        Returns:
+            bool: 删除是否成功
+        """
+        try:
+            role = await self.get_by_id(role_id)
+            if not role:
+                return False
+                
+            role.delete_flag = 'Y'
+            await self.db.commit()
+            
+            # 使权限缓存失效
+            await self.redis_util.delete(f"role_permissions:{role_id}")
+            
+            return True
+        except Exception as e:
+            await self.db.rollback()
+            raise e
