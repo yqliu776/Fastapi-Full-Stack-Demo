@@ -16,20 +16,18 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         exclude_paths (list): 不需要记录日志的路径列表
     """
 
-    def __init__(self, app, logger_manager, formatted_output=True, simplify_response_body=True):
+    def __init__(self, app, logger_manager, formatted_output=True):
         """初始化日志中间件。
 
         Args:
             app: FastAPI 应用实例
             logger_manager: LogTool 日志工具实例
             formatted_output (bool, optional): 是否使用格式化的 JSON 输出。默认为 True。
-            simplify_response_body (bool, optional): 是否简化响应体。默认为 True。
         """
         super().__init__(app)
         self.logger_manager = logger_manager
         self.logger = logger_manager.get_logger()
         self.formatted_output = formatted_output
-        self.simplify_response_body = simplify_response_body
         # 定义不需要记录日志的路径
         self.exclude_paths = [
             "/health",
@@ -90,31 +88,17 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             response.body_iterator = iterate_in_threadpool(iter(response_body))
 
             try:
-                if self.simplify_response_body:
-                    body = json.loads(response_body[0].decode()) if response_body else None
-                    # 如果响应体是字典或列表，检查大小并可能截断
-                    if isinstance(body, dict):
-                        body = self._simplify_response_body(body)
-                    elif isinstance(body, list) and len(body) > 5:
-                        # 如果是列表且元素超过5个，只保留前5个
-                        body = body[:5]
-                        body.append({"truncated": f"...and {len(body) - 5} more items"})
-                else:
-                    body = json.loads(response_body[0].decode())
+                body = json.loads(response_body[0].decode()) if response_body else None
             except (json.JSONDecodeError, UnicodeDecodeError):
                 body = "<non-JSON response>"
 
-            log_data["response"] = {
-                "status_code": response.status_code,
-                "body": body,
-                "process_time": f"{(time() - start_time):.2f}s"
-            }
+            log_data["response"] = body
 
             if self.formatted_output:
                 log_message = f"Request completed\n{json.dumps(log_data, indent=2, ensure_ascii=False)}"
             else:
                 log_message = (f"Request completed - Method: {request.method}, Path: {request.url.path}, "
-                             f"Status: {response.status_code}, Time: {(time() - start_time):.2f}s")
+                             f"Time: {time() - start_time:.2f}s")
 
             self.logger.info(log_message)
 
@@ -162,44 +146,3 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         
         return simplified_headers
 
-    def _simplify_response_body(self, body_dict, max_depth=2, current_depth=0):
-        """精简响应体，避免记录过大的嵌套结构。
-
-        Args:
-            body_dict (dict): 原始响应体字典
-            max_depth (int): 最大嵌套深度
-            current_depth (int): 当前嵌套深度
-
-        Returns:
-            dict: 精简后的响应体字典
-        """
-        if current_depth >= max_depth:
-            return {"truncated": "深度嵌套内容已省略"}
-            
-        result = {}
-        # 限制字典条目数量
-        max_items = 10
-        items_count = 0
-        
-        for k, v in body_dict.items():
-            items_count += 1
-            if items_count > max_items:
-                result["truncated"] = f"...and {len(body_dict) - max_items} more fields"
-                break
-                
-            if isinstance(v, dict):
-                result[k] = self._simplify_response_body(v, max_depth, current_depth + 1)
-            elif isinstance(v, list):
-                if len(v) > 3:
-                    # 如果列表元素超过3个，只保留前3个
-                    result[k] = v[:3]
-                    result[k].append(f"...and {len(v) - 3} more items")
-                else:
-                    result[k] = v
-            elif isinstance(v, str) and len(v) > 100:
-                # 截断长字符串
-                result[k] = v[:100] + "..."
-            else:
-                result[k] = v
-                
-        return result

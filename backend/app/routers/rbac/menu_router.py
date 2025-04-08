@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, Query, Path, Body
 
 from app.core.decorators import has_permission
+from app.core.models.response_models import ResponseModel
 from app.modules.schemas import (
     MenuCreate, MenuUpdate, MenuResponse, MenuDetail, MenuBatchResponse, MenuTreeNode
 )
@@ -14,14 +15,14 @@ router = APIRouter(prefix="/menus", tags=["菜单管理"])
 
 @router.post(
     "",
-    response_model=MenuResponse,
+    response_model=ResponseModel,
     dependencies=[Depends(has_permission(["MENU_MANAGE"]))],
     summary="创建菜单"
 )
 async def create_menu(
     menu_data: MenuCreate,
     rbac_service: RBACService = Depends()
-) -> MenuResponse:
+) -> ResponseModel:
     """
     创建菜单
     
@@ -32,12 +33,17 @@ async def create_menu(
     Returns:
         创建后的菜单响应
     """
-    return await rbac_service.create_menu(menu_data)
+    menu = await rbac_service.create_menu(menu_data)
+    return ResponseModel(
+        code=200,
+        message="菜单创建成功",
+        data=menu
+    )
 
 
 @router.get(
     "",
-    response_model=MenuBatchResponse,
+    response_model=ResponseModel,
     dependencies=[Depends(has_permission(["MENU_MANAGE"]))],
     summary="获取菜单列表"
 )
@@ -45,7 +51,7 @@ async def get_menus(
     skip: int = Query(0, description="跳过的记录数"),
     limit: int = Query(100, description="返回的记录数"),
     rbac_service: RBACService = Depends()
-) -> MenuBatchResponse:
+) -> ResponseModel:
     """
     获取菜单列表
     
@@ -57,18 +63,23 @@ async def get_menus(
     Returns:
         菜单列表响应
     """
-    return await rbac_service.get_all_menus(skip, limit)
+    menus = await rbac_service.get_all_menus(skip, limit)
+    return ResponseModel(
+        code=200,
+        message="获取菜单列表成功",
+        data=menus
+    )
 
 
 @router.get(
     "/tree",
-    response_model=List[MenuTreeNode],
+    response_model=ResponseModel,
     dependencies=[Depends(has_permission(["MENU_MANAGE"]))],
     summary="获取菜单树"
 )
 async def get_menu_tree(
     rbac_service: RBACService = Depends()
-) -> List[MenuTreeNode]:
+) -> ResponseModel:
     """
     获取菜单树
     
@@ -78,19 +89,24 @@ async def get_menu_tree(
     Returns:
         菜单树节点列表
     """
-    return await rbac_service.get_menu_tree()
+    menu_tree = await rbac_service.get_menu_tree()
+    return ResponseModel(
+        code=200,
+        message="获取菜单树成功",
+        data=menu_tree
+    )
 
 
 @router.get(
     "/role/{role_id}",
-    response_model=List[MenuResponse],
+    response_model=ResponseModel,
     dependencies=[Depends(has_permission(["MENU_MANAGE"]))],
     summary="获取角色拥有的菜单"
 )
 async def get_menus_by_role(
     role_id: int = Path(..., description="角色ID"),
     rbac_service: RBACService = Depends()
-) -> List[MenuResponse]:
+) -> ResponseModel:
     """
     获取角色拥有的菜单
     
@@ -101,19 +117,24 @@ async def get_menus_by_role(
     Returns:
         菜单列表响应
     """
-    return await rbac_service.get_menus_by_role_id(role_id)
+    menus = await rbac_service.get_menus_by_role_id(role_id)
+    return ResponseModel(
+        code=200,
+        message="获取角色菜单成功",
+        data=menus
+    )
 
 
 @router.get(
     "/{menu_id}",
-    response_model=MenuDetail,
+    response_model=ResponseModel,
     dependencies=[Depends(has_permission(["MENU_MANAGE"]))],
     summary="获取菜单详情"
 )
 async def get_menu(
     menu_id: int = Path(..., description="菜单ID"),
     rbac_service: RBACService = Depends()
-) -> MenuDetail:
+) -> ResponseModel:
     """
     获取菜单详情
     
@@ -124,12 +145,17 @@ async def get_menu(
     Returns:
         菜单详情响应
     """
-    return await rbac_service.get_menu(menu_id)
+    menu = await rbac_service.get_menu(menu_id)
+    return ResponseModel(
+        code=200,
+        message="获取菜单详情成功",
+        data=menu
+    )
 
 
 @router.put(
     "/{menu_id}",
-    response_model=MenuResponse,
+    response_model=ResponseModel,
     dependencies=[Depends(has_permission(["MENU_MANAGE"]))],
     summary="更新菜单"
 )
@@ -137,7 +163,7 @@ async def update_menu(
     menu_id: int = Path(..., description="菜单ID"),
     menu_data: MenuUpdate = Body(...),
     rbac_service: RBACService = Depends()
-) -> MenuResponse:
+) -> ResponseModel:
     """
     更新菜单
     
@@ -149,18 +175,24 @@ async def update_menu(
     Returns:
         更新后的菜单响应
     """
-    return await rbac_service.update_menu(menu_id, menu_data)
+    menu = await rbac_service.update_menu(menu_id, menu_data)
+    return ResponseModel(
+        code=200,
+        message="菜单更新成功",
+        data=menu
+    )
 
 
 @router.delete(
     "/{menu_id}",
+    response_model=ResponseModel,
     dependencies=[Depends(has_permission(["MENU_MANAGE"]))],
     summary="删除菜单"
 )
 async def delete_menu(
     menu_id: int = Path(..., description="菜单ID"),
     rbac_service: RBACService = Depends()
-) -> dict:
+) -> ResponseModel:
     """
     删除菜单
     
@@ -172,4 +204,8 @@ async def delete_menu(
         删除结果
     """
     result = await rbac_service.delete_menu(menu_id)
-    return {"success": result, "message": "菜单删除成功" if result else "菜单删除失败"} 
+    return ResponseModel(
+        code=200 if result else 400,
+        message="菜单删除成功" if result else "菜单删除失败",
+        data={"success": result}
+    ) 

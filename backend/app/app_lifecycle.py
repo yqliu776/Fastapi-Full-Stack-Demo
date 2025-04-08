@@ -244,7 +244,6 @@ class AppLifecycle:
             LoggingMiddleware,
             logger_manager=logger_manager,
             formatted_output=settings.FORMATTED_OUTPUT,
-            simplify_response_body=settings.SIMPLIFY_RESPONSE_BODY
         )
         
         # 添加CORS中间件

@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 from typing import Optional
+import time
 
+from app.core.models.response_models import ResponseModel
 from app.modules.schemas import TokenResponse, LoginRequest, UserDetail
 from app.services import AuthService, oauth2_scheme
 from app.core.settings import settings
@@ -57,11 +59,11 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=ResponseModel)
 async def login(
     login_data: LoginRequest,
     auth_service: AuthService = Depends()
-) -> TokenResponse:
+) -> ResponseModel:
     """
     用户登录接口
     
@@ -70,15 +72,22 @@ async def login(
         auth_service: 认证服务实例
         
     Returns:
-        TokenResponse: 包含访问令牌的响应
+        ResponseModel: 包含访问令牌的响应
     """
-    return await auth_service.login(login_data)
+    start_time = time.time()
+    token = await auth_service.login(login_data)
+    process_time = time.time() - start_time
+    return ResponseModel.success(
+        data=token,
+        message="登录成功",
+        process_time=process_time
+    )
 
-@router.post("/login/oauth", response_model=TokenResponse)
+@router.post("/login/oauth", response_model=ResponseModel)
 async def oauth_login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     auth_service: AuthService = Depends()
-) -> TokenResponse:
+) -> ResponseModel:
     """
     OAuth2密码模式登录接口
     
@@ -87,16 +96,23 @@ async def oauth_login(
         auth_service: 认证服务实例
         
     Returns:
-        TokenResponse: 包含访问令牌的响应
+        ResponseModel: 包含访问令牌的响应
     """
+    start_time = time.time()
     login_data = LoginRequest(
         username=form_data.username,
         password=form_data.password
     )
-    return await auth_service.login(login_data)
+    token = await auth_service.login(login_data)
+    process_time = time.time() - start_time
+    return ResponseModel.success(
+        data=token,
+        message="登录成功",
+        process_time=process_time
+    )
 
-@router.get("/me", response_model=UserDetail)
-async def get_user_info(current_user: UserDetail = Depends(get_current_user)) -> UserDetail:
+@router.get("/me", response_model=ResponseModel)
+async def get_user_info(current_user: UserDetail = Depends(get_current_user)) -> ResponseModel:
     """
     获取当前登录用户信息
     
@@ -104,15 +120,21 @@ async def get_user_info(current_user: UserDetail = Depends(get_current_user)) ->
         current_user: 当前用户信息
         
     Returns:
-        UserDetail: 用户详细信息
+        ResponseModel: 用户详细信息
     """
-    return current_user
+    start_time = time.time()
+    process_time = time.time() - start_time
+    return ResponseModel.success(
+        data=current_user,
+        message="获取用户信息成功",
+        process_time=process_time
+    )
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post("/refresh", response_model=ResponseModel)
 async def refresh_token(
     refresh_token: str,
     auth_service: AuthService = Depends()
-) -> TokenResponse:
+) -> ResponseModel:
     """
     刷新访问令牌
     
@@ -121,9 +143,16 @@ async def refresh_token(
         auth_service: 认证服务实例
         
     Returns:
-        TokenResponse: 包含新访问令牌的响应
+        ResponseModel: 包含新访问令牌的响应
     """
-    return await auth_service.refresh_token(refresh_token)
+    start_time = time.time()
+    token = await auth_service.refresh_token(refresh_token)
+    process_time = time.time() - start_time
+    return ResponseModel.success(
+        data=token,
+        message="令牌刷新成功",
+        process_time=process_time
+    )
 
 
 
