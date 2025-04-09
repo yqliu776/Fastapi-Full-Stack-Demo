@@ -1,0 +1,1953 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "fast-full-stack-backend",
+        "description": "框架后端服务API文档，提供所有接口的详细说明和测试功能",
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "Login",
+                "description": "用户登录接口\n\nArgs:\n    login_data: 登录请求数据\n    auth_service: 认证服务实例\n    \nReturns:\n    ResponseModel: 包含访问令牌的响应",
+                "operationId": "login_auth_login_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login/oauth": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "Oauth Login",
+                "description": "OAuth2密码模式登录接口\n\nArgs:\n    form_data: OAuth2表单数据\n    auth_service: 认证服务实例\n    \nReturns:\n    ResponseModel: 包含访问令牌的响应",
+                "operationId": "oauth_login_auth_login_oauth_post",
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_oauth_login_auth_login_oauth_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "Get User Info",
+                "description": "获取当前登录用户信息\n\nArgs:\n    current_user: 当前用户信息\n    \nReturns:\n    ResponseModel: 用户详细信息",
+                "operationId": "get_user_info_auth_me_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ]
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "tags": [
+                    "认证"
+                ],
+                "summary": "Refresh Token",
+                "description": "刷新访问令牌\n\nArgs:\n    refresh_token: 刷新令牌\n    auth_service: 认证服务实例\n    \nReturns:\n    ResponseModel: 包含新访问令牌的响应",
+                "operationId": "refresh_token_auth_refresh_post",
+                "parameters": [
+                    {
+                        "name": "refresh_token",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Refresh Token"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/roles": {
+            "post": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "创建角色",
+                "description": "创建角色\n\nArgs:\n    role_data: 角色创建数据\n    rbac_service: RBAC服务实例\n    \nReturns:\n    创建后的角色响应",
+                "operationId": "create_role_roles_post",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoleCreate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "获取角色列表",
+                "description": "获取角色列表\n\nArgs:\n    skip: 跳过的记录数\n    limit: 返回的记录数\n    role_name: 角色名称过滤条件\n    role_code: 角色代码过滤条件\n    rbac_service: RBAC服务实例\n    \nReturns:\n    角色列表响应",
+                "operationId": "get_roles_roles_get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "跳过的记录数",
+                            "default": 0,
+                            "title": "Skip"
+                        },
+                        "description": "跳过的记录数"
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "返回的记录数",
+                            "default": 100,
+                            "title": "Limit"
+                        },
+                        "description": "返回的记录数"
+                    },
+                    {
+                        "name": "role_name",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "角色名称",
+                            "title": "Role Name"
+                        },
+                        "description": "角色名称"
+                    },
+                    {
+                        "name": "role_code",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "角色代码",
+                            "title": "Role Code"
+                        },
+                        "description": "角色代码"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/roles/{role_id}": {
+            "put": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "更新角色",
+                "description": "更新角色\n\nArgs:\n    role_id: 角色ID\n    role_data: 角色更新数据\n    rbac_service: RBAC服务实例\n    \nReturns:\n    更新后的角色响应",
+                "operationId": "update_role_roles__role_id__put",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "角色ID",
+                            "title": "Role Id"
+                        },
+                        "description": "角色ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoleUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "删除角色",
+                "description": "删除角色\n\nArgs:\n    role_id: 角色ID\n    rbac_service: RBAC服务实例\n    \nReturns:\n    删除结果",
+                "operationId": "delete_role_roles__role_id__delete",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "角色ID",
+                            "title": "Role Id"
+                        },
+                        "description": "角色ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "获取角色详情",
+                "description": "获取角色详情\n\nArgs:\n    role_id: 角色ID\n    rbac_service: RBAC服务实例\n    \nReturns:\n    角色详情响应",
+                "operationId": "get_role_roles__role_id__get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "角色ID",
+                            "title": "Role Id"
+                        },
+                        "description": "角色ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/roles/{role_id}/permissions": {
+            "post": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "为角色分配权限",
+                "description": "为角色分配权限\n\nArgs:\n    role_id: 角色ID\n    operation: 角色权限操作数据\n    rbac_service: RBAC服务实例\n    current_user: 当前登录用户\n    \nReturns:\n    操作结果",
+                "operationId": "assign_permissions_to_role_roles__role_id__permissions_post",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "角色ID",
+                            "title": "Role Id"
+                        },
+                        "description": "角色ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RolePermissionOperation"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "移除角色的权限",
+                "description": "移除角色的权限\n\nArgs:\n    role_id: 角色ID\n    operation: 角色权限操作数据\n    rbac_service: RBAC服务实例\n    \nReturns:\n    操作结果",
+                "operationId": "remove_permissions_from_role_roles__role_id__permissions_delete",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "角色ID",
+                            "title": "Role Id"
+                        },
+                        "description": "角色ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RolePermissionOperation"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/roles/{role_id}/menus": {
+            "post": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "为角色分配菜单",
+                "description": "为角色分配菜单\n\nArgs:\n    role_id: 角色ID\n    operation: 角色菜单操作数据\n    rbac_service: RBAC服务实例\n    \nReturns:\n    操作结果",
+                "operationId": "assign_menus_to_role_roles__role_id__menus_post",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "角色ID",
+                            "title": "Role Id"
+                        },
+                        "description": "角色ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoleMenuOperation"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "角色管理"
+                ],
+                "summary": "移除角色的菜单",
+                "description": "移除角色的菜单\n\nArgs:\n    role_id: 角色ID\n    operation: 角色菜单操作数据\n    rbac_service: RBAC服务实例\n    \nReturns:\n    操作结果",
+                "operationId": "remove_menus_from_role_roles__role_id__menus_delete",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "角色ID",
+                            "title": "Role Id"
+                        },
+                        "description": "角色ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoleMenuOperation"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/permissions": {
+            "post": {
+                "tags": [
+                    "权限管理"
+                ],
+                "summary": "创建权限",
+                "description": "创建权限\n\nArgs:\n    permission_data: 权限创建数据\n    rbac_service: RBAC服务实例\n    \nReturns:\n    创建后的权限响应",
+                "operationId": "create_permission_permissions_post",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PermissionCreate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "权限管理"
+                ],
+                "summary": "获取权限列表",
+                "description": "获取权限列表\n\nArgs:\n    skip: 跳过的记录数\n    limit: 返回的记录数\n    permission_name: 权限名称过滤条件\n    permission_code: 权限代码过滤条件\n    rbac_service: RBAC服务实例\n    \nReturns:\n    权限列表响应",
+                "operationId": "get_permissions_permissions_get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "跳过的记录数",
+                            "default": 0,
+                            "title": "Skip"
+                        },
+                        "description": "跳过的记录数"
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "返回的记录数",
+                            "default": 100,
+                            "title": "Limit"
+                        },
+                        "description": "返回的记录数"
+                    },
+                    {
+                        "name": "permission_name",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "权限名称",
+                            "title": "Permission Name"
+                        },
+                        "description": "权限名称"
+                    },
+                    {
+                        "name": "permission_code",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "权限代码",
+                            "title": "Permission Code"
+                        },
+                        "description": "权限代码"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/permissions/role/{role_id}": {
+            "get": {
+                "tags": [
+                    "权限管理"
+                ],
+                "summary": "获取角色拥有的权限",
+                "description": "获取角色拥有的权限\n\nArgs:\n    role_id: 角色ID\n    rbac_service: RBAC服务实例\n    \nReturns:\n    权限列表响应",
+                "operationId": "get_permissions_by_role_permissions_role__role_id__get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "角色ID",
+                            "title": "Role Id"
+                        },
+                        "description": "角色ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/permissions/{permission_id}": {
+            "get": {
+                "tags": [
+                    "权限管理"
+                ],
+                "summary": "获取权限详情",
+                "description": "获取权限详情\n\nArgs:\n    permission_id: 权限ID\n    rbac_service: RBAC服务实例\n    \nReturns:\n    权限详情响应",
+                "operationId": "get_permission_permissions__permission_id__get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "permission_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "权限ID",
+                            "title": "Permission Id"
+                        },
+                        "description": "权限ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "权限管理"
+                ],
+                "summary": "更新权限",
+                "description": "更新权限\n\nArgs:\n    permission_id: 权限ID\n    permission_data: 权限更新数据\n    rbac_service: RBAC服务实例\n    \nReturns:\n    更新后的权限响应",
+                "operationId": "update_permission_permissions__permission_id__put",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "permission_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "权限ID",
+                            "title": "Permission Id"
+                        },
+                        "description": "权限ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PermissionUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "权限管理"
+                ],
+                "summary": "删除权限",
+                "description": "删除权限\n\nArgs:\n    permission_id: 权限ID\n    rbac_service: RBAC服务实例\n    \nReturns:\n    删除结果",
+                "operationId": "delete_permission_permissions__permission_id__delete",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "permission_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "权限ID",
+                            "title": "Permission Id"
+                        },
+                        "description": "权限ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/menus": {
+            "post": {
+                "tags": [
+                    "菜单管理"
+                ],
+                "summary": "创建菜单",
+                "description": "创建菜单\n\nArgs:\n    menu_data: 菜单创建数据\n    rbac_service: RBAC服务实例\n    \nReturns:\n    创建后的菜单响应",
+                "operationId": "create_menu_menus_post",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MenuCreate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "菜单管理"
+                ],
+                "summary": "获取菜单列表",
+                "description": "获取菜单列表\n\nArgs:\n    skip: 跳过的记录数\n    limit: 返回的记录数\n    rbac_service: RBAC服务实例\n    \nReturns:\n    菜单列表响应",
+                "operationId": "get_menus_menus_get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "跳过的记录数",
+                            "default": 0,
+                            "title": "Skip"
+                        },
+                        "description": "跳过的记录数"
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "description": "返回的记录数",
+                            "default": 100,
+                            "title": "Limit"
+                        },
+                        "description": "返回的记录数"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/menus/tree": {
+            "get": {
+                "tags": [
+                    "菜单管理"
+                ],
+                "summary": "获取菜单树",
+                "description": "获取菜单树\n\nArgs:\n    rbac_service: RBAC服务实例\n    \nReturns:\n    菜单树节点列表",
+                "operationId": "get_menu_tree_menus_tree_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ]
+            }
+        },
+        "/menus/role/{role_id}": {
+            "get": {
+                "tags": [
+                    "菜单管理"
+                ],
+                "summary": "获取角色拥有的菜单",
+                "description": "获取角色拥有的菜单\n\nArgs:\n    role_id: 角色ID\n    rbac_service: RBAC服务实例\n    \nReturns:\n    菜单列表响应",
+                "operationId": "get_menus_by_role_menus_role__role_id__get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "role_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "角色ID",
+                            "title": "Role Id"
+                        },
+                        "description": "角色ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/menus/{menu_id}": {
+            "get": {
+                "tags": [
+                    "菜单管理"
+                ],
+                "summary": "获取菜单详情",
+                "description": "获取菜单详情\n\nArgs:\n    menu_id: 菜单ID\n    rbac_service: RBAC服务实例\n    \nReturns:\n    菜单详情响应",
+                "operationId": "get_menu_menus__menu_id__get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "menu_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "菜单ID",
+                            "title": "Menu Id"
+                        },
+                        "description": "菜单ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "菜单管理"
+                ],
+                "summary": "更新菜单",
+                "description": "更新菜单\n\nArgs:\n    menu_id: 菜单ID\n    menu_data: 菜单更新数据\n    rbac_service: RBAC服务实例\n    \nReturns:\n    更新后的菜单响应",
+                "operationId": "update_menu_menus__menu_id__put",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "menu_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "菜单ID",
+                            "title": "Menu Id"
+                        },
+                        "description": "菜单ID"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MenuUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "菜单管理"
+                ],
+                "summary": "删除菜单",
+                "description": "删除菜单\n\nArgs:\n    menu_id: 菜单ID\n    rbac_service: RBAC服务实例\n    \nReturns:\n    删除结果",
+                "operationId": "delete_menu_menus__menu_id__delete",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "menu_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "description": "菜单ID",
+                            "title": "Menu Id"
+                        },
+                        "description": "菜单ID"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Body_oauth_login_auth_login_oauth_post": {
+                "properties": {
+                    "grant_type": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^password$"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Grant Type"
+                    },
+                    "username": {
+                        "type": "string",
+                        "title": "Username"
+                    },
+                    "password": {
+                        "type": "string",
+                        "title": "Password"
+                    },
+                    "scope": {
+                        "type": "string",
+                        "title": "Scope",
+                        "default": ""
+                    },
+                    "client_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Client Id"
+                    },
+                    "client_secret": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Client Secret"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "username",
+                    "password"
+                ],
+                "title": "Body_oauth_login_auth_login_oauth_post"
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "LoginRequest": {
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "title": "Username",
+                        "description": "用户名"
+                    },
+                    "password": {
+                        "type": "string",
+                        "title": "Password",
+                        "description": "密码"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "username",
+                    "password"
+                ],
+                "title": "LoginRequest",
+                "description": "登录请求模型"
+            },
+            "MenuCreate": {
+                "properties": {
+                    "menu_name": {
+                        "type": "string",
+                        "title": "Menu Name",
+                        "description": "菜单名称",
+                        "example": "系统管理"
+                    },
+                    "menu_code": {
+                        "type": "string",
+                        "title": "Menu Code",
+                        "description": "菜单代码",
+                        "example": "SYSTEM"
+                    },
+                    "menu_path": {
+                        "type": "string",
+                        "title": "Menu Path",
+                        "description": "菜单路径",
+                        "example": "/system"
+                    },
+                    "parent_id": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Parent Id",
+                        "description": "父菜单ID"
+                    },
+                    "sort_order": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Sort Order",
+                        "description": "排序号",
+                        "default": 0
+                    },
+                    "created_by": {
+                        "type": "string",
+                        "title": "Created By",
+                        "description": "创建人"
+                    },
+                    "last_updated_by": {
+                        "type": "string",
+                        "title": "Last Updated By",
+                        "description": "最后更新人"
+                    },
+                    "last_update_login": {
+                        "type": "string",
+                        "title": "Last Update Login",
+                        "description": "最后登录ID"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "menu_name",
+                    "menu_code",
+                    "menu_path",
+                    "created_by",
+                    "last_updated_by",
+                    "last_update_login"
+                ],
+                "title": "MenuCreate",
+                "description": "菜单创建模型"
+            },
+            "MenuUpdate": {
+                "properties": {
+                    "menu_name": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Menu Name",
+                        "description": "菜单名称",
+                        "example": "系统管理"
+                    },
+                    "menu_path": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Menu Path",
+                        "description": "菜单路径",
+                        "example": "/system"
+                    },
+                    "parent_id": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Parent Id",
+                        "description": "父菜单ID"
+                    },
+                    "sort_order": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Sort Order",
+                        "description": "排序号"
+                    },
+                    "last_updated_by": {
+                        "type": "string",
+                        "title": "Last Updated By",
+                        "description": "最后更新人"
+                    },
+                    "last_update_login": {
+                        "type": "string",
+                        "title": "Last Update Login",
+                        "description": "最后登录ID"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "last_updated_by",
+                    "last_update_login"
+                ],
+                "title": "MenuUpdate",
+                "description": "菜单更新模型"
+            },
+            "PermissionCreate": {
+                "properties": {
+                    "permission_name": {
+                        "type": "string",
+                        "title": "Permission Name",
+                        "description": "权限名称",
+                        "example": "用户管理"
+                    },
+                    "permission_code": {
+                        "type": "string",
+                        "title": "Permission Code",
+                        "description": "权限代码",
+                        "example": "USER_MANAGE"
+                    },
+                    "created_by": {
+                        "type": "string",
+                        "title": "Created By",
+                        "description": "创建人"
+                    },
+                    "last_updated_by": {
+                        "type": "string",
+                        "title": "Last Updated By",
+                        "description": "最后更新人"
+                    },
+                    "last_update_login": {
+                        "type": "string",
+                        "title": "Last Update Login",
+                        "description": "最后登录ID"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "permission_name",
+                    "permission_code",
+                    "created_by",
+                    "last_updated_by",
+                    "last_update_login"
+                ],
+                "title": "PermissionCreate",
+                "description": "权限创建模型"
+            },
+            "PermissionUpdate": {
+                "properties": {
+                    "permission_name": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Permission Name",
+                        "description": "权限名称",
+                        "example": "用户管理"
+                    },
+                    "last_updated_by": {
+                        "type": "string",
+                        "title": "Last Updated By",
+                        "description": "最后更新人"
+                    },
+                    "last_update_login": {
+                        "type": "string",
+                        "title": "Last Update Login",
+                        "description": "最后登录ID"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "last_updated_by",
+                    "last_update_login"
+                ],
+                "title": "PermissionUpdate",
+                "description": "权限更新模型"
+            },
+            "ResponseModel": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "description": "状态码",
+                        "default": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message",
+                        "description": "返回消息",
+                        "default": "操作成功"
+                    },
+                    "data": {
+                        "title": "Data",
+                        "description": "返回数据"
+                    },
+                    "timestamp": {
+                        "type": "integer",
+                        "title": "Timestamp",
+                        "description": "时间戳"
+                    },
+                    "process_time": {
+                        "type": "number",
+                        "title": "Process Time",
+                        "description": "处理时间(秒)",
+                        "default": 0.0
+                    }
+                },
+                "type": "object",
+                "title": "ResponseModel",
+                "description": "统一API响应模型\n\n定义了API响应的标准格式，包含状态码、消息、数据和时间戳。\n\nAttributes:\n    code: HTTP状态码\n    message: 响应消息\n    data: 响应数据\n    timestamp: 响应时间戳(秒)\n    process_time: 处理时间(秒)"
+            },
+            "RoleCreate": {
+                "properties": {
+                    "role_name": {
+                        "type": "string",
+                        "title": "Role Name",
+                        "description": "角色名称",
+                        "example": "系统管理员"
+                    },
+                    "role_code": {
+                        "type": "string",
+                        "title": "Role Code",
+                        "description": "角色代码",
+                        "example": "ROLE_ADMIN"
+                    },
+                    "created_by": {
+                        "type": "string",
+                        "title": "Created By",
+                        "description": "创建人"
+                    },
+                    "last_updated_by": {
+                        "type": "string",
+                        "title": "Last Updated By",
+                        "description": "最后更新人"
+                    },
+                    "last_update_login": {
+                        "type": "string",
+                        "title": "Last Update Login",
+                        "description": "最后登录ID"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "role_name",
+                    "role_code",
+                    "created_by",
+                    "last_updated_by",
+                    "last_update_login"
+                ],
+                "title": "RoleCreate",
+                "description": "角色创建模型"
+            },
+            "RoleMenuOperation": {
+                "properties": {
+                    "role_id": {
+                        "type": "integer",
+                        "title": "Role Id",
+                        "description": "角色ID"
+                    },
+                    "menu_ids": {
+                        "items": {
+                            "type": "integer"
+                        },
+                        "type": "array",
+                        "title": "Menu Ids",
+                        "description": "菜单ID列表"
+                    },
+                    "operator": {
+                        "type": "string",
+                        "title": "Operator",
+                        "description": "操作人"
+                    },
+                    "operation_login": {
+                        "type": "string",
+                        "title": "Operation Login",
+                        "description": "操作登录ID"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "role_id",
+                    "menu_ids",
+                    "operator",
+                    "operation_login"
+                ],
+                "title": "RoleMenuOperation",
+                "description": "角色菜单操作模型"
+            },
+            "RolePermissionOperation": {
+                "properties": {
+                    "role_id": {
+                        "type": "integer",
+                        "title": "Role Id",
+                        "description": "角色ID"
+                    },
+                    "permission_ids": {
+                        "items": {
+                            "type": "integer"
+                        },
+                        "type": "array",
+                        "title": "Permission Ids",
+                        "description": "权限ID列表"
+                    },
+                    "operator": {
+                        "type": "string",
+                        "title": "Operator",
+                        "description": "操作人"
+                    },
+                    "operation_login": {
+                        "type": "string",
+                        "title": "Operation Login",
+                        "description": "操作登录ID"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "role_id",
+                    "permission_ids",
+                    "operator",
+                    "operation_login"
+                ],
+                "title": "RolePermissionOperation",
+                "description": "角色权限操作模型"
+            },
+            "RoleUpdate": {
+                "properties": {
+                    "role_name": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Role Name",
+                        "description": "角色名称",
+                        "example": "系统管理员"
+                    },
+                    "last_updated_by": {
+                        "type": "string",
+                        "title": "Last Updated By",
+                        "description": "最后更新人"
+                    },
+                    "last_update_login": {
+                        "type": "string",
+                        "title": "Last Update Login",
+                        "description": "最后登录ID"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "last_updated_by",
+                    "last_update_login"
+                ],
+                "title": "RoleUpdate",
+                "description": "角色更新模型"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        },
+        "securitySchemes": {
+            "OAuth2PasswordBearer": {
+                "type": "oauth2",
+                "flows": {
+                    "password": {
+                        "tokenUrl": "/auth/login/oauth",
+                        "scopes": {}
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "认证",
+            "description": "认证相关接口"
+        },
+        {
+            "name": "角色管理",
+            "description": "角色管理相关接口"
+        },
+        {
+            "name": "权限管理",
+            "description": "权限管理相关接口"
+        },
+        {
+            "name": "菜单管理",
+            "description": "菜单管理相关接口"
+        }
+    ],
+    "security": [
+        {
+            "OAuth2PasswordBearer": []
+        }
+    ]
+}
