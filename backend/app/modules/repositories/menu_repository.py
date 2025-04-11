@@ -1,10 +1,9 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
 from typing import Optional, List
 
-from sqlalchemy import select, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.modules.models.rbac_model import SysMenu, SysRoleMenu
-from app.modules.repositories.base_repository import BaseRepository
+from app.modules.models import SysMenu, SysRoleMenu
+from .base_repository import BaseRepository
 
 
 class MenuRepository(BaseRepository[SysMenu]):

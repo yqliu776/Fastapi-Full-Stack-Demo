@@ -1,7 +1,6 @@
-from typing import AsyncGenerator
-
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from typing import AsyncGenerator
 
 from app.core.settings import settings
 from app.core.utils import logger

@@ -1,11 +1,10 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, delete
 from typing import Optional, List
 
-from sqlalchemy import select, and_, delete
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.modules.models.rbac_model import SysRole, SysPermission, SysMenu, SysRolePermission, SysRoleMenu
-from app.modules.repositories.base_repository import BaseRepository
-from app.core.utils.redis_util import RedisUtil
+from app.modules.models import SysRole, SysPermission, SysMenu, SysRolePermission, SysRoleMenu
+from .base_repository import BaseRepository
+from app.core.utils import RedisUtil
 
 
 class RoleRepository(BaseRepository[SysRole]):

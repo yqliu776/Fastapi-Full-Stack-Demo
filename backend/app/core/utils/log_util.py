@@ -1,11 +1,12 @@
-import os
-import time
-import shutil
-import schedule
-import threading
-import datetime
 from loguru import logger
-from app.core.utils.timezone_util import tzu
+import threading
+import schedule
+import datetime
+import shutil
+import time
+import os
+
+from .timezone_util import tzu
 
 
 class LogUtil:

@@ -1,8 +1,8 @@
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
 
-from app.modules.schemas.base_schema import BaseResponseModel
+from .base_schema import BaseResponseModel
 
 
 class PermissionBase(BaseModel):

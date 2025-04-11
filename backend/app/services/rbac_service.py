@@ -1,16 +1,13 @@
 from typing import List, Optional, Dict, Any, Tuple
 from fastapi import Depends, HTTPException, status
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.connects.database import db
-from app.modules.models.rbac_model import SysRole, SysPermission, SysMenu
-from app.modules.repositories.role_repository import RoleRepository
-from app.modules.repositories.permission_repository import PermissionRepository
-from app.modules.repositories.menu_repository import MenuRepository
-from app.modules.schemas.role_schema import RoleCreate, RoleUpdate, RoleResponse, RoleDetail, RoleBatchResponse
-from app.modules.schemas.permission_schema import PermissionCreate, PermissionUpdate, PermissionResponse, PermissionDetail, PermissionBatchResponse
-from app.modules.schemas.menu_schema import MenuCreate, MenuUpdate, MenuResponse, MenuDetail, MenuTreeNode, MenuBatchResponse
+from app.modules.schemas import PermissionCreate, PermissionUpdate, PermissionResponse, PermissionDetail, PermissionBatchResponse
+from app.modules.schemas import MenuCreate, MenuUpdate, MenuResponse, MenuDetail, MenuTreeNode, MenuBatchResponse
+from app.modules.schemas import RoleCreate, RoleUpdate, RoleResponse, RoleDetail, RoleBatchResponse
+from app.modules.repositories import RoleRepository, MenuRepository, PermissionRepository
+from app.modules.models import SysRole, SysPermission, SysMenu
+from app.core.connects import db
 
 
 class RBACService:

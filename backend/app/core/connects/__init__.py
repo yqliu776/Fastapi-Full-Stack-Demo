@@ -1,4 +1,4 @@
-from app.core.connects.database import db, Base
-from app.core.connects.redis_client import redis_client
+from .redis_client import RedisClient, redis_client
+from .database import db, Base
 
-__all__ = ["db", "Base", "redis_client"]
+__all__ = ["db", "Base", "RedisClient", "redis_client"]

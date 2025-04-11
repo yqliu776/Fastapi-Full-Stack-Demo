@@ -1,19 +1,17 @@
+from fastapi import APIRouter, Depends, Query, Path, Body
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, Path, Body
-
-from app.core.decorators import has_permission
-from app.core.models.response_models import ResponseModel
 from app.modules.schemas import (
     RoleCreate, RoleUpdate, RoleResponse, RoleDetail, RoleBatchResponse,
     RolePermissionOperation, RoleMenuOperation
 )
+from app.core.models.response_models import ResponseModel
+from app.core.decorators import has_permission
+from app.routers.auth import get_current_user
 from app.services import RBACService
-from app.routers.auth.auth_router import get_current_user
 
 
 router = APIRouter(prefix="/roles", tags=["角色管理"])
-
 
 @router.post(
     "",

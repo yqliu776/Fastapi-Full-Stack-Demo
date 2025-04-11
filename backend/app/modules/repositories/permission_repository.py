@@ -1,10 +1,9 @@
-from typing import Optional, List
-
-from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional, List
+from sqlalchemy import select, and_
 
-from app.modules.models.rbac_model import SysPermission
-from app.modules.repositories.base_repository import BaseRepository
+from app.modules.models import SysPermission
+from .base_repository import BaseRepository
 
 
 class PermissionRepository(BaseRepository[SysPermission]):

@@ -1,5 +1,6 @@
-import redis
 from redis.asyncio import Redis, ConnectionPool
+import redis
+
 from app.core.settings import settings
 from app.core.utils import logger
 
@@ -108,5 +109,4 @@ class RedisClient:
             logger.error(f"Redis ping失败: {str(e)}")
             return False
 
-
-redis_client = RedisClient() 
+redis_client = RedisClient()

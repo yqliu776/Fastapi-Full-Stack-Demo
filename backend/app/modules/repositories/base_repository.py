@@ -1,9 +1,8 @@
 from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
-
 from sqlalchemy import select, update, delete, func, BinaryExpression, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql.elements import BooleanClauseList
 from sqlalchemy.sql.expression import ColumnElement as SQLAColumnElement
+from sqlalchemy.sql.elements import BooleanClauseList
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.models.base_model import BaseModel
 

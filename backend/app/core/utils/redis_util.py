@@ -1,11 +1,8 @@
-import json
-from typing import Any, Dict, List, Optional
-from datetime import datetime
-
-from redis.asyncio import Redis
 from sqlalchemy.ext.declarative import DeclarativeMeta
-
-from app.core.connects import redis_client
+from typing import Any, Dict, List, Optional
+from redis.asyncio import Redis
+from datetime import datetime
+import json
 
 
 class RedisUtil:
@@ -18,7 +15,8 @@ class RedisUtil:
     @staticmethod
     async def get_redis() -> Redis:
         """获取Redis客户端实例"""
-        return await redis_client.get_redis()
+        from app.core.connects.redis_client import RedisClient
+        return await RedisClient.get_redis()
     
     @staticmethod
     def _serialize(value: Any) -> str:

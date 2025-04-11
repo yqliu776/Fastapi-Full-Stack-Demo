@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Optional
 from jose import jwt
 
-from app.core.utils.timezone_util import tzu
+from .timezone_util import tzu
 from app.core.settings import settings
 
 

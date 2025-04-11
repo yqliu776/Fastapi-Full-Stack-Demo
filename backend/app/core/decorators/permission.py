@@ -1,7 +1,6 @@
-from functools import wraps
-from typing import List, Optional, Callable
-
 from fastapi import Depends, HTTPException, status
+from typing import List, Optional, Callable
+from functools import wraps
 from jose import jwt
 
 from app.core.settings import settings

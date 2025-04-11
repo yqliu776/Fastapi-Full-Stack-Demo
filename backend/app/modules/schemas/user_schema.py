@@ -1,9 +1,8 @@
+from pydantic import BaseModel, EmailStr, field_validator, Field
 from typing import Optional, List
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, field_validator, Field
-
-from app.modules.schemas.base_schema import BaseSchema
+from .base_schema import BaseSchema
 
 
 class RoleInfo(BaseSchema):

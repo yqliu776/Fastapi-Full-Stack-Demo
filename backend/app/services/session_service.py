@@ -2,8 +2,8 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from uuid import uuid4
 
-from app.core.utils.redis_util import RedisUtil
 from app.core.settings import settings
+from app.core.utils import RedisUtil
 
 
 class SessionService:

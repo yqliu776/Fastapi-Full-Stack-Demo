@@ -4,9 +4,9 @@ from jose import jwt, JWTError
 from typing import Optional
 import time
 
-from app.core.models.response_models import ResponseModel
 from app.modules.schemas import TokenResponse, LoginRequest, UserDetail
 from app.services import AuthService, oauth2_scheme
+from app.core.models import ResponseModel
 from app.core.settings import settings
 
 router = APIRouter(prefix="/auth", tags=["认证"])

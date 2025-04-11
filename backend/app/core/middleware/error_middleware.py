@@ -1,18 +1,17 @@
-from typing import Dict, Any, Coroutine
-import traceback
-import json
-from fastapi import Request, FastAPI, status
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
-from pydantic import ValidationError
-from sqlalchemy.exc import SQLAlchemyError
 from starlette.responses import JSONResponse, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi import Request, FastAPI, status
+from sqlalchemy.exc import SQLAlchemyError
+from typing import Dict, Any, Coroutine
+from pydantic import ValidationError
+import traceback
+import json
 
-from app.core.utils import logger
 from app.core.models import ResponseModel
-from app.core.models.exceptions import AppException
+from app.core.models import AppException
+from app.core.utils import logger
 
 
 class ErrorHandlerMiddleware(BaseHTTPMiddleware):

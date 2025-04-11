@@ -1,9 +1,8 @@
-from datetime import datetime
-
 from sqlalchemy import Column, Integer, String, DateTime, BigInteger
 from sqlalchemy.ext.declarative import declared_attr
+from datetime import datetime
 
-from app.core.connects.database import Base
+from app.core.connects import Base
 
 
 class BaseModel(Base):

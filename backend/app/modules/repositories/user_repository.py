@@ -1,10 +1,9 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
 from typing import Optional, List
 
-from sqlalchemy import select, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.modules.models.rbac_model import SysUser, SysRole
-from app.modules.repositories.base_repository import BaseRepository
+from app.modules.models import SysUser, SysRole
+from .base_repository import BaseRepository
 
 
 class UserRepository(BaseRepository[SysUser]):

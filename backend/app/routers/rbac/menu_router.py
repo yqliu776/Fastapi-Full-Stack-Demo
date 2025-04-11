@@ -1,17 +1,15 @@
+from fastapi import APIRouter, Depends, Query, Path, Body
 from typing import List
 
-from fastapi import APIRouter, Depends, Query, Path, Body
-
-from app.core.decorators import has_permission
-from app.core.models.response_models import ResponseModel
 from app.modules.schemas import (
     MenuCreate, MenuUpdate, MenuResponse, MenuDetail, MenuBatchResponse, MenuTreeNode
 )
+from app.core.decorators import has_permission
+from app.core.models import ResponseModel
 from app.services import RBACService
 
 
 router = APIRouter(prefix="/menus", tags=["菜单管理"])
-
 
 @router.post(
     "",

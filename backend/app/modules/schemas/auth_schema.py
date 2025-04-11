@@ -1,7 +1,6 @@
+from pydantic import BaseModel, field_validator, Field
 from datetime import datetime
 from typing import List, Optional
-
-from pydantic import BaseModel, field_validator, Field
 
 
 class TokenPayload(BaseModel):

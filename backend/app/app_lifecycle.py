@@ -1,14 +1,14 @@
-from contextlib import asynccontextmanager
-from typing import Callable, Awaitable, Optional
-from fastapi import FastAPI, APIRouter
 from fastapi.security import OAuth2PasswordBearer
-from fastapi.middleware.cors import CORSMiddleware
-from app.core.connects import db, redis_client
-from app.core.utils import logger_manager, logger
-from app.core.middleware import LoggingMiddleware
-from app.core.middleware import ErrorHandlerMiddleware
-from app.core.settings import settings
+from typing import Callable, Awaitable, Optional
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, APIRouter
+
 from app.routers import auth_router, role_router, permission_router, menu_router
+from app.core.middleware import LoggingMiddleware, ErrorHandlerMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.utils import logger_manager, logger
+from app.core.connects import db, redis_client
+from app.core.settings import settings
 
 
 class AppLifecycle:

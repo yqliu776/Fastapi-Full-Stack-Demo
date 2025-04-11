@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, BigInteger, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 
-from app.modules.models import BaseModel
+from .base_model import BaseModel
 
 
 class SysUser(BaseModel):
