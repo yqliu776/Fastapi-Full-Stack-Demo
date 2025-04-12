@@ -25,6 +25,7 @@ class LogUtil:
         _initialized (bool): 初始化标志
         archive_thread (threading.Thread): 归档任务线程
         _should_stop (bool): 控制归档线程停止的标志
+        _archive_lock (threading.Lock): 归档操作的互斥锁
     """
     _instance = None
     
@@ -38,11 +39,16 @@ class LogUtil:
         初始化 LogUtil 实例
         """
         # 确保只初始化一次
+        self.schedule_initialized = None
         if hasattr(self, '_initialized'):
             return
         self._initialized = True
         self._should_stop = False
         self.archive_thread = None
+        # 添加归档锁，防止重复归档
+        self._archive_lock = threading.Lock()
+        # 归档日期记录，避免重复归档同一天的日志
+        self._archived_dates = set()
         
         # 获取项目根目录
         current_file_path = os.path.abspath(__file__)
@@ -81,7 +87,7 @@ class LogUtil:
 
         # 添加日志处理
         self.log_handler_id = logger.add(
-            os.path.join(self.daily_log_dir, "{time:HH-mm-ss}.log"),
+            os.path.join(self.daily_log_dir, "{time:HH-mm}.log"),
             format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}",
             rotation=rotation_size,
             retention=retention,
@@ -89,8 +95,10 @@ class LogUtil:
             encoding="utf-8"
         )
 
-        # 添加归档任务
-        self.setup_archive_task()
+        # 添加归档任务 - 仅在初始化时设置一次
+        if not hasattr(self, 'schedule_initialized') or not self.schedule_initialized:
+            self.setup_archive_task()
+            self.schedule_initialized = True
 
     def setup_archive_task(self):
         """
@@ -107,12 +115,70 @@ class LogUtil:
         
         # 设置每天0点执行归档
         schedule.clear()
-        schedule.every().day.at("00:00").do(self.archive_logs)
+        # 将归档任务调整为每天00:01执行
+        schedule.every().day.at("00:01").do(self._prepare_for_new_day_logs)
 
         # 启动调度任务
         self._should_stop = False
         self.archive_thread = threading.Thread(target=self.run_schedule, daemon=True)
         self.archive_thread.start()
+
+    def _prepare_for_new_day_logs(self):
+        """
+        准备新一天的日志记录，并归档前一天的日志。
+        
+        此方法确保在处理旧日志前先设置好新日志文件，避免文件占用冲突。
+        """
+        try:
+            # 获取当前日期和昨天日期
+            now = tzu.get_now()
+            yesterday = now - datetime.timedelta(days=1)
+            today_date = now.strftime("%Y-%m-%d")
+            yesterday_date = yesterday.strftime("%Y-%m-%d")
+            
+            # 如果今天的日期与当前记录的日期相同，说明日志已经更新过
+            # 这是为了防止一天内多次调用此方法
+            if today_date == self.current_date and os.path.exists(os.path.join(self.daily_log_dir, "app.log")):
+                logger.debug(f"当前日志已经是最新日期 {today_date}，跳过日志处理器更新")
+                
+                # 仍然检查是否需要归档昨天的日志
+                if yesterday_date not in self._archived_dates and self.archive_logs(yesterday_date):
+                    logger.info(f"成功归档 {yesterday_date} 的日志")
+                return True
+            
+            logger.info(f"开始准备 {today_date} 的日志文件")
+            
+            # 1. 先移除旧的日志处理器
+            if self.log_handler_id is not None:
+                logger.remove(self.log_handler_id)
+                
+            # 2. 确保使用新的日期
+            self.current_date = today_date
+            self.daily_log_dir = os.path.join(self.base_log_dir, self.current_date)
+            
+            # 3. 确保新日期的目录存在
+            os.makedirs(self.daily_log_dir, exist_ok=True)
+            
+            # 4. 重新添加日志处理器，指向新的日期目录
+            self.log_handler_id = logger.add(
+                os.path.join(self.daily_log_dir, "{time:HH-mm}.log"),
+                format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}",
+                rotation="100 MB",
+                retention="1 day",
+                compression=None,
+                encoding="utf-8"
+            )
+            
+            logger.info("已创建新的日志文件并更新日志处理器")
+            
+            # 5. 在创建新日志处理器后，归档昨天的日志(如果尚未归档)
+            if yesterday_date not in self._archived_dates and self.archive_logs(yesterday_date):
+                logger.info(f"成功归档 {yesterday_date} 的日志")
+            
+            return True
+        except Exception as e:
+            logger.exception(f"准备新日志时发生错误: {str(e)}")
+            return False
 
     def run_schedule(self):
         """运行调度任务的线程函数"""
@@ -137,29 +203,47 @@ class LogUtil:
         Returns:
             bool: 归档操作是否成功
         """
+        # 使用锁确保同一时间只有一个线程执行归档
+        if not self._archive_lock.acquire(blocking=False):
+            logger.info(f"另一个归档操作正在进行中，跳过对 {target_date} 的归档")
+            return False
+            
         try:
             # 如果未指定日期，使用前一天的日期
             if target_date is None:
                 yesterday = tzu.get_now() - datetime.timedelta(days=1)
                 target_date = yesterday.strftime("%Y-%m-%d")
+                
+            # 检查是否已经归档过这个日期
+            if target_date in self._archived_dates:
+                logger.info(f"日期 {target_date} 的日志已归档，跳过")
+                return False
+                
+            # 检查归档文件是否已存在
+            archive_name = f"{target_date}.zip"
+            archive_path = os.path.join(self.archive_dir, archive_name)
+            if os.path.exists(archive_path):
+                logger.info(f"归档文件已存在: {archive_path}，标记为已归档")
+                self._archived_dates.add(target_date)
+                return True
             
             target_log_dir = os.path.join(self.base_log_dir, target_date)
             
             # 确保目标日志目录存在
             if not os.path.exists(target_log_dir):
                 logger.warning(f"归档目标目录不存在: {target_log_dir}")
+                # 即使目录不存在也标记为已尝试归档
+                self._archived_dates.add(target_date)
                 return False
                 
             # 确保目录中有文件需要归档
             if not os.listdir(target_log_dir):
                 logger.warning(f"归档目标目录为空: {target_log_dir}")
+                # 即使目录为空也标记为已尝试归档
+                self._archived_dates.add(target_date)
                 return False
             
             # 创建归档文件
-            archive_name = f"{target_date}.zip"
-            archive_path = os.path.join(self.archive_dir, archive_name)
-            
-            # 执行归档
             logger.info(f"开始归档 {target_date} 的日志...")
             shutil.make_archive(
                 os.path.splitext(archive_path)[0],  # 不包含扩展名的路径
@@ -173,6 +257,9 @@ class LogUtil:
                 
                 # 删除原始日志目录，使用安全的方式
                 self._safe_remove_directory(target_log_dir)
+                
+                # 记录已归档的日期
+                self._archived_dates.add(target_date)
                 return True
             else:
                 logger.error(f"归档文件创建失败: {archive_path}")
@@ -181,6 +268,9 @@ class LogUtil:
         except Exception as e:
             logger.exception(f"日志归档过程出错: {str(e)}")
             return False
+        finally:
+            # 释放锁，允许其他归档操作进行
+            self._archive_lock.release()
 
     @staticmethod
     def _safe_remove_directory(directory_path, max_retries=3, retry_delay=2):
