@@ -33,6 +33,11 @@ const router = createRouter({
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/HomePage.vue') // 临时使用HomePage作为占位
+        },
+        {
+          path: 'roles',
+          name: 'roles',
+          component: () => import('@/views/RoleManagePage.vue')
         }
       ]
     },
