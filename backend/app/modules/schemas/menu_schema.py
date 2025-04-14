@@ -48,7 +48,7 @@ class MenuDetail(MenuResponse):
 
 
 # 解决类型循环引用问题
-MenuDetail.update_forward_refs()
+MenuDetail.model_rebuild()
 
 
 class MenuTreeNode(BaseModel):
@@ -66,7 +66,7 @@ class MenuTreeNode(BaseModel):
 
 
 # 解决类型循环引用问题
-MenuTreeNode.update_forward_refs()
+MenuTreeNode.model_rebuild()
 
 
 class MenuBatchResponse(BaseResponseModel):

@@ -221,11 +221,25 @@ class AuthService:
                 expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
             )
             
+            # 更新用户会话
+            user_data = {
+                "user_id": user.id,
+                "username": user.user_name,
+                "permissions": token_data["permissions"],
+                "roles": [role.role_code for role in user.roles]
+            }
+            session_id = await session_service.create_session(
+                user.id,
+                user_data,
+                expire=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            )
+            
             return TokenResponse(
                 access_token=access_token,
                 refresh_token=new_refresh_token,
                 token_type="bearer",
-                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+                expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                session_id=session_id  # 添加session_id参数
             )
             
         except JWTError:

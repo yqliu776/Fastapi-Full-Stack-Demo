@@ -36,6 +36,15 @@ class ResponseModel(BaseModel):
     model_config = {
         "arbitrary_types_allowed": True
     }
+    
+    def __init__(self, **data):
+        """初始化响应模型
+        
+        自动处理process_time参数，确保即使不传入该参数也不会有IDE警告
+        """
+        if 'process_time' not in data:
+            data['process_time'] = 0.0
+        super().__init__(**data)
 
     @classmethod
     def success(cls, data: Any = None, message: str = "操作成功", process_time: float = 0.0) -> "ResponseModel":

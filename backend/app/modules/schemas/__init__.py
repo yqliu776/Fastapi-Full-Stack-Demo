@@ -24,7 +24,7 @@ __all__ = [
     "BaseSchema", "BaseResponseModel",
     
     # 认证相关模型
-    "TokenPayload", "TokenResponse", "LoginRequest", "PasswordChangeRequest", "TokenData"
+    "TokenPayload", "TokenResponse", "LoginRequest", "PasswordChangeRequest", "TokenData",
     
     # 用户相关模型
     "UserBase", "UserCreate", "UserUpdate", "UserDetail", "UserList",

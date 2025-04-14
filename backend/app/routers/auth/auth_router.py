@@ -132,21 +132,21 @@ async def get_user_info(current_user: UserDetail = Depends(get_current_user)) ->
 
 @router.post("/refresh", response_model=ResponseModel)
 async def refresh_token(
-    refresh_token: str,
+    fresh_token: str,
     auth_service: AuthService = Depends()
 ) -> ResponseModel:
     """
     刷新访问令牌
     
     Args:
-        refresh_token: 刷新令牌
+        fresh_token: 刷新令牌
         auth_service: 认证服务实例
         
     Returns:
         ResponseModel: 包含新访问令牌的响应
     """
     start_time = time.time()
-    token = await auth_service.refresh_token(refresh_token)
+    token = await auth_service.refresh_token(fresh_token)
     process_time = time.time() - start_time
     return ResponseModel.success(
         data=token,

@@ -242,10 +242,18 @@ async def remove_permissions_from_role(
             message="请求参数不一致",
             data=None
         )
+    
+    # 构建审计信息
+    audit_info = {
+        "created_by": operation.operator,
+        "last_updated_by": operation.operator,
+        "last_update_login": operation.operation_login
+    }
         
     result = await rbac_service.remove_permissions_from_role(
         role_id=role_id,
-        permission_ids=operation.permission_ids
+        permission_ids=operation.permission_ids,
+        audit_info=audit_info
     )
     
     return ResponseModel(
@@ -334,10 +342,18 @@ async def remove_menus_from_role(
             message="请求参数不一致",
             data=None
         )
+    
+    # 构建审计信息
+    audit_info = {
+        "created_by": operation.operator,
+        "last_updated_by": operation.operator,
+        "last_update_login": operation.operation_login
+    }
         
     result = await rbac_service.remove_menus_from_role(
         role_id=role_id,
-        menu_ids=operation.menu_ids
+        menu_ids=operation.menu_ids,
+        audit_info=audit_info
     )
     
     return ResponseModel(

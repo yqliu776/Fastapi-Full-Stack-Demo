@@ -112,8 +112,9 @@ class SessionService:
             bool: 删除是否成功
         """
         return await self.redis_util.delete(f"{self.session_prefix}{session_id}")
-    
-    async def get_user_sessions(self, user_id: int) -> list:
+
+    @staticmethod
+    async def get_user_sessions(user_id: int) -> list:
         """获取用户的所有会话
         
         Args:
@@ -128,8 +129,9 @@ class SessionService:
         # 这里只是示例，实际实现可能需要使用 Redis 的 SCAN 命令
         # 或者使用其他数据结构来存储用户会话列表
         return sessions
-    
-    async def invalidate_user_sessions(self, user_id: int) -> bool:
+
+    @staticmethod
+    async def invalidate_user_sessions(user_id: int) -> bool:
         """使用户的所有会话失效
         
         Args:

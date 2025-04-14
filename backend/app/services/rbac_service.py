@@ -256,7 +256,8 @@ class RBACService:
     async def remove_permissions_from_role(
         self, 
         role_id: int, 
-        permission_ids: List[int]
+        permission_ids: List[int],
+        audit_info: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
         从角色移除权限
@@ -264,6 +265,7 @@ class RBACService:
         Args:
             role_id: 角色ID
             permission_ids: 权限ID列表
+            audit_info: 可选的审计信息
             
         Returns:
             移除成功返回True
@@ -327,7 +329,8 @@ class RBACService:
     async def remove_menus_from_role(
         self, 
         role_id: int, 
-        menu_ids: List[int]
+        menu_ids: List[int],
+        audit_info: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
         从角色移除菜单
@@ -335,6 +338,7 @@ class RBACService:
         Args:
             role_id: 角色ID
             menu_ids: 菜单ID列表
+            audit_info: 可选的审计信息
             
         Returns:
             移除成功返回True
