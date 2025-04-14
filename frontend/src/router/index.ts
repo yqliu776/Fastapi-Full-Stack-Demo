@@ -38,6 +38,16 @@ const router = createRouter({
           path: 'roles',
           name: 'roles',
           component: () => import('@/views/RoleManagePage.vue')
+        },
+        {
+          path: 'permissions',
+          name: 'permissions',
+          component: () => import('@/views/PermissionManagePage.vue')
+        },
+        {
+          path: 'menus',
+          name: 'menus',
+          component: () => import('@/views/MenuManagePage.vue')
         }
       ]
     },
