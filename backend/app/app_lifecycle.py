@@ -3,7 +3,7 @@ from typing import Callable, Awaitable, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter
 
-from app.routers import auth_router, role_router, permission_router, menu_router
+from app.routers import auth_router, role_router, permission_router, menu_router, user_router
 from app.core.middleware import LoggingMiddleware, ErrorHandlerMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.utils import logger_manager, logger
@@ -143,6 +143,10 @@ class AppLifecycle:
                     "name": "菜单管理",
                     "description": "菜单管理相关接口",
                 },
+                {
+                    "name": "用户管理",
+                    "description": "用户管理相关接口，包含用户注册、管理员管理用户等功能",
+                },
                 # 可以添加更多标签分组
             ],
             
@@ -233,7 +237,8 @@ class AppLifecycle:
             auth_router,
             role_router,
             permission_router,
-            menu_router
+            menu_router,
+            user_router
         ]
         for router in router_list:
             app.include_router(router)

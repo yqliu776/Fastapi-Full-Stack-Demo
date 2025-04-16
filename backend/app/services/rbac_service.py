@@ -10,7 +10,7 @@ from app.modules.models import SysRole, SysPermission, SysMenu
 from app.core.connects import db
 
 
-class RBACService:
+class RbacService:
     """
     RBAC服务类，提供角色、权限和菜单的业务逻辑实现
     """

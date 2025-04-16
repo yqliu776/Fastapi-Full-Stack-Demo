@@ -6,7 +6,7 @@ from app.modules.schemas import (
 )
 from app.core.decorators import has_permission
 from app.core.models import ResponseModel
-from app.services import RBACService
+from app.services import RbacService
 
 
 router = APIRouter(prefix="/menus", tags=["菜单管理"])
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/menus", tags=["菜单管理"])
 )
 async def create_menu(
     menu_data: MenuCreate,
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     创建菜单
@@ -48,7 +48,7 @@ async def create_menu(
 async def get_menus(
     skip: int = Query(0, description="跳过的记录数"),
     limit: int = Query(100, description="返回的记录数"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     获取菜单列表
@@ -76,7 +76,7 @@ async def get_menus(
     summary="获取菜单树"
 )
 async def get_menu_tree(
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     获取菜单树
@@ -103,7 +103,7 @@ async def get_menu_tree(
 )
 async def get_menus_by_role(
     role_id: int = Path(..., description="角色ID"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     获取角色拥有的菜单
@@ -131,7 +131,7 @@ async def get_menus_by_role(
 )
 async def get_menu(
     menu_id: int = Path(..., description="菜单ID"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     获取菜单详情
@@ -160,7 +160,7 @@ async def get_menu(
 async def update_menu(
     menu_id: int = Path(..., description="菜单ID"),
     menu_data: MenuUpdate = Body(...),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     更新菜单
@@ -189,7 +189,7 @@ async def update_menu(
 )
 async def delete_menu(
     menu_id: int = Path(..., description="菜单ID"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     删除菜单

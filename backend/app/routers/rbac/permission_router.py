@@ -6,7 +6,7 @@ from app.modules.schemas import (
 )
 from app.core.decorators import has_permission
 from app.core.models import ResponseModel
-from app.services import RBACService
+from app.services import RbacService
 
 
 router = APIRouter(prefix="/permissions", tags=["权限管理"])
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/permissions", tags=["权限管理"])
 )
 async def create_permission(
     permission_data: PermissionCreate,
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     创建权限
@@ -50,7 +50,7 @@ async def get_permissions(
     limit: int = Query(100, description="返回的记录数"),
     permission_name: Optional[str] = Query(None, description="权限名称"),
     permission_code: Optional[str] = Query(None, description="权限代码"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     获取权限列表
@@ -81,7 +81,7 @@ async def get_permissions(
 )
 async def get_permissions_by_role(
     role_id: int = Path(..., description="角色ID"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     获取角色拥有的权限
@@ -109,7 +109,7 @@ async def get_permissions_by_role(
 )
 async def get_permission(
     permission_id: int = Path(..., description="权限ID"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     获取权限详情
@@ -138,7 +138,7 @@ async def get_permission(
 async def update_permission(
     permission_id: int = Path(..., description="权限ID"),
     permission_data: PermissionUpdate = Body(...),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     更新权限
@@ -167,7 +167,7 @@ async def update_permission(
 )
 async def delete_permission(
     permission_id: int = Path(..., description="权限ID"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     删除权限

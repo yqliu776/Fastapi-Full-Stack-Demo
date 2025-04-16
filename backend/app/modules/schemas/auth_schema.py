@@ -2,6 +2,8 @@ from pydantic import BaseModel, field_validator, Field
 from datetime import datetime
 from typing import List, Optional
 
+from .base_schema import TimestampMixin
+
 
 class TokenPayload(BaseModel):
     """令牌负载模型"""
@@ -42,9 +44,9 @@ class LoginRequest(BaseModel):
 
 class TokenData(BaseModel):
     """令牌数据模型"""
-    user_id: int = Field(..., description="用户ID")
-    user_name: str = Field(..., description="用户名")
-    permissions: list = Field(..., description="权限列表")
+    user_id: Optional[int] = None
+    user_name: Optional[str] = None
+    permissions: Optional[List[str]] = None
 
 
 class PasswordChangeRequest(BaseModel):
@@ -66,4 +68,23 @@ class PasswordChangeRequest(BaseModel):
     def passwords_match(cls, v, values):
         if "new_password" in values.data and v != values.data["new_password"]:
             raise ValueError("两次输入的密码不一致")
-        return v 
+        return v
+
+
+class RoleInfo(BaseModel):
+    """角色信息简单模型"""
+    role_name: str
+    role_code: str
+
+
+class UserDetail(TimestampMixin):
+    """用户详细信息模型，用于API响应"""
+    id: int
+    user_name: str
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
+    roles: List[RoleInfo] = []
+    
+    model_config = {
+        "from_attributes": True
+    } 

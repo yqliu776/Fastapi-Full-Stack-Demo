@@ -8,7 +8,7 @@ from app.modules.schemas import (
 from app.core.models.response_models import ResponseModel
 from app.core.decorators import has_permission
 from app.routers.auth import get_current_user
-from app.services import RBACService
+from app.services import RbacService
 
 
 router = APIRouter(prefix="/roles", tags=["角色管理"])
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/roles", tags=["角色管理"])
 )
 async def create_role(
     role_data: RoleCreate,
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     创建角色
@@ -50,7 +50,7 @@ async def create_role(
 async def update_role(
     role_id: int = Path(..., description="角色ID"),
     role_data: RoleUpdate = Body(...),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     更新角色
@@ -79,7 +79,7 @@ async def update_role(
 )
 async def delete_role(
     role_id: int = Path(..., description="角色ID"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     删除角色
@@ -107,7 +107,7 @@ async def delete_role(
 )
 async def get_role(
     role_id: int = Path(..., description="角色ID"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     获取角色详情
@@ -138,7 +138,7 @@ async def get_roles(
     limit: int = Query(100, description="返回的记录数"),
     role_name: Optional[str] = Query(None, description="角色名称"),
     role_code: Optional[str] = Query(None, description="角色代码"),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     获取角色列表
@@ -170,7 +170,7 @@ async def get_roles(
 async def assign_permissions_to_role(
     role_id: int = Path(..., description="角色ID"),
     operation: RolePermissionOperation = Body(...),
-    rbac_service: RBACService = Depends(),
+    rbac_service: RbacService = Depends(),
     current_user = Depends(get_current_user)
 ) -> ResponseModel:
     """
@@ -222,7 +222,7 @@ async def assign_permissions_to_role(
 async def remove_permissions_from_role(
     role_id: int = Path(..., description="角色ID"),
     operation: RolePermissionOperation = Body(...),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     移除角色的权限
@@ -272,7 +272,7 @@ async def remove_permissions_from_role(
 async def assign_menus_to_role(
     role_id: int = Path(..., description="角色ID"),
     operation: RoleMenuOperation = Body(...),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     为角色分配菜单
@@ -322,7 +322,7 @@ async def assign_menus_to_role(
 async def remove_menus_from_role(
     role_id: int = Path(..., description="角色ID"),
     operation: RoleMenuOperation = Body(...),
-    rbac_service: RBACService = Depends()
+    rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
     移除角色的菜单
