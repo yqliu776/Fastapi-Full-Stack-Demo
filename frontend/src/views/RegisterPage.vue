@@ -1,46 +1,132 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { useUserStore } from '@/stores/user';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { register } from '@/services/authService';
+
+const router = useRouter();
 
 const username = ref('');
+const email = ref('');
+const phoneNumber = ref('');
 const password = ref('');
-const isLoading = ref(false);
+const confirmPassword = ref('');
 const showPassword = ref(false);
-const successMessage = ref<string | null>(null);
+const isLoading = ref(false);
+const error = ref<string | null>(null);
 
-const userStore = useUserStore();
-const router = useRouter();
-const route = useRoute();
+// 验证用户名只包含字母、数字和下划线
+function validateUsername(value: string): boolean {
+  return /^[a-zA-Z0-9_]+$/.test(value);
+}
 
-onMounted(() => {
-  // 检查URL参数，如果是从注册页面跳转过来，显示成功信息
-  if (route.query.registered === 'true') {
-    successMessage.value = '注册成功，请登录';
-    // 如果URL中有用户名，自动填充到用户名输入框
-    if (route.query.username) {
-      username.value = route.query.username as string;
-    }
+// 简单的邮箱验证
+function validateEmail(value: string): boolean {
+  return /\S+@\S+\.\S+/.test(value);
+}
+
+// 简单的手机号验证（中国大陆手机号格式）
+function validatePhoneNumber(value: string): boolean {
+  return /^1[3-9]\d{9}$/.test(value);
+}
+
+// 密码验证 - 至少6个字符
+function validatePassword(value: string): boolean {
+  return value.length >= 6;
+}
+
+// 验证表单
+function validateForm(): boolean {
+  if (!username.value) {
+    error.value = '用户名不能为空';
+    return false;
   }
-});
+  
+  if (!validateUsername(username.value)) {
+    error.value = '用户名只能包含字母、数字和下划线';
+    return false;
+  }
+  
+  if (!email.value) {
+    error.value = '邮箱不能为空';
+    return false;
+  }
+  
+  if (!validateEmail(email.value)) {
+    error.value = '请输入有效的邮箱地址';
+    return false;
+  }
+  
+  if (!phoneNumber.value) {
+    error.value = '手机号不能为空';
+    return false;
+  }
+  
+  if (!validatePhoneNumber(phoneNumber.value)) {
+    error.value = '请输入有效的手机号码';
+    return false;
+  }
+  
+  if (!password.value) {
+    error.value = '密码不能为空';
+    return false;
+  }
+  
+  if (!validatePassword(password.value)) {
+    error.value = '密码长度至少为6个字符';
+    return false;
+  }
+  
+  if (password.value !== confirmPassword.value) {
+    error.value = '两次输入的密码不一致';
+    return false;
+  }
+  
+  return true;
+}
 
-async function handleLogin() {
-  if (!username.value || !password.value) {
+async function handleRegister() {
+  if (!validateForm()) {
     return;
   }
 
   isLoading.value = true;
-  successMessage.value = null;
-  const success = await userStore.login(username.value, password.value);
-
-  if (success) {
-    router.push('/dashboard');
+  error.value = null;
+  
+  try {
+    const response = await register(
+      username.value, 
+      email.value, 
+      phoneNumber.value, 
+      password.value
+    );
+    
+    if (response.code === 200) {
+      // 注册成功，跳转到登录页
+      router.push({
+        path: '/login',
+        query: { 
+          registered: 'true',
+          username: username.value
+        }
+      });
+    } else {
+      error.value = response.message || '注册失败，请稍后重试';
+    }
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'response' in err) {
+      const apiError = err as { response?: { data?: { message?: string } } };
+      error.value = apiError.response?.data?.message || '注册失败，请稍后重试';
+    } else {
+      error.value = '注册失败，请稍后重试';
+    }
+    console.error('注册出错:', err);
+  } finally {
+    isLoading.value = false;
   }
-  isLoading.value = false;
 }
 
-function clearSuccessMessage() {
-  successMessage.value = null;
+function clearError() {
+  error.value = null;
 }
 </script>
 
@@ -49,42 +135,14 @@ function clearSuccessMessage() {
     <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
       <div>
         <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          系统登录
+          用户注册
         </h2>
         <p class="mt-2 text-center text-sm text-gray-600">
-          请输入您的账号和密码
+          注册一个新账号
         </p>
       </div>
-      <form class="mt-8 space-y-6" @submit.prevent="handleLogin">
-        <div v-if="successMessage" class="bg-green-50 p-4 rounded-md">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-green-800">
-                {{ successMessage }}
-              </h3>
-            </div>
-            <div class="ml-auto pl-3">
-              <div class="-mx-1.5 -my-1.5">
-                <button
-                  type="button"
-                  @click="clearSuccessMessage"
-                  class="inline-flex bg-green-50 rounded-md p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <span class="sr-only">关闭</span>
-                  <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-if="userStore.error" class="bg-red-50 p-4 rounded-md">
+      <form class="mt-8 space-y-6" @submit.prevent="handleRegister">
+        <div v-if="error" class="bg-red-50 p-4 rounded-md">
           <div class="flex">
             <div class="flex-shrink-0">
               <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -93,14 +151,14 @@ function clearSuccessMessage() {
             </div>
             <div class="ml-3">
               <h3 class="text-sm font-medium text-red-800">
-                {{ userStore.error }}
+                {{ error }}
               </h3>
             </div>
             <div class="ml-auto pl-3">
               <div class="-mx-1.5 -my-1.5">
                 <button
                   type="button"
-                  @click="userStore.clearError()"
+                  @click="clearError"
                   class="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 >
                   <span class="sr-only">关闭</span>
@@ -123,7 +181,33 @@ function clearSuccessMessage() {
               autocomplete="username"
               required
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              placeholder="用户名"
+              placeholder="用户名（仅允许字母、数字和下划线）"
+            />
+          </div>
+          <div>
+            <label for="email" class="sr-only">邮箱</label>
+            <input
+              id="email"
+              v-model="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+              placeholder="邮箱"
+            />
+          </div>
+          <div>
+            <label for="phoneNumber" class="sr-only">手机号</label>
+            <input
+              id="phoneNumber"
+              v-model="phoneNumber"
+              name="phoneNumber"
+              type="tel"
+              autocomplete="tel"
+              required
+              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+              placeholder="手机号"
             />
           </div>
           <div class="relative">
@@ -133,10 +217,23 @@ function clearSuccessMessage() {
               v-model="password"
               name="password"
               :type="showPassword ? 'text' : 'password'"
-              autocomplete="current-password"
+              autocomplete="new-password"
+              required
+              class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+              placeholder="密码（至少6个字符）"
+            />
+          </div>
+          <div class="relative">
+            <label for="confirmPassword" class="sr-only">确认密码</label>
+            <input
+              id="confirmPassword"
+              v-model="confirmPassword"
+              name="confirmPassword"
+              :type="showPassword ? 'text' : 'password'"
+              autocomplete="new-password"
               required
               class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              placeholder="密码"
+              placeholder="确认密码"
             />
             <button
               type="button"
@@ -170,21 +267,17 @@ function clearSuccessMessage() {
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             </span>
-            {{ isLoading ? '登录中...' : '登录' }}
+            {{ isLoading ? '注册中...' : '注册' }}
           </button>
         </div>
-        <div class="flex items-center justify-center mt-4">
+        <div class="flex items-center justify-center">
           <div class="text-sm">
-            <router-link to="/register" class="font-medium text-indigo-600 hover:text-indigo-500">
-              还没有账号？点此注册
+            <router-link to="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
+              已有账号？点此登录
             </router-link>
           </div>
         </div>
       </form>
     </div>
   </div>
-</template>
-
-<style scoped>
-/* 登录页面样式 */
-</style> 
+</template> 

@@ -34,7 +34,7 @@ const handleLogout = async () => {
   if (!window.confirm('确定要退出系统吗？')) {
     return;
   }
-  
+
   console.log('开始退出登录');
   isLoggingOut.value = true;
   try {
@@ -89,9 +89,9 @@ onUnmounted(() => {
             </div>
             <nav class="mt-5 flex-1 px-2 bg-gray-800 space-y-1">
               <template v-for="item in navItems" :key="item.name">
-                <RouterLink 
+                <RouterLink
                   v-if="!item.action"
-                  :to="item.path" 
+                  :to="item.path"
                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md"
                   v-slot="{ isActive }"
                 >
@@ -99,22 +99,22 @@ onUnmounted(() => {
                     isActive ? 'text-white bg-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white',
                     'group flex items-center px-2 py-2 text-sm font-medium rounded-md w-full'
                   ]">
-                    <svg 
+                    <svg
                       :class="[
                         isActive ? 'text-gray-300' : 'text-gray-400 group-hover:text-gray-300',
                         'mr-3 flex-shrink-0 h-6 w-6'
-                      ]" 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor" 
+                      ]"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                       aria-hidden="true"
                     >
-                      <path 
-                        stroke-linecap="round" 
-                        stroke-linejoin="round" 
-                        stroke-width="2" 
-                        :d="item.icon" 
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        :d="item.icon"
                       />
                     </svg>
                     {{ item.name }}
@@ -126,7 +126,7 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-    
+
     <!-- 主要内容区域 -->
     <div class="flex flex-col w-0 flex-1 overflow-hidden">
       <!-- 顶部导航栏 -->
@@ -144,12 +144,12 @@ onUnmounted(() => {
             <!-- 用户下拉菜单 -->
             <div class="ml-3 relative">
               <div>
-                <button 
-                  type="button" 
-                  class="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" 
-                  id="user-menu-button" 
+                <button
+                  type="button"
+                  class="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  id="user-menu-button"
                   @click="toggleUserDropdown"
-                  aria-expanded="false" 
+                  aria-expanded="false"
                   aria-haspopup="true"
                 >
                   <span class="sr-only">用户菜单</span>
@@ -159,12 +159,12 @@ onUnmounted(() => {
                   <span class="ml-3 text-gray-700">{{ userStore.userInfo?.user_name || '加载中...' }}</span>
                 </button>
               </div>
-              
-              <div 
-                v-if="userDropdownOpen" 
-                class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50" 
-                role="menu" 
-                aria-orientation="vertical" 
+
+              <div
+                v-if="userDropdownOpen"
+                class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+                role="menu"
+                aria-orientation="vertical"
                 aria-labelledby="user-menu-button"
                 @click.stop
               >
@@ -172,7 +172,7 @@ onUnmounted(() => {
                   当前用户：{{ userStore.userInfo?.user_name }}
                 </div>
                 <div class="py-1">
-                  <RouterLink 
+                  <RouterLink
                     v-for="item in navItems.filter(item => ['个人信息', '设置'].includes(item.name))"
                     :key="item.name"
                     :to="item.path"
@@ -197,7 +197,7 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
-      
+
       <!-- 页面内容 -->
       <main class="flex-1 relative overflow-y-auto focus:outline-none">
         <div class="py-6">
@@ -212,4 +212,4 @@ onUnmounted(() => {
 
 <style scoped>
 /* 仪表盘样式 */
-</style> 
+</style>

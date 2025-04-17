@@ -144,4 +144,18 @@ export function logout() {
     // 即使发生错误，也尝试重定向到登录页
     window.location.href = '/login';
   }
+}
+
+export async function register(user_name: string, email: string, phone_number: string, password: string) {
+  try {
+    const response = await apiClient.post('/users/register', {
+      user_name,
+      email,
+      phone_number,
+      password
+    });
+    return response.data;
+  } catch (error) {
+    return Promise.reject(error);
+  }
 } 
