@@ -16,7 +16,7 @@ from .role_schema import (
 )
 from .user_schema import (
     UserBase, UserCreate, UserUpdate, UserResponse, UserResponseWithRoles,
-    UserAdminCreate, RoleInfo, UserFilter, PermissionInfo, MenuInfo
+    UserAdminCreate, RoleInfo, UserFilter, PermissionInfo, MenuInfo, UserRoleAssign, UserRoleRemove
 )
 
 __all__ = [

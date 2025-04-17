@@ -132,3 +132,31 @@ class UserFilter(PaginationParams):
     user_name: Optional[str] = None
     email: Optional[str] = None
     phone_number: Optional[str] = None 
+
+
+class UserRoleAssign(BaseModel):
+    """用户角色分配请求模型"""
+    
+    role_codes: List[str] = Field(..., min_items=1, description="角色代码列表")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "role_codes": ["admin", "user"]
+            }
+        }
+    } 
+
+
+class UserRoleRemove(BaseModel):
+    """用户角色删除请求模型"""
+    
+    role_codes: List[str] = Field(..., min_items=1, description="要删除的角色代码列表")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "role_codes": ["admin"]
+            }
+        }
+    } 

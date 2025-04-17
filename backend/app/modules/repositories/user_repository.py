@@ -237,15 +237,34 @@ class UserRepository(BaseRepository[SysUser]):
         self.db.add(user)
         await self.db.flush()
         
-        # 创建用户-角色关联
-        user_role = SysUserRole(
-            user_id=user.id,
-            role_id=role_id,
-            created_by=created_by,
-            last_updated_by=created_by,
-            last_update_login=created_by
+        # 检查是否存在已被软删除的相同用户-角色关联
+        existing_query = select(SysUserRole).where(
+            and_(
+                SysUserRole.user_id == user.id,
+                SysUserRole.role_id == role_id,
+                SysUserRole.delete_flag == 'Y'
+            )
         )
-        self.db.add(user_role)
+        existing_result = await self.db.execute(existing_query)
+        existing_user_role = existing_result.scalar_one_or_none()
+        
+        if existing_user_role:
+            # 如果存在被软删除的记录，则恢复该记录
+            existing_user_role.delete_flag = 'N'
+            existing_user_role.last_updated_by = created_by
+            existing_user_role.last_update_login = created_by
+            existing_user_role.last_update_date = func.now()
+        else:
+            # 如果不存在，则创建新记录
+            user_role = SysUserRole(
+                user_id=user.id,
+                role_id=role_id,
+                created_by=created_by,
+                last_updated_by=created_by,
+                last_update_login=created_by
+            )
+            self.db.add(user_role)
+        
         await self.db.commit()
         await self.db.refresh(user)
         
@@ -294,14 +313,33 @@ class UserRepository(BaseRepository[SysUser]):
         
         # 创建用户-角色关联
         for role_id, _ in roles:
-            user_role = SysUserRole(
-                user_id=user.id,
-                role_id=role_id,
-                created_by=created_by,
-                last_updated_by=created_by,
-                last_update_login=created_by
+            # 检查是否存在已被软删除的相同用户-角色关联
+            existing_query = select(SysUserRole).where(
+                and_(
+                    SysUserRole.user_id == user.id,
+                    SysUserRole.role_id == role_id,
+                    SysUserRole.delete_flag == 'Y'
+                )
             )
-            self.db.add(user_role)
+            existing_result = await self.db.execute(existing_query)
+            existing_user_role = existing_result.scalar_one_or_none()
+            
+            if existing_user_role:
+                # 如果存在被软删除的记录，则恢复该记录
+                existing_user_role.delete_flag = 'N'
+                existing_user_role.last_updated_by = created_by
+                existing_user_role.last_update_login = created_by
+                existing_user_role.last_update_date = func.now()
+            else:
+                # 如果不存在，则创建新记录
+                user_role = SysUserRole(
+                    user_id=user.id,
+                    role_id=role_id,
+                    created_by=created_by,
+                    last_updated_by=created_by,
+                    last_update_login=created_by
+                )
+                self.db.add(user_role)
         
         await self.db.commit()
         await self.db.refresh(user)
@@ -363,14 +401,33 @@ class UserRepository(BaseRepository[SysUser]):
             
             # 创建新的用户角色关联
             for role_id in role_ids:
-                user_role = SysUserRole(
-                    user_id=user_id,
-                    role_id=role_id,
-                    created_by=updated_by,
-                    last_updated_by=updated_by,
-                    last_update_login=updated_by
+                # 检查是否存在已被软删除的相同用户-角色关联
+                existing_query = select(SysUserRole).where(
+                    and_(
+                        SysUserRole.user_id == user_id,
+                        SysUserRole.role_id == role_id,
+                        SysUserRole.delete_flag == 'Y'
+                    )
                 )
-                self.db.add(user_role)
+                existing_result = await self.db.execute(existing_query)
+                existing_user_role = existing_result.scalar_one_or_none()
+                
+                if existing_user_role:
+                    # 如果存在被软删除的记录，则恢复该记录
+                    existing_user_role.delete_flag = 'N'
+                    existing_user_role.last_updated_by = updated_by
+                    existing_user_role.last_update_login = updated_by
+                    existing_user_role.last_update_date = func.now()
+                else:
+                    # 如果不存在，则创建新记录
+                    user_role = SysUserRole(
+                        user_id=user_id,
+                        role_id=role_id,
+                        created_by=updated_by,
+                        last_updated_by=updated_by,
+                        last_update_login=updated_by
+                    )
+                    self.db.add(user_role)
         
         await self.db.commit()
         return await self.get(user_id)
@@ -406,4 +463,56 @@ class UserRepository(BaseRepository[SysUser]):
         
         user = await self.update(id_=user_id, obj_in=update_data)
         
-        return new_password, user 
+        return new_password, user
+    
+    async def remove_user_roles(
+        self,
+        user_id: int,
+        role_codes: List[str],
+        updated_by: str
+    ) -> SysUser:
+        """
+        删除用户的指定角色
+        
+        Args:
+            user_id: 用户ID
+            role_codes: 要删除的角色代码列表
+            updated_by: 更新人
+            
+        Returns:
+            更新后的用户实例
+        """
+        # 查询角色ID
+        role_query = select(SysRole.id).where(
+            and_(
+                SysRole.role_code.in_(role_codes),
+                SysRole.delete_flag == 'N'
+            )
+        )
+        role_result = await self.db.execute(role_query)
+        role_ids = [row[0] for row in role_result.fetchall()]
+        
+        if not role_ids:
+            # 如果没有找到对应的角色ID，直接返回用户
+            return await self.get(user_id)
+        
+        # 查询当前用户拥有的角色
+        query = select(SysUserRole).where(
+            and_(
+                SysUserRole.user_id == user_id,
+                SysUserRole.role_id.in_(role_ids),
+                SysUserRole.delete_flag == 'N'
+            )
+        )
+        result = await self.db.execute(query)
+        user_roles = result.scalars().all()
+        
+        # 软删除指定的角色关联
+        for user_role in user_roles:
+            user_role.delete_flag = 'Y'
+            user_role.last_updated_by = updated_by
+            user_role.last_update_login = updated_by
+            user_role.last_update_date = func.now()
+        
+        await self.db.commit()
+        return await self.get(user_id) 

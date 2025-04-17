@@ -5,7 +5,7 @@ import time
 
 from app.modules.schemas import (
     UserCreate, UserUpdate, UserResponse, UserResponseWithRoles, 
-    PaginationParams, UserAdminCreate
+    PaginationParams, UserAdminCreate, UserRoleAssign, UserRoleRemove
 )
 
 from app.services import AuthService, RbacService, oauth2_scheme
@@ -17,6 +17,41 @@ from app.core.connects import db
 
 # 创建路由
 user_router = APIRouter(prefix="/users", tags=["用户管理"])
+
+# 根路径用户列表接口
+@user_router.get("/", response_model=ResponseModel)
+@permission_required("user:list")
+async def get_users(
+    pagination: PaginationParams = Depends(),
+    username: Optional[str] = Query(None, description="用户名过滤"),
+    email: Optional[str] = Query(None, description="邮箱过滤"),
+    phone: Optional[str] = Query(None, description="手机号过滤"),
+    current_user = Depends(get_current_user),
+    auth_service: AuthService = Depends()
+) -> ResponseModel:
+    """
+    获取用户列表接口(根路径)
+    
+    Args:
+        pagination: 分页参数
+        username: 用户名过滤条件
+        email: 邮箱过滤条件
+        phone: 手机号过滤条件
+        current_user: 当前登录用户
+        auth_service: 认证服务实例
+    
+    Returns:
+        ResponseModel: 包含用户列表的响应
+    """
+    # 直接调用/list接口的实现
+    return await get_user_list(
+        pagination=pagination,
+        username=username,
+        email=email,
+        phone=phone,
+        current_user=current_user,
+        auth_service=auth_service
+    )
 
 # 用户注册接口
 @user_router.post("/register", response_model=ResponseModel)
@@ -308,9 +343,8 @@ async def delete_user(
         )
     
     # 删除用户(软删除)
-    await auth_service.user_repository.remove(
-        id=user_id,
-        updated_by=current_user.user_name
+    await auth_service.user_repository.delete(
+        id_=user_id
     )
     
     process_time = time.time() - start_time
@@ -359,5 +393,124 @@ async def reset_user_password(
     return ResponseModel.success(
         data={"new_password": new_password},
         message="密码重置成功",
+        process_time=process_time
+    )
+
+# 分配用户角色接口
+@user_router.post("/assign-roles/{user_id}", response_model=ResponseModel)
+@permission_required("user:assign-roles")
+async def assign_user_roles(
+    user_id: int,
+    role_data: UserRoleAssign,
+    current_user = Depends(get_current_user),
+    auth_service: AuthService = Depends(),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    分配用户角色接口
+    
+    Args:
+        user_id: 用户ID
+        role_data: 角色分配数据
+        current_user: 当前登录用户
+        auth_service: 认证服务实例
+        rbac_service: RBAC服务实例
+    
+    Returns:
+        ResponseModel: 包含更新后的用户信息的响应
+    """
+    start_time = time.time()
+    
+    # 检查用户是否存在
+    user = await auth_service.user_repository.get(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    # 检查所有角色是否存在
+    for role_code in role_data.role_codes:
+        if not await rbac_service.role_repository.check_role_code_exists(role_code):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"角色代码不存在: {role_code}"
+            )
+    
+    # 创建用户更新数据对象
+    user_data = UserUpdate(role_codes=role_data.role_codes)
+    
+    # 更新用户角色
+    updated_user = await auth_service.user_repository.update_user_with_roles(
+        user_id=user_id,
+        user_data=user_data,
+        updated_by=current_user.user_name
+    )
+    
+    # 获取更新后的用户详情
+    user_with_roles = await auth_service.user_repository.get_user_with_roles(user_id)
+    
+    process_time = time.time() - start_time
+    return ResponseModel.success(
+        data=UserResponseWithRoles.from_orm(user_with_roles),
+        message="用户角色分配成功",
+        process_time=process_time
+    )
+
+# 删除用户角色接口
+@user_router.post("/remove-roles/{user_id}", response_model=ResponseModel)
+@permission_required("user:remove-roles")
+async def remove_user_roles(
+    user_id: int,
+    role_data: UserRoleRemove,
+    current_user = Depends(get_current_user),
+    auth_service: AuthService = Depends(),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    删除用户角色接口
+    
+    Args:
+        user_id: 用户ID
+        role_data: 角色删除数据
+        current_user: 当前登录用户
+        auth_service: 认证服务实例
+        rbac_service: RBAC服务实例
+    
+    Returns:
+        ResponseModel: 包含更新后的用户信息的响应
+    """
+    start_time = time.time()
+    
+    # 检查用户是否存在
+    user = await auth_service.user_repository.get(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    # 检查所有角色是否存在
+    for role_code in role_data.role_codes:
+        if not await rbac_service.role_repository.check_role_code_exists(role_code):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"角色代码不存在: {role_code}"
+            )
+    
+    # 删除用户指定角色
+    await auth_service.user_repository.remove_user_roles(
+        user_id=user_id,
+        role_codes=role_data.role_codes,
+        updated_by=current_user.user_name
+    )
+    
+    # 获取更新后的用户详情
+    user_with_roles = await auth_service.user_repository.get_user_with_roles(user_id)
+    
+    process_time = time.time() - start_time
+    return ResponseModel.success(
+        data=UserResponseWithRoles.from_orm(user_with_roles),
+        message="用户角色删除成功",
         process_time=process_time
     )
