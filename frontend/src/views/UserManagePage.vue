@@ -4,6 +4,8 @@ import { userService } from '@/services/userService';
 import type { User, UserCreate, UserUpdate } from '@/services/userService';
 import UserRoleSelector from '@/components/UserRoleSelector.vue';
 import { useUserStore } from '@/stores/user';
+import { roleService } from '@/services/roleService';
+import type { Role } from '@/services/roleService';
 
 // 获取用户信息
 const userStore = useUserStore();
@@ -38,12 +40,13 @@ const notification = reactive({
 const userForm = reactive<UserCreate & UserUpdate>({
   user_name: '',
   email: '',
-  phone: '',
+  phone_number: '',
   password: '',
   delete_flag: 'N',
   created_by: '-1',
   last_updated_by: '-1',
-  last_update_login: '-1'
+  last_update_login: '-1',
+  role_codes: ['ROLE_USER'] // 默认添加普通用户角色
 });
 
 // 密码表单
@@ -59,6 +62,40 @@ const statusOptions = [
   { value: 'N', label: '启用' },
   { value: 'Y', label: '禁用' }
 ];
+
+// 角色数据
+const allRoles = ref<Role[]>([]);
+const selectedRoleCodes = ref<string[]>(['ROLE_USER']);
+
+// 获取所有角色
+const loadAllRoles = async () => {
+  try {
+    const response = await roleService.getRoles({ limit: 500 });
+    if (response.code === 200) {
+      allRoles.value = response.data.items;
+    } else {
+      console.error('加载角色列表失败:', response.message);
+      showNotification('加载角色列表失败: ' + response.message, 'error');
+    }
+  } catch (error) {
+    console.error('加载角色列表出错:', error);
+    showNotification('加载角色列表出错', 'error');
+  }
+};
+
+// 处理角色选择变更
+const handleRoleChange = (event: Event, roleCode: string) => {
+  const target = event.target as HTMLInputElement;
+  if (target.checked) {
+    if (!selectedRoleCodes.value.includes(roleCode)) {
+      selectedRoleCodes.value.push(roleCode);
+    }
+  } else {
+    selectedRoleCodes.value = selectedRoleCodes.value.filter(code => code !== roleCode);
+  }
+  // 更新userForm的role_codes
+  userForm.role_codes = [...selectedRoleCodes.value];
+};
 
 // 显示通知
 const showNotification = (message: string, type: 'success' | 'error' | 'warning') => {
@@ -119,12 +156,13 @@ const openCreateModal = () => {
   
   userForm.user_name = '';
   userForm.email = '';
-  userForm.phone = '';
+  userForm.phone_number = '';
   userForm.password = '';
   userForm.delete_flag = 'N';
   userForm.created_by = userId;
   userForm.last_updated_by = userId;
   userForm.last_update_login = userId;
+  userForm.role_codes = ['ROLE_USER']; // 重置为默认角色
   
   showCreateModal.value = true;
 };
@@ -134,6 +172,11 @@ const createUser = async () => {
   if (!userForm.password) {
     showNotification('请输入密码', 'error');
     return;
+  }
+
+  // 确保至少有一个角色
+  if (userForm.role_codes.length === 0) {
+    userForm.role_codes = ['ROLE_USER']; // 默认添加用户角色
   }
   
   try {
@@ -186,7 +229,7 @@ const openEditModal = (user: User) => {
   currentUser.value = user;
   userForm.user_name = user.user_name;
   userForm.email = user.email;
-  userForm.phone = user.phone || '';
+  userForm.phone_number = user.phone_number || '';
   userForm.delete_flag = user.delete_flag;
   userForm.last_updated_by = userId;
   userForm.last_update_login = userId;
@@ -314,6 +357,7 @@ const getUserStatusClass = (deleteFlag: string) => {
 // 初始化
 onMounted(() => {
   loadUsers();
+  loadAllRoles();
 });
 </script>
 
@@ -438,7 +482,7 @@ onMounted(() => {
           <tr v-for="user in users" :key="user.id" class="hover:bg-gray-50 transition-colors">
             <td class="px-6 py-4 whitespace-nowrap">{{ user.user_name }}</td>
             <td class="px-6 py-4 whitespace-nowrap">{{ user.email }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">{{ user.phone || '-' }}</td>
+            <td class="px-6 py-4 whitespace-nowrap">{{ user.phone_number || '-' }}</td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getUserStatusClass(user.delete_flag)">
                 {{ getUserStatusText(user.delete_flag) }}
@@ -532,7 +576,7 @@ onMounted(() => {
               <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">电话</label>
                 <input 
-                  v-model="userForm.phone"
+                  v-model="userForm.phone_number"
                   type="text" 
                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   placeholder="请输入电话"
@@ -557,6 +601,38 @@ onMounted(() => {
                     {{ option.label }}
                   </option>
                 </select>
+              </div>
+              
+              <!-- 角色选择 -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">用户角色 <span class="text-red-500">*</span></label>
+                <div class="bg-gray-50 p-3 border rounded-md max-h-40 overflow-y-auto">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div 
+                      v-for="role in allRoles" 
+                      :key="role.id" 
+                      class="flex items-center p-2 border rounded hover:bg-gray-100 cursor-pointer"
+                      :class="{ 'bg-blue-50 border-blue-300': selectedRoleCodes.includes(role.role_code) }"
+                      @click="handleRoleChange($event, role.role_code)"
+                    >
+                      <input 
+                        type="checkbox" 
+                        :checked="selectedRoleCodes.includes(role.role_code)" 
+                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        @click.stop
+                        @change="handleRoleChange($event, role.role_code)"
+                      />
+                      <label class="ml-2 block text-sm text-gray-900 cursor-pointer">
+                        <span class="font-medium">{{ role.role_name }}</span>
+                        <span class="text-xs text-gray-500 block">{{ role.role_code }}</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div v-if="allRoles.length === 0" class="text-center text-gray-500 py-2">
+                    暂无可用角色
+                  </div>
+                </div>
+                <p class="mt-1 text-xs text-gray-500">至少需要选择一个角色，默认为普通用户(ROLE_USER)</p>
               </div>
             </div>
           </div>
@@ -609,7 +685,7 @@ onMounted(() => {
               <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">电话</label>
                 <input 
-                  v-model="userForm.phone"
+                  v-model="userForm.phone_number"
                   type="text" 
                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   placeholder="请输入电话"
@@ -708,6 +784,7 @@ onMounted(() => {
                 v-if="currentUser"
                 :userId="currentUser.id"
                 :username="currentUser.user_name"
+                mode="edit"
                 @update="handleUserUpdate"
               />
             </div>

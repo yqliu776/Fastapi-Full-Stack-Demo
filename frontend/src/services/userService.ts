@@ -56,7 +56,7 @@ export interface User {
   id: number;
   user_name: string;
   email: string;
-  phone: string;
+  phone_number: string;  // 从phone改为phone_number匹配后端返回字段
   delete_flag: string; // 删除标识，Y/N，Y表示已删除/禁用，N表示正常/启用
   creation_date: string;
   last_update_date: string;
@@ -66,18 +66,19 @@ export interface User {
 export interface UserCreate {
   user_name: string;
   email: string;
-  phone: string;
+  phone_number: string;
   password: string;
   delete_flag: string;
   created_by: string;
   last_updated_by: string;
   last_update_login: string;
+  role_codes: string[]; // 用户角色代码列表，如 ["ROLE_USER"]
 }
 
 export interface UserUpdate {
   user_name?: string;
   email?: string;
-  phone?: string;
+  phone_number?: string;
   delete_flag?: string;
   last_updated_by: string;
   last_update_login: string;
@@ -88,6 +89,20 @@ export interface UserRoleOperation {
   operator: string;
   operation_login: string;
   user_id: number;
+}
+
+// 角色分配请求数据定义
+export interface UserRoleAssign {
+  role_codes: string[];
+  operator?: string;
+  operation_login?: string;
+}
+
+// 角色移除请求数据定义
+export interface UserRoleRemove {
+  role_codes: string[];
+  operator?: string;
+  operation_login?: string;
 }
 
 export interface UserPasswordUpdate {
@@ -172,7 +187,7 @@ export const userService = {
   // 修改用户密码
   async updateUserPassword(userId: number, passwordData: UserPasswordUpdate) {
     try {
-      const response = await apiClient.put<SingleResponse<OperationResponse>>(`/users/reset-password/${userId}/password`, passwordData);
+      const response = await apiClient.post<SingleResponse<OperationResponse>>(`/users/reset-password/${userId}`, passwordData);
       return response.data;
     } catch (error) {
       return Promise.reject(error);
@@ -180,9 +195,9 @@ export const userService = {
   },
 
   // 为用户分配角色
-  async assignRolesToUser(userId: number, operation: UserRoleOperation) {
+  async assignRolesToUser(userId: number, roleData: UserRoleAssign) {
     try {
-      const response = await apiClient.post<SingleResponse<OperationResponse>>(`/users/${userId}/roles`, operation);
+      const response = await apiClient.post<SingleResponse<OperationResponse>>(`/users/assign-roles/${userId}`, roleData);
       return response.data;
     } catch (error) {
       return Promise.reject(error);
@@ -190,11 +205,9 @@ export const userService = {
   },
 
   // 移除用户的角色
-  async removeRolesFromUser(userId: number, operation: UserRoleOperation) {
+  async removeRolesFromUser(userId: number, roleData: UserRoleRemove) {
     try {
-      const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/users/${userId}/roles`, {
-        data: operation
-      });
+      const response = await apiClient.post<SingleResponse<OperationResponse>>(`/users/remove-roles/${userId}`, roleData);
       return response.data;
     } catch (error) {
       return Promise.reject(error);
