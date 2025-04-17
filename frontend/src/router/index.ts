@@ -48,6 +48,11 @@ const router = createRouter({
           path: 'menus',
           name: 'menus',
           component: () => import('@/views/MenuManagePage.vue')
+        },
+        {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/views/UserManagePage.vue')
         }
       ]
     },

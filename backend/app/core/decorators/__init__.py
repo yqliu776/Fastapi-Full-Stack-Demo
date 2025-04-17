@@ -1,9 +1,8 @@
-from .permission import has_permission, require_permission, permission_required
+from .permission import has_permission, permission_required
 from .response_decorators import response_wrapper
 
 __all__ = [
-    "response_wrapper", 
-    "require_permission", 
+    "response_wrapper",
     "has_permission", 
     "permission_required"
 ]

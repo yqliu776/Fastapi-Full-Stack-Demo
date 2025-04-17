@@ -123,16 +123,16 @@
                     "认证"
                 ],
                 "summary": "Refresh Token",
-                "description": "刷新访问令牌\n\nArgs:\n    refresh_token: 刷新令牌\n    auth_service: 认证服务实例\n    \nReturns:\n    ResponseModel: 包含新访问令牌的响应",
+                "description": "刷新访问令牌\n\nArgs:\n    fresh_token: 刷新令牌\n    auth_service: 认证服务实例\n    \nReturns:\n    ResponseModel: 包含新访问令牌的响应",
                 "operationId": "refresh_token_auth_refresh_post",
                 "parameters": [
                     {
-                        "name": "refresh_token",
+                        "name": "fresh_token",
                         "in": "query",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "title": "Refresh Token"
+                            "title": "Fresh Token"
                         }
                     }
                 ],
@@ -1386,6 +1386,413 @@
                     }
                 }
             }
+        },
+        "/users/register": {
+            "post": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "Register User",
+                "description": "用户注册接口\n\nArgs:\n    user_data: 用户注册信息\n    auth_service: 认证服务实例\n\nReturns:\n    ResponseModel: 包含用户基本信息的响应",
+                "operationId": "register_user_users_register_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserCreate"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/admin/create": {
+            "post": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "Admin Create User",
+                "description": "管理员创建用户接口\n\nArgs:\n    user_data: 用户创建信息(包含角色)\n    current_user: 当前登录用户\n    auth_service: 认证服务实例\n    rbac_service: RBAC服务实例\n\nReturns:\n    ResponseModel: 包含用户详细信息的响应",
+                "operationId": "admin_create_user_users_admin_create_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserAdminCreate"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ]
+            }
+        },
+        "/users/list": {
+            "get": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "Get User List",
+                "description": "获取用户列表接口\n\nArgs:\n    pagination: 分页参数\n    username: 用户名过滤条件\n    email: 邮箱过滤条件\n    phone: 手机号过滤条件\n    current_user: 当前登录用户\n    auth_service: 认证服务实例\n\nReturns:\n    ResponseModel: 包含用户列表的响应",
+                "operationId": "get_user_list_users_list_get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "用户名过滤",
+                            "title": "Username"
+                        },
+                        "description": "用户名过滤"
+                    },
+                    {
+                        "name": "email",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "邮箱过滤",
+                            "title": "Email"
+                        },
+                        "description": "邮箱过滤"
+                    },
+                    {
+                        "name": "phone",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "手机号过滤",
+                            "title": "Phone"
+                        },
+                        "description": "手机号过滤"
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1,
+                            "title": "Page"
+                        }
+                    },
+                    {
+                        "name": "size",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "default": 10,
+                            "title": "Size"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/detail/{user_id}": {
+            "get": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "Get User Detail",
+                "description": "获取用户详情接口\n\nArgs:\n    user_id: 用户ID\n    current_user: 当前登录用户\n    auth_service: 认证服务实例\n\nReturns:\n    ResponseModel: 包含用户详细信息的响应",
+                "operationId": "get_user_detail_users_detail__user_id__get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "User Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/update/{user_id}": {
+            "put": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "Update User",
+                "description": "更新用户信息接口\n\nArgs:\n    user_id: 用户ID\n    user_data: 用户更新信息\n    current_user: 当前登录用户\n    auth_service: 认证服务实例\n    rbac_service: RBAC服务实例\n\nReturns:\n    ResponseModel: 包含更新后的用户信息的响应",
+                "operationId": "update_user_users_update__user_id__put",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "User Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/delete/{user_id}": {
+            "delete": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "Delete User",
+                "description": "删除用户接口\n\nArgs:\n    user_id: 用户ID\n    current_user: 当前登录用户\n    auth_service: 认证服务实例\n\nReturns:\n    ResponseModel: 删除结果响应",
+                "operationId": "delete_user_users_delete__user_id__delete",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "User Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/reset-password/{user_id}": {
+            "post": {
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "Reset User Password",
+                "description": "重置用户密码接口\n\nArgs:\n    user_id: 用户ID\n    current_user: 当前登录用户\n    auth_service: 认证服务实例\n\nReturns:\n    ResponseModel: 包含重置后的密码的响应",
+                "operationId": "reset_user_password_users_reset_password__user_id__post",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "User Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -1881,6 +2288,169 @@
                 "title": "RoleUpdate",
                 "description": "角色更新模型"
             },
+            "UserAdminCreate": {
+                "properties": {
+                    "user_name": {
+                        "type": "string",
+                        "maxLength": 50,
+                        "minLength": 3,
+                        "title": "User Name",
+                        "description": "用户名"
+                    },
+                    "email": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Email",
+                        "description": "电子邮箱"
+                    },
+                    "phone_number": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Phone Number",
+                        "description": "手机号码"
+                    },
+                    "password": {
+                        "type": "string",
+                        "minLength": 6,
+                        "title": "Password",
+                        "description": "用户密码"
+                    },
+                    "role_codes": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "minItems": 1,
+                        "title": "Role Codes",
+                        "description": "角色代码列表"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "user_name",
+                    "password",
+                    "role_codes"
+                ],
+                "title": "UserAdminCreate",
+                "description": "管理员创建用户模型（包含角色指定）"
+            },
+            "UserCreate": {
+                "properties": {
+                    "user_name": {
+                        "type": "string",
+                        "maxLength": 50,
+                        "minLength": 3,
+                        "title": "User Name",
+                        "description": "用户名"
+                    },
+                    "email": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Email",
+                        "description": "电子邮箱"
+                    },
+                    "phone_number": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Phone Number",
+                        "description": "手机号码"
+                    },
+                    "password": {
+                        "type": "string",
+                        "minLength": 6,
+                        "title": "Password",
+                        "description": "用户密码"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "user_name",
+                    "password"
+                ],
+                "title": "UserCreate",
+                "description": "用户创建模型（用于用户注册）"
+            },
+            "UserUpdate": {
+                "properties": {
+                    "email": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Email"
+                    },
+                    "phone_number": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Phone Number"
+                    },
+                    "password": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Password"
+                    },
+                    "role_codes": {
+                        "anyOf": [
+                            {
+                                "items": {
+                                    "type": "string"
+                                },
+                                "type": "array"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Role Codes"
+                    }
+                },
+                "type": "object",
+                "title": "UserUpdate",
+                "description": "用户更新模型"
+            },
             "ValidationError": {
                 "properties": {
                     "loc": {
@@ -1943,6 +2513,10 @@
         {
             "name": "菜单管理",
             "description": "菜单管理相关接口"
+        },
+        {
+            "name": "用户管理",
+            "description": "用户管理相关接口，包含用户注册、管理员管理用户等功能"
         }
     ],
     "security": [
