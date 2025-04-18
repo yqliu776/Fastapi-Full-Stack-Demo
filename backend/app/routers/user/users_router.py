@@ -9,7 +9,7 @@ from app.modules.schemas import (
 )
 
 from app.services import AuthService, RbacService, oauth2_scheme
-from app.core.decorators import permission_required
+from app.core.decorators import has_permission
 from app.routers.auth import get_current_user
 from app.core.models import ResponseModel
 from app.modules.models import SysUser
@@ -19,8 +19,12 @@ from app.core.connects import db
 user_router = APIRouter(prefix="/users", tags=["用户管理"])
 
 # 根路径用户列表接口
-@user_router.get("/", response_model=ResponseModel)
-@permission_required("user:list")
+@user_router.get(
+    "/", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="获取用户列表"
+)
 async def get_users(
     pagination: PaginationParams = Depends(),
     username: Optional[str] = Query(None, description="用户名过滤"),
@@ -99,8 +103,12 @@ async def register_user(
     )
 
 # 管理员创建用户接口
-@user_router.post("/admin/create", response_model=ResponseModel)
-@permission_required("user:create")
+@user_router.post(
+    "/admin/create", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="管理员创建用户"
+)
 async def admin_create_user(
     user_data: UserAdminCreate,
     current_user = Depends(get_current_user),
@@ -154,8 +162,12 @@ async def admin_create_user(
     )
 
 # 获取用户列表接口
-@user_router.get("/list", response_model=ResponseModel)
-@permission_required("user:list")
+@user_router.get(
+    "/list", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="获取用户列表"
+)
 async def get_user_list(
     pagination: PaginationParams = Depends(),
     username: Optional[str] = Query(None, description="用户名过滤"),
@@ -212,8 +224,12 @@ async def get_user_list(
     )
 
 # 获取用户详情接口
-@user_router.get("/detail/{user_id}", response_model=ResponseModel)
-@permission_required("user:detail")
+@user_router.get(
+    "/detail/{user_id}", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="获取用户详情"
+)
 async def get_user_detail(
     user_id: int,
     current_user = Depends(get_current_user),
@@ -248,8 +264,12 @@ async def get_user_detail(
     )
 
 # 更新用户信息接口
-@user_router.put("/update/{user_id}", response_model=ResponseModel)
-@permission_required("user:update")
+@user_router.put(
+    "/update/{user_id}", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="更新用户信息"
+)
 async def update_user(
     user_id: int,
     user_data: UserUpdate,
@@ -307,8 +327,12 @@ async def update_user(
     )
 
 # 删除用户接口
-@user_router.delete("/delete/{user_id}", response_model=ResponseModel)
-@permission_required("user:delete")
+@user_router.delete(
+    "/delete/{user_id}", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="删除用户"
+)
 async def delete_user(
     user_id: int,
     current_user = Depends(get_current_user),
@@ -355,8 +379,12 @@ async def delete_user(
     )
 
 # 重置用户密码接口
-@user_router.post("/reset-password/{user_id}", response_model=ResponseModel)
-@permission_required("user:reset-password")
+@user_router.post(
+    "/reset-password/{user_id}", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="重置用户密码"
+)
 async def reset_user_password(
     user_id: int,
     current_user = Depends(get_current_user),
@@ -397,8 +425,12 @@ async def reset_user_password(
     )
 
 # 分配用户角色接口
-@user_router.post("/assign-roles/{user_id}", response_model=ResponseModel)
-@permission_required("user:assign-roles")
+@user_router.post(
+    "/assign-roles/{user_id}", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="分配用户角色"
+)
 async def assign_user_roles(
     user_id: int,
     role_data: UserRoleAssign,
@@ -458,8 +490,12 @@ async def assign_user_roles(
     )
 
 # 删除用户角色接口
-@user_router.post("/remove-roles/{user_id}", response_model=ResponseModel)
-@permission_required("user:remove-roles")
+@user_router.post(
+    "/remove-roles/{user_id}", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="删除用户角色"
+)
 async def remove_user_roles(
     user_id: int,
     role_data: UserRoleRemove,

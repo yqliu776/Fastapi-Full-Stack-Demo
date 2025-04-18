@@ -93,7 +93,6 @@ export interface RoleCreate {
 
 export interface RoleUpdate {
   role_name?: string;
-  role_code?: string;
   last_updated_by: string;
   last_update_login: string;
 }

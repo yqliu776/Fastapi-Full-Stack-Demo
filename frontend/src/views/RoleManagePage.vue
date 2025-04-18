@@ -171,7 +171,14 @@ const updateRole = async () => {
   if (!currentRole.value) return;
   
   try {
-    const response = await roleService.updateRole(currentRole.value.id, roleForm);
+    // 创建一个新的对象，只包含后端支持的字段
+    const updateData: RoleUpdate = {
+      role_name: roleForm.role_name,
+      last_updated_by: roleForm.last_updated_by,
+      last_update_login: roleForm.last_update_login
+    };
+    
+    const response = await roleService.updateRole(currentRole.value.id, updateData);
     if (response.code === 200) {
       showEditModal.value = false;
       loadRoles();
@@ -469,13 +476,15 @@ onMounted(() => {
                 />
               </div>
               <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">角色代码 <span class="text-red-500">*</span></label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">角色代码</label>
                 <input 
                   v-model="roleForm.role_code"
                   type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  class="w-full rounded-md border-gray-300 shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
                   placeholder="请输入角色代码"
+                  disabled
                 />
+                <p class="mt-1 text-xs text-gray-500">角色代码创建后不可修改</p>
               </div>
             </div>
           </div>
