@@ -5,3 +5,8 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/backend/.cursor/rules/01-project-overview.mdc
+/backend/.cursor/rules/02-api-routers.mdc
+/backend/.cursor/rules/03-core-components.mdc
+/backend/.cursor/rules/04-application-settings.mdc
+/backend/.cursor/rules/05-application-lifecycle.mdc
