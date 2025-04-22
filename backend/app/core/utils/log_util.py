@@ -254,8 +254,8 @@ class LogUtil:
             # 检查归档是否成功
             if os.path.exists(archive_path):
                 logger.info(f"成功创建归档文件: {archive_path}")
-                
-                # 删除原始日志目录，使用安全的方式
+                # 暂停等待线程释放，安全删除原始日志目录
+                time.sleep(2)
                 self._safe_remove_directory(target_log_dir)
                 
                 # 记录已归档的日期
