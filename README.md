@@ -2,7 +2,7 @@
 
 ## 项目简介
 
-本项目是一个基于FastAPI和Vue 3构建的全栈应用示例，旨在展示现代化Web应用的开发架构和最佳实践。项目采用前后端分离的设计，包含完整的用户认证、权限管理、数据处理等功能，可作为企业级应用的开发模板。
+本项目是一个基于FastAPI和Vue 3构建的全栈应用示例，旨在展示现代化Web应用的开发架构和最佳实践。项目采用前后端分离的设计，包含完整的用户认证、权限管理、数据处理等功能，可以用作应用的开发模板。
 
 ## 技术栈
 
@@ -57,7 +57,7 @@
 ```
 
 ## 系统要求
-
+版本信息为开发时适用版本，未对任何其他版本进行测试。
 - Python >= 3.12
 - Node.js >= 16
 - MySQL >= 8.0
@@ -65,7 +65,36 @@
 
 ## 快速开始
 
-### 后端设置
+### 环境设置
+项目在win11系统开发以及测试。
+1. 创建数据库和redis容器
+   ```bash
+   docker run -d `
+     --name mysql8 `
+     -e MYSQL_ROOT_PASSWORD=<password> `
+     -v D:\env\Docker\databases\MySql8:/var/lib/mysql `
+     -p 3306:3306 `
+     mysql:8.0
+   ```
+   ```bash
+   docker run `
+   --restart=always `
+   --log-opt max-size=100m `
+   --log-opt max-file=2 `
+   -p 6379:6379 `
+   --name redis `
+   -v D:\env\Docker\redis\conf\redis.conf:/etc/redis/redis.conf  `
+   -v D:\env\Docker\redis\data:/data `
+   -d redis redis-server /etc/redis/redis.conf `
+   --appendonly yes `
+   --requirepass <password>
+   ```
+   个人喜好可以直接使用自己本地应用。 
+   2. 导入数据库并创建数据
+   [mysql-8.sql](sql/mysql-8.sql)直接在数据库中运行sql创建数据库。
+   [init_mysql.sql](sql/init_mysql.sql)写入基础数据。
+
+#### 后端设置
 
 1. 进入后端目录
    ```bash
@@ -96,7 +125,7 @@
    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
    ```
 
-### 前端设置
+#### 前端设置
 
 1. 进入前端目录
    ```bash
@@ -144,9 +173,6 @@
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启Pull Request
 
-## 许可证
-
-MIT License
 
 ## 维护者
 
