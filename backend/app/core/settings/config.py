@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # MySQL设置
     MYSQL_SERVER: str = "localhost:3306"
     MYSQL_USER: str = "root"
-    MYSQL_PASSWORD: str = ""  # 移除硬编码的密码
+    MYSQL_PASSWORD: str = ""
     MYSQL_DB: str = "full-stack-demo"
     MYSQL_ECHO_SQL: bool = False  # 是否打印SQL语句
     MYSQL_POOL_SIZE: int = 5  # 连接池大小
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # PostgresSQL设置
     POSTGRES_SERVER: str = "localhost:5432"
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = ""  # 移除硬编码的密码
+    POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = "full-stack-demo"
     POSTGRES_ECHO_SQL: bool = False  # 是否打印SQL语句
     POSTGRES_POOL_SIZE: int = 5  # 连接池大小
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # Redis设置
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
-    REDIS_PASSWORD: str = ""  # 移除硬编码的密码
+    REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0
     REDIS_TIMEOUT: int = 5  # Redis连接超时时间（秒）
     
