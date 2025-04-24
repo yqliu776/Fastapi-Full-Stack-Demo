@@ -3,6 +3,7 @@ import { ref, onMounted, reactive } from 'vue';
 import { permissionService } from '@/services/permissionService';
 import type { Permission, PermissionCreate, PermissionUpdate } from '@/services/permissionService';
 import { useUserStore } from '@/stores/user';
+import { handleComponentError } from '@/utils/errorHandlers';
 
 // 获取用户信息
 const userStore = useUserStore();
@@ -69,9 +70,9 @@ const loadPermissions = async () => {
       console.error('加载权限列表失败:', response.message);
       showNotification('加载权限列表失败: ' + response.message, 'error');
     }
-  } catch (error) {
-    console.error('加载权限列表出错:', error);
-    showNotification('加载权限列表出错', 'error');
+  } catch (error: any) {
+    const errorMessage = handleComponentError(error, '加载权限列表出错');
+    showNotification(errorMessage, 'error');
   } finally {
     loading.value = false;
   }
@@ -116,9 +117,9 @@ const createPermission = async () => {
       console.error('创建权限失败:', response.message);
       showNotification('创建权限失败: ' + response.message, 'error');
     }
-  } catch (error) {
-    console.error('创建权限出错:', error);
-    showNotification('创建权限出错', 'error');
+  } catch (error: any) {
+    const errorMessage = handleComponentError(error, '创建权限出错');
+    showNotification(errorMessage, 'error');
   }
 };
 
@@ -151,9 +152,9 @@ const updatePermission = async () => {
       console.error('更新权限失败:', response.message);
       showNotification('更新权限失败: ' + response.message, 'error');
     }
-  } catch (error) {
-    console.error('更新权限出错:', error);
-    showNotification('更新权限出错', 'error');
+  } catch (error: any) {
+    const errorMessage = handleComponentError(error, '更新权限出错');
+    showNotification(errorMessage, 'error');
   }
 };
 
@@ -170,9 +171,9 @@ const deletePermission = async (permission: Permission) => {
       console.error('删除权限失败:', response.message);
       showNotification('删除权限失败: ' + response.message, 'error');
     }
-  } catch (error) {
-    console.error('删除权限出错:', error);
-    showNotification('删除权限出错', 'error');
+  } catch (error: any) {
+    const errorMessage = handleComponentError(error, '删除权限出错');
+    showNotification(errorMessage, 'error');
   }
 };
 

@@ -1,5 +1,10 @@
 import axios from 'axios';
 
+// 创建自定义错误接口
+interface CustomError extends Error {
+  response?: any;
+}
+
 // 创建axios实例
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
@@ -46,6 +51,19 @@ apiClient.interceptors.response.use(
         }
       }
     }
+    
+    // 处理403权限不足错误
+    if (error.response && error.response.status === 403) {
+      // 创建一个新的错误对象，包含更友好的信息
+      const permissionError: CustomError = new Error(error.response.data.message || "您没有执行此操作的权限");
+      permissionError.name = "PermissionError";
+      
+      // 将原始响应数据附加到错误对象，以便组件能够访问
+      permissionError.response = error.response;
+      
+      return Promise.reject(permissionError);
+    }
+    
     return Promise.reject(error);
   }
 );

@@ -5,6 +5,7 @@ import type { Role, RoleCreate, RoleUpdate } from '@/services/roleService';
 import RolePermissionSelector from '@/components/RolePermissionSelector.vue';
 import RoleMenuSelector from '@/components/RoleMenuSelector.vue';
 import { useUserStore } from '@/stores/user';
+import { handleComponentError } from '@/utils/errorHandlers';
 
 // 获取用户信息
 const userStore = useUserStore();
@@ -73,9 +74,9 @@ const loadRoles = async () => {
       console.error('加载角色列表失败:', response.message);
       showNotification('加载角色列表失败: ' + response.message, 'error');
     }
-  } catch (error) {
-    console.error('加载角色列表出错:', error);
-    showNotification('加载角色列表出错', 'error');
+  } catch (error: any) {
+    const errorMessage = handleComponentError(error, '加载角色列表出错');
+    showNotification(errorMessage, 'error');
   } finally {
     loading.value = false;
   }
@@ -120,35 +121,9 @@ const createRole = async () => {
       console.error('创建角色失败:', response.message);
       showNotification('创建角色失败: ' + response.message, 'error');
     }
-  } catch (error: unknown) {
-    console.error('创建角色出错:', error);
-    // 尝试提取API返回的详细错误信息
-    let errorMsg = '创建角色出错';
-    if (
-      error && 
-      typeof error === 'object' && 
-      'response' in error && 
-      error.response && 
-      typeof error.response === 'object' && 
-      'data' in error.response && 
-      error.response.data && 
-      typeof error.response.data === 'object' && 
-      'detail' in error.response.data
-    ) {
-      try {
-        const detail = error.response.data.detail;
-        // 尝试格式化错误信息
-        if (Array.isArray(detail)) {
-          errorMsg += ': ' + detail.map((item: {msg: string}) => item.msg).join(', ');
-        } else if (typeof detail === 'string') {
-          errorMsg += ': ' + detail;
-        }
-      } catch {
-        // 如果格式化失败，使用原始错误消息
-        errorMsg = '创建角色出错';
-      }
-    }
-    showNotification(errorMsg, 'error');
+  } catch (error: any) {
+    const errorMessage = handleComponentError(error, '创建角色出错');
+    showNotification(errorMessage, 'error');
   }
 };
 
@@ -187,9 +162,9 @@ const updateRole = async () => {
       console.error('更新角色失败:', response.message);
       showNotification('更新角色失败: ' + response.message, 'error');
     }
-  } catch (error: unknown) {
-    console.error('更新角色出错:', error);
-    showNotification('更新角色出错', 'error');
+  } catch (error: any) {
+    const errorMessage = handleComponentError(error, '更新角色出错');
+    showNotification(errorMessage, 'error');
   }
 };
 
@@ -206,9 +181,9 @@ const deleteRole = async (role: Role) => {
       console.error('删除角色失败:', response.message);
       showNotification('删除角色失败: ' + response.message, 'error');
     }
-  } catch (error) {
-    console.error('删除角色出错:', error);
-    showNotification('删除角色出错', 'error');
+  } catch (error: any) {
+    const errorMessage = handleComponentError(error, '删除角色出错');
+    showNotification(errorMessage, 'error');
   }
 };
 
