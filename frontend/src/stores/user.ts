@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { getUserInfo, login as apiLogin, logout as apiLogout } from '@/services/authService';
+import { useMenuStore } from './menu';
 
 export interface UserRole {
   id: number | null;
@@ -49,6 +50,13 @@ export const useUserStore = defineStore('user', () => {
       const response = await apiLogin(username, password);
       if (response.code === 200) {
         await fetchUserInfo();
+        
+        // 登录成功后获取菜单数据并初始化路由
+        const menuStore = useMenuStore();
+        await menuStore.fetchMenus();
+        await menuStore.fetchMenuTree();
+        menuStore.addRoutes();
+        
         return true;
       } else {
         error.value = response.message || '登录失败';
@@ -72,6 +80,9 @@ export const useUserStore = defineStore('user', () => {
 
   function logout() {
     userInfo.value = null;
+    // 清除菜单数据
+    const menuStore = useMenuStore();
+    menuStore.resetState();
     apiLogout();
   }
 
