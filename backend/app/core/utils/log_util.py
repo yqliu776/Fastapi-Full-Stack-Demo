@@ -123,68 +123,23 @@ class LogUtil:
         self.archive_thread = threading.Thread(target=self.run_schedule, daemon=True)
         self.archive_thread.start()
 
-    def _prepare_for_new_day_logs(self):
-        """
-        准备新一天的日志记录，并归档前一天的日志。
-        
-        此方法确保在处理旧日志前先设置好新日志文件，避免文件占用冲突。
-        """
-        try:
-            # 获取当前日期和昨天日期
-            now = tzu.get_now()
-            yesterday = now - datetime.timedelta(days=1)
-            today_date = now.strftime("%Y-%m-%d")
-            yesterday_date = yesterday.strftime("%Y-%m-%d")
-            
-            # 如果今天的日期与当前记录的日期相同，说明日志已经更新过
-            # 这是为了防止一天内多次调用此方法
-            if today_date == self.current_date and os.path.exists(os.path.join(self.daily_log_dir, "app.log")):
-                logger.debug(f"当前日志已经是最新日期 {today_date}，跳过日志处理器更新")
-                
-                # 仍然检查是否需要归档昨天的日志
-                if yesterday_date not in self._archived_dates and self.archive_logs(yesterday_date):
-                    logger.info(f"成功归档 {yesterday_date} 的日志")
-                return True
-            
-            logger.info(f"开始准备 {today_date} 的日志文件")
-            
-            # 1. 先移除旧的日志处理器
-            if self.log_handler_id is not None:
-                logger.remove(self.log_handler_id)
-                
-            # 2. 确保使用新的日期
-            self.current_date = today_date
-            self.daily_log_dir = os.path.join(self.base_log_dir, self.current_date)
-            
-            # 3. 确保新日期的目录存在
-            os.makedirs(self.daily_log_dir, exist_ok=True)
-            
-            # 4. 重新添加日志处理器，指向新的日期目录
-            self.log_handler_id = logger.add(
-                os.path.join(self.daily_log_dir, "{time:HH-mm}.log"),
-                format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}",
-                rotation="100 MB",
-                retention="1 day",
-                compression=None,
-                encoding="utf-8"
-            )
-            
-            logger.info("已创建新的日志文件并更新日志处理器")
-            
-            # 5. 在创建新日志处理器后，归档昨天的日志(如果尚未归档)
-            if yesterday_date not in self._archived_dates and self.archive_logs(yesterday_date):
-                logger.info(f"成功归档 {yesterday_date} 的日志")
-            
-            return True
-        except Exception as e:
-            logger.exception(f"准备新日志时发生错误: {str(e)}")
-            return False
-
     def run_schedule(self):
         """运行调度任务的线程函数"""
+        # 添加最后执行时间的记录，防止重复执行
+        last_run_time = None
+        
         while not self._should_stop:
-            schedule.run_pending()
-            time.sleep(60)  # 每分钟检查一次
+            # 获取当前时间
+            now = datetime.datetime.now()
+            # 当前分钟
+            current_minute = now.strftime("%H:%M")
+            
+            # 检查是否已在当前分钟内执行过任务
+            if last_run_time != current_minute:
+                schedule.run_pending()
+                last_run_time = current_minute
+                
+            time.sleep(10)  # 减少检查间隔，但不至于造成太大负担
 
     def stop_archive_thread(self):
         """停止归档线程"""
@@ -224,6 +179,16 @@ class LogUtil:
             archive_path = os.path.join(self.archive_dir, archive_name)
             if os.path.exists(archive_path):
                 logger.info(f"归档文件已存在: {archive_path}，标记为已归档")
+                
+                # 尝试删除原始日志目录(如果存在)
+                target_log_dir = os.path.join(self.base_log_dir, target_date)
+                if os.path.exists(target_log_dir):
+                    try:
+                        shutil.rmtree(target_log_dir, ignore_errors=True)
+                        logger.info(f"已删除重复的原始日志目录: {target_log_dir}")
+                    except Exception as e:
+                        logger.error(f"删除重复日志目录时出错: {target_log_dir}, 错误: {str(e)}")
+                
                 self._archived_dates.add(target_date)
                 return True
             
@@ -254,9 +219,13 @@ class LogUtil:
             # 检查归档是否成功
             if os.path.exists(archive_path):
                 logger.info(f"成功创建归档文件: {archive_path}")
-                # 暂停等待线程释放，安全删除原始日志目录
-                time.sleep(2)
-                self._safe_remove_directory(target_log_dir)
+                
+                # 直接使用强制删除方式移除原目录
+                try:
+                    shutil.rmtree(target_log_dir, ignore_errors=True)
+                    logger.info(f"已强制删除原始日志目录: {target_log_dir}")
+                except Exception as e:
+                    logger.error(f"强制删除目录时发生错误: {target_log_dir}, 错误: {str(e)}")
                 
                 # 记录已归档的日期
                 self._archived_dates.add(target_date)
@@ -365,6 +334,83 @@ class LogUtil:
         析构函数，确保在对象销毁时停止归档线程
         """
         self.stop_archive_thread()
+
+    def _prepare_for_new_day_logs(self):
+        """
+        准备新一天的日志记录，并归档前一天的日志。
+        
+        此方法确保在处理旧日志前先设置好新日志文件，避免文件占用冲突。
+        """
+        try:
+            # 获取当前日期和昨天日期
+            now = tzu.get_now()
+            yesterday = now - datetime.timedelta(days=1)
+            today_date = now.strftime("%Y-%m-%d")
+            yesterday_date = yesterday.strftime("%Y-%m-%d")
+            
+            # 添加防重复执行的检查
+            log_path = os.path.join(self.daily_log_dir, "first_run_marker")
+            if today_date == self.current_date:
+                if os.path.exists(log_path):
+                    # logger.debug(f"今日({today_date})日志处理器已更新过，跳过处理")
+                    return True
+            
+            logger.info(f"开始准备 {today_date} 的日志文件")
+            
+            # 1. 先移除旧的日志处理器
+            if self.log_handler_id is not None:
+                logger.remove(self.log_handler_id)
+                
+            # 2. 确保使用新的日期
+            self.current_date = today_date
+            self.daily_log_dir = os.path.join(self.base_log_dir, self.current_date)
+            
+            # 3. 确保新日期的目录存在
+            os.makedirs(self.daily_log_dir, exist_ok=True)
+            
+            # 4. 重新添加日志处理器，指向新的日期目录
+            self.log_handler_id = logger.add(
+                os.path.join(self.daily_log_dir, "{time:HH-mm}.log"),
+                format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}",
+                rotation="100 MB",
+                retention="1 day",
+                compression=None,
+                encoding="utf-8"
+            )
+            
+            # 创建标记文件表示今日已运行
+            with open(log_path, 'w') as f:
+                f.write(f"Log handler updated at {datetime.datetime.now()}")
+            
+            logger.info("已创建新的日志文件并更新日志处理器")
+            
+            # 5. 在创建新日志处理器后，归档昨天的日志(如果尚未归档)
+            if yesterday_date not in self._archived_dates and self.archive_logs(yesterday_date):
+                logger.info(f"成功归档 {yesterday_date} 的日志")
+            
+            return True
+        except Exception as e:
+            logger.exception(f"准备新日志时发生错误: {str(e)}")
+            return False
+
+    def force_archive_and_delete(self, target_date=None):
+        """
+        强制归档指定日期的日志并删除原目录。
+        
+        Args:
+            target_date (str, optional): 要归档的日期，格式为YYYY-MM-DD。
+                                        如果不指定，默认归档前一天的日志。
+        
+        Returns:
+            bool: 归档操作是否成功
+        """
+        # 使用内部归档方法
+        if self.archive_logs(target_date):
+            logger.info(f"已强制归档并删除日期 {target_date} 的日志")
+            return True
+        else:
+            logger.error(f"强制归档日期 {target_date} 的日志失败")
+            return False
 
 # 实例化日志管理器
 logger_manager = LogUtil()
