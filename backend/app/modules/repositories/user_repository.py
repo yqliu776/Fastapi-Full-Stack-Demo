@@ -202,10 +202,7 @@ class UserRepository(BaseRepository[SysUser]):
         """
         # 获取角色ID
         role_query = select(SysRole.id).where(
-            and_(
-                SysRole.role_code == role_code,
-                SysRole.delete_flag == 'N'
-            )
+            SysRole.role_code == role_code
         )
         role_result = await self.db.execute(role_query)
         role_id = role_result.scalar_one_or_none()
