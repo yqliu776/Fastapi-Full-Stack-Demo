@@ -1,18 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { RouterView, useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import { useMenuStore } from '@/stores/menu';
 import { logout } from '@/services/authService';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import Breadcrumb from '@/components/Breadcrumb.vue';
+import TagsView from '@/components/TagsView.vue';
 
 const userStore = useUserStore();
 const menuStore = useMenuStore();
 const router = useRouter();
-const userDropdownOpen = ref(false);
-const isLoggingOut = ref(false);
+const route = useRoute();
+
+// 侧边栏状态
+const isCollapse = ref(false);
+const device = ref('desktop');
+const showDrawer = ref(false);
 
 // 父菜单展开状态
 const expandedMenus = ref<Set<number>>(new Set());
+
+// 切换侧边栏折叠状态
+const toggleSideBar = () => {
+  isCollapse.value = !isCollapse.value;
+};
 
 // 切换菜单展开状态
 const toggleMenuExpand = (menuId: number) => {
@@ -25,59 +37,27 @@ const toggleMenuExpand = (menuId: number) => {
 
 // 判断当前路由是否活跃
 const isRouteActive = (path: string) => {
-  const route = useRoute();
   return route.path === path;
 };
 
-// 创建一个ref来存储事件处理函数
-const documentClickHandler = ref((event: Event) => {
-  // 如果点击的是菜单内部元素，不关闭菜单
-  const menu = document.querySelector('[role="menu"]');
-  const button = document.getElementById('user-menu-button');
-  if (menu?.contains(event.target as Node) || button?.contains(event.target as Node)) {
-    return;
-  }
-  closeUserDropdown();
-});
-
-const toggleUserDropdown = (event: Event) => {
-  console.log('toggleUserDropdown called', event);
-  event.stopPropagation();
-  userDropdownOpen.value = !userDropdownOpen.value;
-  console.log('userDropdownOpen toggled to:', userDropdownOpen.value);
-};
-
-const closeUserDropdown = () => {
-  userDropdownOpen.value = false;
-};
-
+// 处理退出登录
 const handleLogout = async () => {
-  if (!window.confirm('确定要退出系统吗？')) {
-    return;
-  }
-
-  console.log('开始退出登录');
-  isLoggingOut.value = true;
   try {
-    console.log('正在清除用户状态...');
+    await ElMessageBox.confirm('确定要退出系统吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    
     await userStore.logout();
-    console.log('用户状态已清除，准备调用登出服务...');
-    closeUserDropdown();
-    menuStore.resetState(); // 重置菜单状态
+    menuStore.resetState();
     logout();
-    console.log('登出服务调用完成');
+    ElMessage.success('退出成功');
+    router.push('/login');
   } catch (error) {
     console.error('退出登录失败:', error);
-    alert('退出登录失败，请重试');
-  } finally {
-    isLoggingOut.value = false;
   }
 };
-
-// 固定菜单项
-const fixedMenuItems = [
-  { name: '退出系统', path: '#', icon: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1', action: handleLogout }
-];
 
 // 创建菜单项接口
 interface MenuItem {
@@ -95,7 +75,7 @@ interface MenuItem {
   }>;
 }
 
-// 计算属性：动态菜单与固定菜单合并
+// 计算属性：动态菜单
 const navItems = computed<MenuItem[]>(() => {
   const dynamicMenus = menuStore.menuTree.filter(menu => !menu.parent_id).map(menu => ({
     id: menu.id,
@@ -105,31 +85,46 @@ const navItems = computed<MenuItem[]>(() => {
     children: menu.children || []
   }));
   
-  // 确保固定菜单项也有id
-  const fixedMenusWithId = fixedMenuItems.map((item, index) => ({
-    ...item,
-    id: -1 - index // 使用负数作为固定菜单的ID，避免与动态菜单冲突
-  }));
-  
-  return [...dynamicMenus, ...fixedMenusWithId];
+  return dynamicMenus;
 });
 
 // 根据菜单代码获取对应图标
 function getIconByMenuCode(menuCode: string): string {
   const iconMap: Record<string, string> = {
-    'dashboard': 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
-    'user': 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-    'role': 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
-    'permission': 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
-    'menu': 'M4 6h16M4 12h16m-7 6h7',
-    'profile': 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-    'setting': 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'
+    'dashboard': 'HomeFilled',
+    'user': 'User',
+    'role': 'UserFilled',
+    'permission': 'Lock',
+    'menu': 'Menu',
+    'profile': 'User',
+    'setting': 'Setting'
   };
   
   // 从menuCode中提取相关部分作为图标查询键
   const key = menuCode.toLowerCase().split('_')[0];
-  return iconMap[key] || iconMap['setting']; // 默认返回设置图标
+  return iconMap[key] || 'Setting'; // 默认返回设置图标
 }
+
+// 响应式布局处理
+const handleResize = () => {
+  const rect = document.body.getBoundingClientRect();
+  const width = rect.width;
+  
+  if (width <= 992) {
+    device.value = 'mobile';
+    isCollapse.value = true;
+  } else {
+    device.value = 'desktop';
+    isCollapse.value = false;
+  }
+};
+
+// 移动设备上点击菜单后关闭抽屉
+const handleClickMenuItem = () => {
+  if (device.value === 'mobile') {
+    showDrawer.value = false;
+  }
+};
 
 // 加载用户信息和菜单数据
 onMounted(async () => {
@@ -144,7 +139,6 @@ onMounted(async () => {
     menuStore.addRoutes();
     
     // 自动展开包含当前路由的父菜单
-    const route = useRoute();
     menuStore.menuTree.forEach(menu => {
       if (menu.id && menu.children?.some(child => child.menu_path === route.path)) {
         expandedMenus.value.add(menu.id);
@@ -152,234 +146,291 @@ onMounted(async () => {
     });
   }
   
-  // 添加全局点击事件监听器来关闭菜单
-  document.addEventListener('click', documentClickHandler.value);
+  // 添加窗口大小变化监听
+  window.addEventListener('resize', handleResize);
+  handleResize(); // 初始化时执行一次
 });
 
 onUnmounted(() => {
   // 移除事件监听器
-  document.removeEventListener('click', documentClickHandler.value);
+  window.removeEventListener('resize', handleResize);
 });
+
+// 监听路由变化，高亮当前菜单
+watch(
+  () => route.path,
+  () => {
+    if (device.value === 'mobile') {
+      showDrawer.value = false;
+    }
+  }
+);
 </script>
 
 <template>
-  <div class="h-screen flex overflow-hidden bg-gray-100">
+  <el-container class="app-wrapper">
     <!-- 侧边栏 -->
-    <div class="hidden md:flex md:flex-shrink-0">
-      <div class="flex flex-col w-64">
-        <div class="flex flex-col h-0 flex-1 bg-gray-800">
-          <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-            <div class="flex items-center flex-shrink-0 px-4">
-              <h1 class="text-white text-xl font-semibold">管理系统</h1>
-            </div>
-            <nav class="mt-5 flex-1 px-2 bg-gray-800 space-y-1">
-              <template v-for="item in navItems" :key="item.name">
-                <!-- 有动作的菜单项 -->
-                <div 
-                  v-if="item.action" 
-                  @click="item.action"
-                  class="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer"
-                >
-                  <svg
-                    class="text-gray-400 group-hover:text-gray-300 mr-3 flex-shrink-0 h-6 w-6"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      :d="item.icon"
-                    />
-                  </svg>
-                  {{ item.name }}
-                </div>
-                
-                <!-- 无子菜单的常规菜单项 -->
-                <RouterLink
-                  v-else-if="!item.children || item.children.length === 0"
-                  :to="item.path"
-                  class="group flex items-center px-2 py-2 text-sm font-medium rounded-md"
-                  v-slot="{ isActive }"
-                >
-                  <div :class="[
-                    isActive ? 'text-white bg-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white',
-                    'group flex items-center px-2 py-2 text-sm font-medium rounded-md w-full'
-                  ]">
-                    <svg
-                      :class="[
-                        isActive ? 'text-gray-300' : 'text-gray-400 group-hover:text-gray-300',
-                        'mr-3 flex-shrink-0 h-6 w-6'
-                      ]"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        :d="item.icon"
-                      />
-                    </svg>
-                    {{ item.name }}
-                  </div>
-                </RouterLink>
-                
-                <!-- 有子菜单的菜单项 -->
-                <div v-else class="space-y-1">
-                  <!-- 父菜单项 -->
-                  <div 
-                    @click="item.id && toggleMenuExpand(item.id)"
-                    class="text-gray-300 group flex items-center px-2 py-2 text-sm font-medium rounded-md hover:bg-gray-700 hover:text-white cursor-pointer"
-                  >
-                    <svg
-                      class="text-gray-400 group-hover:text-gray-300 mr-3 flex-shrink-0 h-6 w-6"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        :d="item.icon"
-                      />
-                    </svg>
-                    <span class="flex-1">{{ item.name }}</span>
-                    <!-- 展开/折叠图标 -->
-                    <svg 
-                      class="h-5 w-5 text-gray-400"
-                      :class="{ 'transform rotate-90': item.id && expandedMenus.has(item.id) }"
-                      xmlns="http://www.w3.org/2000/svg" 
-                      viewBox="0 0 20 20" 
-                      fill="currentColor"
-                    >
-                      <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                  
-                  <!-- 子菜单项，只在父菜单展开时显示 -->
-                  <div v-if="item.id && expandedMenus.has(item.id)" class="mt-1">
-                    <RouterLink
-                      v-for="child in item.children"
-                      :key="child.id"
-                      :to="child.menu_path"
-                      class="group flex items-center pl-10 pr-2 py-2 text-sm font-medium rounded-md"
-                      v-slot="{ isActive }"
-                    >
-                      <div :class="[
-                        isActive ? 'text-white bg-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white',
-                        'group flex items-center w-full text-sm font-medium rounded-md'
-                      ]">
-                        {{ child.menu_name }}
-                      </div>
-                    </RouterLink>
-                  </div>
-                </div>
+    <el-aside 
+      :width="isCollapse ? '64px' : '210px'" 
+      class="sidebar-container"
+      :class="{ 'is-collapse': isCollapse }"
+    >
+      <div class="logo-container">
+        <router-link to="/dashboard" class="logo-link">
+          <span v-if="!isCollapse" class="logo-title">管理系统</span>
+          <el-icon v-else><HomeFilled /></el-icon>
+        </router-link>
+      </div>
+      
+      <el-scrollbar>
+        <el-menu
+          :default-active="route.path"
+          :collapse="isCollapse"
+          :unique-opened="true"
+          class="el-menu-vertical"
+          background-color="#304156"
+          text-color="#bfcbd9"
+          active-text-color="#409EFF"
+        >
+          <template v-for="item in navItems" :key="item.id">
+            <!-- 无子菜单的菜单项 -->
+            <el-menu-item 
+              v-if="!item.children || item.children.length === 0" 
+              :index="item.path"
+              @click="() => router.push(item.path)"
+            >
+              <el-icon><component :is="item.icon" /></el-icon>
+              <template #title>{{ item.name }}</template>
+            </el-menu-item>
+            
+            <!-- 有子菜单的菜单项 -->
+            <el-sub-menu 
+              v-else 
+              :index="item.path"
+            >
+              <template #title>
+                <el-icon><component :is="item.icon" /></el-icon>
+                <span>{{ item.name }}</span>
               </template>
-            </nav>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 主要内容区域 -->
-    <div class="flex flex-col w-0 flex-1 overflow-hidden">
-      <!-- 顶部导航栏 -->
-      <div class="relative z-10 flex-shrink-0 flex h-16 bg-white shadow">
-        <button class="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 md:hidden">
-          <span class="sr-only">打开侧边栏</span>
-          <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <div class="flex-1 px-4 flex justify-between">
-          <div class="flex-1 flex">
-          </div>
-          <div class="ml-4 flex items-center md:ml-6">
-            <!-- 用户下拉菜单 -->
-            <div class="ml-3 relative">
-              <div>
-                <button
-                  type="button"
-                  class="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  id="user-menu-button"
-                  @click="toggleUserDropdown"
-                  aria-expanded="false"
-                  aria-haspopup="true"
-                >
-                  <span class="sr-only">用户菜单</span>
-                  <div class="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white">
-                    {{ userStore.userInfo?.user_name.charAt(0).toUpperCase() || '?' }}
-                  </div>
-                  <span class="ml-3 text-gray-700">{{ userStore.userInfo?.user_name || '加载中...' }}</span>
-                </button>
-              </div>
-
-              <div
-                v-if="userDropdownOpen"
-                class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-                role="menu"
-                aria-orientation="vertical"
-                aria-labelledby="user-menu-button"
-                @click.stop
+              
+              <el-menu-item 
+                v-for="child in item.children" 
+                :key="child.id"
+                :index="child.menu_path"
+                @click="() => router.push(child.menu_path)"
               >
-                <div class="px-4 py-2 text-sm text-gray-500 border-b border-gray-200">
-                  当前用户：{{ userStore.userInfo?.user_name }}
-                </div>
-                <div class="py-1">
-                  <RouterLink
-                    to="/dashboard/profile"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    role="menuitem"
-                    @click="closeUserDropdown"
-                  >
-                    个人信息
-                  </RouterLink>
-                  <RouterLink
-                    to="/dashboard/settings"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    role="menuitem"
-                    @click="closeUserDropdown"
-                  >
-                    设置
-                  </RouterLink>
-                  <button
-                    class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    role="menuitem"
-                    :disabled="isLoggingOut"
-                    @click="handleLogout"
-                  >
-                    退出系统
-                    <span v-if="isLoggingOut" class="ml-2 text-gray-500">(退出中...)</span>
-                  </button>
-                </div>
+                <template #title>{{ child.menu_name }}</template>
+              </el-menu-item>
+            </el-sub-menu>
+          </template>
+        </el-menu>
+      </el-scrollbar>
+    </el-aside>
+    
+    <el-container class="main-container">
+      <!-- 头部导航 -->
+      <el-header class="app-header">
+        <div class="header-left">
+          <div class="hamburger-container" @click="toggleSideBar">
+            <el-icon :class="{'is-active': !isCollapse}">
+              <Expand v-if="isCollapse" />
+              <Fold v-else />
+            </el-icon>
+          </div>
+          <Breadcrumb class="breadcrumb-container" />
+        </div>
+        
+        <div class="header-right">
+          <el-dropdown trigger="click">
+            <div class="avatar-container">
+              <div class="avatar-wrapper">
+                <el-avatar 
+                  :size="30" 
+                  class="user-avatar"
+                  :src="userStore.userInfo?.avatar || ''"
+                >
+                  {{ userStore.userInfo?.user_name.charAt(0).toUpperCase() || '?' }}
+                </el-avatar>
+                <span class="user-name">{{ userStore.userInfo?.user_name || '加载中...' }}</span>
+                <el-icon><CaretBottom /></el-icon>
               </div>
             </div>
-          </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item>
+                  <router-link to="/dashboard/profile">
+                    <el-icon><User /></el-icon>
+                    个人信息
+                  </router-link>
+                </el-dropdown-item>
+                <el-dropdown-item divided @click="handleLogout">
+                  <el-icon><SwitchButton /></el-icon>
+                  退出登录
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
-      </div>
-
-      <!-- 页面内容 -->
-      <main class="flex-1 relative overflow-y-auto focus:outline-none">
-        <div class="py-6">
-          <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-            <RouterView />
-          </div>
-        </div>
-      </main>
-    </div>
-  </div>
+      </el-header>
+      
+      <!-- 标签视图 -->
+      <TagsView />
+      
+      <!-- 主要内容区域 -->
+      <el-main class="app-main">
+        <router-view />
+      </el-main>
+    </el-container>
+  </el-container>
 </template>
 
 <style scoped>
-/* 仪表盘样式 */
+/* 全局布局样式 */
+.app-wrapper {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+/* 侧边栏样式 */
+.sidebar-container {
+  transition: width 0.28s;
+  height: 100%;
+  background-color: #304156;
+  overflow: hidden;
+}
+
+.sidebar-container.is-collapse {
+  width: 64px !important;
+}
+
+.logo-container {
+  height: 50px;
+  line-height: 50px;
+  background: #2b2f3a;
+  text-align: center;
+  overflow: hidden;
+}
+
+.logo-link {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.logo-title {
+  display: inline-block;
+  color: #fff;
+  font-weight: 600;
+  font-size: 18px;
+  font-family: Avenir, Helvetica Neue, Arial, Helvetica, sans-serif;
+  vertical-align: middle;
+}
+
+.el-menu-vertical:not(.el-menu--collapse) {
+  width: 210px;
+  min-height: 400px;
+}
+
+/* 头部样式 */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 50px;
+  background-color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  position: relative;
+  padding: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.hamburger-container {
+  line-height: 46px;
+  height: 100%;
+  padding: 0 15px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.hamburger-container:hover {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.hamburger-container .is-active {
+  transform: rotate(180deg);
+}
+
+.breadcrumb-container {
+  margin-left: 8px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  padding-right: 15px;
+}
+
+.avatar-container {
+  margin-right: 30px;
+}
+
+.avatar-wrapper {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.user-avatar {
+  margin-right: 8px;
+  background: #409EFF;
+}
+
+.user-name {
+  margin-right: 5px;
+  font-size: 14px;
+}
+
+/* 主内容区域样式 */
+.main-container {
+  min-height: 100%;
+  transition: margin-left 0.28s;
+  position: relative;
+}
+
+.app-main {
+  padding: 20px;
+  background-color: #f0f2f5;
+  position: relative;
+  overflow: auto;
+  height: calc(100vh - 84px); /* 减去头部和标签视图的高度 */
+}
+
+/* 响应式布局 */
+@media screen and (max-width: 992px) {
+  .app-wrapper {
+    position: relative;
+  }
+  
+  .sidebar-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1001;
+    height: 100%;
+    transition: transform 0.28s;
+    transform: translate3d(-210px, 0, 0);
+  }
+  
+  .sidebar-container.is-collapse {
+    transform: translate3d(0, 0, 0);
+  }
+}
 </style>

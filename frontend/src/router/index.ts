@@ -13,24 +13,25 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginPage.vue'),
-      meta: { requiresAuth: false }
+      meta: { requiresAuth: false, title: '登录' }
     },
     {
       path: '/register',
       name: 'register',
       component: () => import('@/views/RegisterPage.vue'),
-      meta: { requiresAuth: false }
+      meta: { requiresAuth: false, title: '注册' }
     },
     {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('@/views/DashboardLayout.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: '首页' },
       children: [
         {
           path: '',
           name: 'dashboardHome',
-          component: () => import('@/views/DashboardHome.vue')
+          component: () => import('@/views/DashboardHome.vue'),
+          meta: { title: '控制台' }
         }
         // 其他子路由将通过动态路由添加
       ]
@@ -40,7 +41,7 @@ const router = createRouter({
       redirect: '/dashboard',
       name: 'system',
       component: () => import('@/views/DashboardLayout.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: '系统管理' },
       children: [
         // 系统管理子路由将通过动态路由添加
       ]
