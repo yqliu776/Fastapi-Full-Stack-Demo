@@ -17,6 +17,7 @@ export interface UserInfo {
   creation_date: string;
   last_update_date: string;
   roles: UserRole[];
+  avatar?: string;
 }
 
 export const useUserStore = defineStore('user', () => {
