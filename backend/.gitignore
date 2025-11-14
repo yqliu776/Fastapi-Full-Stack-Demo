@@ -16,3 +16,7 @@ wheels/
 .env
 /app/logs/archives/
 /.cursorignore
+/static/21e27b12-b3ca-48e2-9315-2ace73382b24.jpeg
+/static/49cb521a-09a2-4274-a29f-a7c31a7d0db4.jpg
+/static/f24f9a2f-5f46-487c-8514-85fb30fd2bea.jpg
+/.claude/settings.local.json
