@@ -21,6 +21,7 @@ dependencies = [
     "bcrypt==4.0.1",
     "redis>=5.0.0",
     "psutil>=7.0.0",
+    "alembic>=1.17.2",
 ]
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
