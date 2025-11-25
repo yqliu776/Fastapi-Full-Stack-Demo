@@ -42,6 +42,27 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0
     REDIS_TIMEOUT: int = 5  # Redis连接超时时间（秒）
+
+    # 限流设置
+    RATE_LIMIT_ENABLED: bool = True  # 是否启用限流
+    RATE_LIMIT_ALGORITHM: Literal["token_bucket", "sliding_window", "fixed_window"] = "token_bucket"  # 限流算法
+    RATE_LIMIT_STORAGE: Literal["redis", "memory"] = "redis"  # 存储方式
+    RATE_LIMIT_DEFAULT_REQUESTS: int = 100  # 默认每分钟请求数
+    RATE_LIMIT_DEFAULT_BURST: int = 10  # 令牌桶算法的突发容量
+    RATE_LIMIT_BLOCK_DURATION: int = 60  # 限流后封禁时长（秒）
+    RATE_LIMIT_ENABLE_WHITELIST: bool = True  # 是否启用白名单
+    RATE_LIMIT_ENABLE_BLACKLIST: bool = True  # 是否启用黑名单
+    RATE_LIMIT_LOG_VIOLATIONS: bool = True  # 是否记录限流违规日志
+
+    # 机器人检测设置
+    BOT_DETECTION_ENABLED: bool = True  # 是否启用机器人检测
+    BOT_DETECTION_MAX_REQUESTS_PER_MINUTE: int = 60  # 每分钟最大请求数
+    BOT_DETECTION_MAX_REQUESTS_PER_SECOND: int = 5  # 每秒最大请求数
+    BOT_DETECTION_MIN_INTERVAL_MS: int = 100  # 最小请求间隔（毫秒）
+    BOT_DETECTION_SUSPICIOUS_SCORE_THRESHOLD: int = 10  # 可疑分数阈值
+    BOT_DETECTION_BLOCK_DURATION: int = 300  # 封禁时长（秒）
+    BOT_DETECTION_ENABLE_CAPTCHA: bool = True  # 是否启用验证码挑战
+    BOT_DETECTION_ENABLE_HONEYPOT: bool = True  # 是否启用蜜罐陷阱
     
     # 数据库URL
     @property

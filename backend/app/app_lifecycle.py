@@ -1,11 +1,11 @@
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from typing import Callable, Awaitable, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter
 
-from app.routers import auth_router, role_router, permission_router, menu_router, user_router
-from app.core.middleware import LoggingMiddleware, ErrorHandlerMiddleware
-from fastapi.middleware.cors import CORSMiddleware
+from app.core.middleware import LoggingMiddleware, ErrorHandlerMiddleware, RateLimitMiddleware, BotDetectionMiddleware
+from app.routers import auth_router, role_router, permission_router, menu_router, user_router, rate_limit_router
 from app.core.utils import logger_manager, logger
 from app.core.connects import db, redis_client
 from app.core.settings import settings
@@ -238,13 +238,16 @@ class AppLifecycle:
             role_router,
             permission_router,
             menu_router,
-            user_router
+            user_router,
+            rate_limit_router
         ]
         for router in router_list:
             app.include_router(router)
         
         # 添加中间件 - 标准ASGI中间件的添加方式
         app.add_middleware(ErrorHandlerMiddleware)
+        app.add_middleware(BotDetectionMiddleware)
+        app.add_middleware(RateLimitMiddleware)
         app.add_middleware(
             LoggingMiddleware,
             logger_manager=logger_manager,

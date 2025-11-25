@@ -1,12 +1,14 @@
 from .rbac import role_router, permission_router, menu_router
 from .auth import auth_router
 from .user import user_router
+from .rate_limit import rate_limit_router
 
 __all__ = [
-    "auth_router", 
-    "role_router", 
-    "permission_router", 
+    "auth_router",
+    "role_router",
+    "permission_router",
     "menu_router",
-    "user_router"
+    "user_router",
+    "rate_limit_router"
 ]
 

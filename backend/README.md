@@ -400,7 +400,12 @@ POSTGRES_POOL_SIZE=20
 POSTGRES_MAX_OVERFLOW=40
 ```
 
+​     本项目已集成 Alembic 数据库迁移工具，用于管理数据库架构的版本控制。Alembic 会自动检测 SQLAlchemy 模型的变化并生成相应的迁移脚本。
+
+[数据库迁移使用指南](./doc/ALEMBIC_USAGE.md)
+
 ### Redis配置
+
 多级缓存策略配置：
 
 ```env
@@ -602,9 +607,9 @@ volumes:
 ## 🗺️ 路线图
 
 ### 短期目标 (v1.1.0)
-- [ ] 集成Alembic数据库迁移
+- [x] 集成Alembic数据库迁移
 - [ ] 添加单元测试框架和测试用例
-- [ ] 实现API限流和防刷机制
+- [x] 实现API限流和防刷机制
 - [ ] 完善Docker部署配置
 
 ### 中期目标 (v1.2.0)
@@ -675,5 +680,4 @@ SOFTWARE.
 ---
 
 **⭐ 如果这个项目对你有帮助，请给我们一个Star！**
-
 
