@@ -402,7 +402,7 @@ POSTGRES_MAX_OVERFLOW=40
 
 ​     本项目已集成 Alembic 数据库迁移工具，用于管理数据库架构的版本控制。Alembic 会自动检测 SQLAlchemy 模型的变化并生成相应的迁移脚本。
 
-[数据库迁移使用指南](./doc/ALEMBIC_USAGE.md)
+[数据库迁移使用指南](../docs/ALEMBIC_USAGE.md)
 
 ### Redis配置
 

@@ -97,9 +97,14 @@ function getIconByMenuCode(menuCode: string): string {
     'permission': 'Lock',
     'menu': 'Menu',
     'profile': 'User',
-    'setting': 'Setting'
+    'setting': 'Setting',
+    'rate_limit': 'Lightning',
+    'whitelist': 'CircleCheck',
+    'blacklist': 'CircleClose',
+    'api_docs': 'Document',
+    'swagger': 'Document'
   };
-  
+
   // 从menuCode中提取相关部分作为图标查询键
   const key = menuCode.toLowerCase().split('_')[0];
   return iconMap[key] || 'Setting'; // 默认返回设置图标

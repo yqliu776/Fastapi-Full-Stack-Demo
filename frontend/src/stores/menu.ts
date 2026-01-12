@@ -14,12 +14,15 @@ const componentMap: Record<string, () => Promise<any>> = {
   '/dashboard/permissions': () => import('@/views/PermissionManagePage.vue'),
   '/dashboard/menus': () => import('@/views/MenuManagePage.vue'),
   '/dashboard/users': () => import('@/views/UserManagePage.vue'),
+  '/dashboard/rate-limit': () => import('@/views/RateLimitManagePage.vue'),
   // 添加系统管理相关路径映射
   '/system': () => import('@/views/DashboardHome.vue'),
   '/system/user': () => import('@/views/UserManagePage.vue'),
   '/system/role': () => import('@/views/RoleManagePage.vue'),
   '/system/permission': () => import('@/views/PermissionManagePage.vue'),
   '/system/menu': () => import('@/views/MenuManagePage.vue'),
+  '/system/api-rate-limit': () => import('@/views/RateLimitManagePage.vue'),
+  '/system/swagger-ui': () => import('@/views/SwaggerUIPage.vue'),
   // 添加以下默认映射，确保即使找不到确切的映射也能返回一个合理的组件
   'default': () => import('@/views/DashboardHome.vue')
 };

@@ -32,7 +32,9 @@ VALUES
 ('用户管理', 'USER', '/system/user', @system_menu_id, 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('角色管理', 'ROLE', '/system/role', @system_menu_id, 2, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('权限管理', 'PERMISSION', '/system/permission', @system_menu_id, 3, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
-('菜单管理', 'MENU', '/system/menu', @system_menu_id, 4, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
+('菜单管理', 'MENU', '/system/menu', @system_menu_id, 4, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('API限流管理', 'API_RATE_LIMIT', '/system/api-rate-limit', @system_menu_id, 5, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('API文档', 'API_DOCS', '/system/swagger-ui', @system_menu_id, 6, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
 
 -- ========== 4. 创建超级管理员用户 ==========
 -- 密码为 Admin@123，使用bcrypt加密
