@@ -113,36 +113,68 @@ class SessionService:
         """
         return await self.redis_util.delete(f"{self.session_prefix}{session_id}")
 
-    @staticmethod
-    async def get_user_sessions(user_id: int) -> list:
-        """获取用户的所有会话
+    async def _get_user_session_index_key(self, user_id: int) -> str:
+        return f"user_sessions:{user_id}"
+
+    async def create_session(self, user_id: int, user_data: Dict[str, Any], expire: Optional[int] = None) -> str:
+        """创建用户会话（重写以维护用户会话索引）"""
+        session_id = str(uuid4())
         
-        Args:
-            user_id: 用户ID
-            
-        Returns:
-            list: 会话列表
-        """
-        # 注意：这个实现可能需要根据实际需求优化
-        # 在大型系统中，可能需要使用其他数据结构来存储用户会话列表
+        session_data = {
+            "user_id": user_id,
+            "user_data": user_data,
+            "created_at": datetime.now().isoformat(),
+            "last_accessed": datetime.now().isoformat()
+        }
+        
+        expire_time = expire if expire is not None else self.default_expire
+        
+        await self.redis_util.set(
+            f"{self.session_prefix}{session_id}",
+            session_data,
+            ex=expire_time
+        )
+        
+        index_key = await self._get_user_session_index_key(user_id)
+        try:
+            redis = await self.redis_util._get_redis()
+            await redis.sadd(index_key, session_id)
+            await redis.expire(index_key, expire_time + 60)
+        except Exception:
+            pass
+        
+        return session_id
+
+    async def get_user_sessions(self, user_id: int) -> list:
+        """获取用户的所有会话"""
+        index_key = await self._get_user_session_index_key(user_id)
         sessions = []
-        # 这里只是示例，实际实现可能需要使用 Redis 的 SCAN 命令
-        # 或者使用其他数据结构来存储用户会话列表
+        try:
+            redis = await self.redis_util._get_redis()
+            session_ids = await redis.smembers(index_key)
+            for sid in session_ids:
+                session_data = await self.redis_util.get(f"{self.session_prefix}{sid}")
+                if session_data:
+                    session_data["session_id"] = sid
+                    sessions.append(session_data)
+                else:
+                    await redis.srem(index_key, sid)
+        except Exception:
+            pass
         return sessions
 
-    @staticmethod
-    async def invalidate_user_sessions(user_id: int) -> bool:
-        """使用户的所有会话失效
-        
-        Args:
-            user_id: 用户ID
-            
-        Returns:
-            bool: 操作是否成功
-        """
-        # 注意：这个实现可能需要根据实际需求优化
-        # 在大型系统中，可能需要使用其他数据结构来存储用户会话列表
-        return True
+    async def invalidate_user_sessions(self, user_id: int) -> bool:
+        """使用户的所有会话失效"""
+        index_key = await self._get_user_session_index_key(user_id)
+        try:
+            redis = await self.redis_util._get_redis()
+            session_ids = await redis.smembers(index_key)
+            for sid in session_ids:
+                await self.redis_util.delete(f"{self.session_prefix}{sid}")
+            await redis.delete(index_key)
+            return True
+        except Exception:
+            return False
 
 
 # 创建全局会话服务实例

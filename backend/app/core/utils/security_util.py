@@ -1,5 +1,6 @@
 from datetime import timedelta
 from typing import Optional
+from uuid import uuid4
 from jose import jwt
 
 from .timezone_util import tzu
@@ -22,7 +23,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expire = tzu.get_now() + expires_delta
     else:
         expire = tzu.get_now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access", "jti": str(uuid4())})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
     return encoded_jwt
 
@@ -43,6 +44,6 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) 
     else:
         expire = tzu.get_now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "refresh", "jti": str(uuid4())})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
     return encoded_jwt 

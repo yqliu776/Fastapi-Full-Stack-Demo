@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm run:*)",
+      "Bash(python -c \"from app.core.settings import settings; print\\(f''Backend URL: {settings.BACKEND_URL}''\\)\")",
+      "Bash(curl -s http://localhost:8000/docs)",
+      "Bash(curl:*)",
+      "Bash(python add_rate_limit_permission.py)",
+      "Bash(xargs redis-cli:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

@@ -113,10 +113,8 @@ const loadUserRoles = async () => {
       // 保存角色代码，之后用于匹配角色ID
       if (userData.roles && Array.isArray(userData.roles)) {
         initialRoleCodes.value = userData.roles.map(role => role.role_code);
-        console.log('用户已有角色代码:', initialRoleCodes.value);
       } else {
         initialRoleCodes.value = [];
-        console.log('用户没有角色或角色数据格式不正确');
       }
     } else {
       console.error('加载用户角色失败:', response.message);
@@ -134,7 +132,6 @@ const loadUserRoles = async () => {
 const matchUserRolesByCode = () => {
   // 如果角色列表为空，不进行处理
   if (allRoles.value.length === 0) {
-    console.log('角色列表为空，无法匹配角色');
     return;
   }
   
@@ -150,7 +147,6 @@ const matchUserRolesByCode = () => {
   }
   
   if (roleCodeSource.length === 0) {
-    console.log('没有角色代码可匹配');
     initialUserRoles.value = [];
     userRoles.value = [];
     return;
@@ -160,13 +156,8 @@ const matchUserRolesByCode = () => {
   const matchedRoleIds = allRoles.value
     .filter(role => roleCodeSource.includes(role.role_code))
     .map(role => role.id);
-  
-  console.log('匹配到的角色ID:', matchedRoleIds);
   initialUserRoles.value = [...matchedRoleIds];
   userRoles.value = [...matchedRoleIds]; // 初始化选中状态
-  
-  console.log('初始角色IDs:', initialUserRoles.value);
-  console.log('当前选中角色IDs:', userRoles.value);
 };
 
 // 显示通知

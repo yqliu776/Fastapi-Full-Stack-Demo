@@ -1,4 +1,5 @@
 from redis.asyncio import Redis, ConnectionPool
+import asyncio
 import redis
 
 from app.core.settings import settings
@@ -13,6 +14,7 @@ class RedisClient:
     
     _pool: ConnectionPool = None
     _sync_client: redis.Redis = None
+    _init_lock: asyncio.Lock = asyncio.Lock()
     
     @classmethod
     async def init_redis(cls):
@@ -72,7 +74,9 @@ class RedisClient:
             Redis: 异步Redis客户端实例
         """
         if not cls._pool:
-            await cls.init_redis()
+            async with cls._init_lock:
+                if not cls._pool:
+                    await cls.init_redis()
         return Redis(connection_pool=cls._pool)
     
     @classmethod
@@ -104,7 +108,7 @@ class RedisClient:
         try:
             _redis_client = await cls.get_redis()
             result = await _redis_client.ping()
-            return result == True
+            return result is True
         except Exception as e:
             logger.error(f"Redis ping失败: {str(e)}")
             return False

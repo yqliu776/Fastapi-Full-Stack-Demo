@@ -161,7 +161,7 @@ class RoleRepository(BaseRepository[SysRole]):
     
     async def remove_permissions_from_role(self, role_id: int, permission_ids: List[int]) -> bool:
         """
-        从角色移除权限
+        从角色移除权限（软删除）
         
         Args:
             role_id: 角色ID
@@ -170,17 +170,17 @@ class RoleRepository(BaseRepository[SysRole]):
         Returns:
             移除成功返回True
         """
-        from sqlalchemy import delete as sql_delete
+        from sqlalchemy import update as sql_update
         
-        # 删除指定的角色-权限关联
-        delete_query = sql_delete(SysRolePermission).where(
+        update_query = sql_update(SysRolePermission).where(
             and_(
                 SysRolePermission.role_id == role_id,
-                SysRolePermission.permission_id.in_(permission_ids)
+                SysRolePermission.permission_id.in_(permission_ids),
+                SysRolePermission.delete_flag == 'N'
             )
-        )
+        ).values(delete_flag='Y')
         
-        await self.db.execute(delete_query)
+        await self.db.execute(update_query)
         await self.db.commit()
         return True
     
@@ -215,7 +215,7 @@ class RoleRepository(BaseRepository[SysRole]):
     
     async def remove_menus_from_role(self, role_id: int, menu_ids: List[int]) -> bool:
         """
-        从角色移除菜单
+        从角色移除菜单（软删除）
         
         Args:
             role_id: 角色ID
@@ -224,23 +224,23 @@ class RoleRepository(BaseRepository[SysRole]):
         Returns:
             移除成功返回True
         """
-        from sqlalchemy import delete as sql_delete
+        from sqlalchemy import update as sql_update
         
-        # 删除指定的角色-菜单关联
-        delete_query = sql_delete(SysRoleMenu).where(
+        update_query = sql_update(SysRoleMenu).where(
             and_(
                 SysRoleMenu.role_id == role_id,
-                SysRoleMenu.menu_id.in_(menu_ids)
+                SysRoleMenu.menu_id.in_(menu_ids),
+                SysRoleMenu.delete_flag == 'N'
             )
-        )
+        ).values(delete_flag='Y')
         
-        await self.db.execute(delete_query)
+        await self.db.execute(update_query)
         await self.db.commit()
         return True
     
     async def update_role_permissions(self, role_id: int, permission_ids: List[int]) -> bool:
         """
-        更新角色的权限列表
+        更新角色的权限列表（软删除旧关联 + 创建新关联）
         
         Args:
             role_id: 角色ID
@@ -249,17 +249,29 @@ class RoleRepository(BaseRepository[SysRole]):
         Returns:
             bool: 更新是否成功
         """
+        from sqlalchemy import update as sql_update
+        
         try:
-            # 删除现有权限关联
+            # 软删除现有权限关联
             await self.db.execute(
-                delete(SysRolePermission).where(SysRolePermission.role_id == role_id)
+                sql_update(SysRolePermission)
+                .where(
+                    and_(
+                        SysRolePermission.role_id == role_id,
+                        SysRolePermission.delete_flag == 'N'
+                    )
+                )
+                .values(delete_flag='Y')
             )
             
             # 添加新的权限关联
             for permission_id in permission_ids:
                 role_permission = SysRolePermission(
                     role_id=role_id,
-                    permission_id=permission_id
+                    permission_id=permission_id,
+                    created_by="system",
+                    last_updated_by="system",
+                    last_update_login="system"
                 )
                 self.db.add(role_permission)
             
@@ -284,7 +296,7 @@ class RoleRepository(BaseRepository[SysRole]):
             bool: 删除是否成功
         """
         try:
-            role = await self.get_by_id(role_id)
+            role = await self.get(role_id)
             if not role:
                 return False
                 

@@ -9,7 +9,6 @@ import router from '@/router';
 const componentMap: Record<string, () => Promise<any>> = {
   '/dashboard': () => import('@/views/DashboardHome.vue'),
   '/dashboard/profile': () => import('@/views/ProfilePage.vue'),
-  '/dashboard/settings': () => import('@/views/HomePage.vue'),
   '/dashboard/roles': () => import('@/views/RoleManagePage.vue'),
   '/dashboard/permissions': () => import('@/views/PermissionManagePage.vue'),
   '/dashboard/menus': () => import('@/views/MenuManagePage.vue'),
@@ -136,8 +135,6 @@ export const useMenuStore = defineStore('menu', () => {
     // 为路由添加到router
     menuRoutes.forEach(route => {
       if (!router.hasRoute(route.name as string)) {
-        console.log(`添加路由: ${route.path}`);
-        
         // 根据原始菜单路径前缀决定添加到哪个父路由下
         const menu = menuList.value.find(m => m.menu_code === route.name);
         if (menu) {

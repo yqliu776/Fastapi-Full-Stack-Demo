@@ -1,79 +1,14 @@
-import axios from 'axios';
-
-// 创建自定义错误接口
-interface CustomError extends Error {
-  response?: any;
-}
-
-// 创建axios实例
-const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
-  timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  }
-});
-
-// 拦截器配置
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// 响应拦截器
-apiClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  async (error) => {
-    if (error.response && error.response.status === 401) {
-      if (error.response.data.detail === "无效的身份凭证") {
-        // 尝试刷新令牌
-        try {
-          await refreshToken();
-          // 重新发送原请求
-          const originalRequest = error.config;
-          originalRequest.headers.Authorization = `Bearer ${getToken()}`;
-          return apiClient(originalRequest);
-        } catch (refreshError) {
-          // 刷新令牌失败，清除所有凭证并跳转到登录页面
-          clearTokens();
-          window.location.href = '/login';
-          return Promise.reject(refreshError);
-        }
-      }
-    }
-    
-    // 处理403权限不足错误
-    if (error.response && error.response.status === 403) {
-      // 创建一个新的错误对象，包含更友好的信息
-      const permissionError: CustomError = new Error(error.response.data.message || "您没有执行此操作的权限");
-      permissionError.name = "PermissionError";
-      
-      // 将原始响应数据附加到错误对象，以便组件能够访问
-      permissionError.response = error.response;
-      
-      return Promise.reject(permissionError);
-    }
-    
-    return Promise.reject(error);
-  }
-);
+import apiClient from '@/api/client';
 
 // Token操作相关函数
 const TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
+const isSecure = window.location.protocol === 'https:';
+const secureSuffix = isSecure ? '; Secure' : '';
+
 export function setToken(token: string): void {
-  document.cookie = `${TOKEN_KEY}=${token}; path=/; max-age=86400; SameSite=Strict`;
+  document.cookie = `${TOKEN_KEY}=${token}; path=/; max-age=86400; SameSite=Strict${secureSuffix}`;
 }
 
 export function getToken(): string | null {
@@ -82,7 +17,7 @@ export function getToken(): string | null {
 }
 
 export function setRefreshToken(token: string): void {
-  document.cookie = `${REFRESH_TOKEN_KEY}=${token}; path=/; max-age=604800; SameSite=Strict`;
+  document.cookie = `${REFRESH_TOKEN_KEY}=${token}; path=/; max-age=604800; SameSite=Strict${secureSuffix}`;
 }
 
 export function getRefreshToken(): string | null {
@@ -120,8 +55,8 @@ export async function refreshToken() {
   }
   
   try {
-    const response = await apiClient.post('/auth/refresh', null, {
-      params: { refresh_token: refreshToken },
+    const response = await apiClient.post('/auth/refresh', {
+      refresh_token: refreshToken,
     });
     
     if (response.data.code === 200) {
@@ -149,17 +84,15 @@ export async function getUserInfo() {
   }
 }
 
-export function logout() {
+export async function logout() {
   try {
-    console.log('authService.logout called');
+    await apiClient.post('/auth/logout').catch(() => {});
     clearTokens();
-    console.log('Tokens cleared');
-    // 使用window.location而不是router，确保完全刷新页面
-    console.log('Redirecting to login page');
+    const { resetDynamicRoutesFlag } = await import('@/router');
+    resetDynamicRoutesFlag();
     window.location.href = '/login';
   } catch (error) {
     console.error('登出过程中发生错误:', error);
-    // 即使发生错误，也尝试重定向到登录页
     window.location.href = '/login';
   }
 }

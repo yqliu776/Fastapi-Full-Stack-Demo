@@ -56,28 +56,46 @@ class AuthService:
         Raises:
             HTTPException: 登录失败时抛出异常
         """
+        # 检查是否被锁定
+        lock_key = f"login_lock:{login_data.username}"
+        fail_key = f"login_fail:{login_data.username}"
+        locked = await self.redis_util.get(lock_key)
+        if locked:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="登录失败次数过多，账号已临时锁定，请15分钟后重试",
+            )
+        
         user = await self.authenticate_user(login_data.username, login_data.password)
         if not user:
+            fail_count = await self.redis_util.get(fail_key)
+            fail_count = int(fail_count) + 1 if fail_count else 1
+            await self.redis_util.set(fail_key, fail_count, ex=900)
+            if fail_count >= 5:
+                await self.redis_util.set(lock_key, "1", ex=900)
+                await self.redis_util.delete(fail_key)
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="登录失败次数过多，账号已临时锁定，请15分钟后重试",
+                )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="用户名或密码错误",
+                detail=f"用户名或密码错误，还可尝试{5 - fail_count}次",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
+        await self.redis_util.delete(fail_key)
         
         # 获取用户权限
         user_with_roles = await self.user_repository.get_user_with_roles(user.id)
         
-        # 构建权限列表
-        permissions = []
-        for role in user_with_roles.roles:
-            role_permissions = await self._get_role_permissions(role.id)
-            permissions.extend([p.permission_code for p in role_permissions])
+        role_ids = [role.id for role in user_with_roles.roles]
+        permissions = await self._get_permissions_for_roles(role_ids)
         
-        # 创建令牌数据
         token_data = {
             "user_id": user.id,
             "user_name": user.user_name,
-            "permissions": list(set(permissions))  # 去重
+            "permissions": list(set(permissions))
         }
         
         # 创建访问令牌和刷新令牌
@@ -111,46 +129,47 @@ class AuthService:
             session_id=session_id  # 添加会话ID到响应中
         )
     
-    async def _get_role_permissions(self, role_id: int):
-        """
-        获取角色的权限列表，使用Redis缓存优化
+    async def _get_permissions_for_roles(self, role_ids: list) -> list:
+        """批量获取多个角色的权限代码列表，使用 Redis 缓存"""
+        if not role_ids:
+            return []
         
-        Args:
-            role_id: 角色ID
+        all_codes = []
+        uncached_role_ids = []
+        
+        for role_id in role_ids:
+            cache_key = f"role_permissions:{role_id}"
+            cached = await self.redis_util.get(cache_key)
+            if cached is not None:
+                all_codes.extend(cached)
+            else:
+                uncached_role_ids.append(role_id)
+        
+        if uncached_role_ids:
+            query = select(
+                SysRolePermission.role_id,
+                SysPermission.permission_code
+            ).select_from(
+                join(
+                    SysPermission,
+                    SysRolePermission,
+                    SysPermission.id == SysRolePermission.permission_id
+                )
+            ).where(SysRolePermission.role_id.in_(uncached_role_ids))
             
-        Returns:
-            权限列表
-        """
-        # 构建缓存键
-        cache_key = f"role_permissions:{role_id}"
-        
-        # 尝试从缓存获取
-        cached_permission_codes = await self.redis_util.get(cache_key)
-        if cached_permission_codes is not None:
-            # 从缓存中获取权限代码，需要转换为权限对象
-            query = select(SysPermission).where(SysPermission.permission_code.in_(cached_permission_codes))
             result = await self.db.execute(query)
-            return result.scalars().all()
+            rows = result.all()
             
-        # 缓存未命中，从数据库查询
-        query = select(SysPermission).select_from(
-            join(
-                SysPermission,
-                SysRolePermission,
-                SysPermission.id == SysRolePermission.permission_id
-            )
-        ).where(SysRolePermission.role_id == role_id)
+            role_perm_map: dict = {}
+            for role_id, perm_code in rows:
+                role_perm_map.setdefault(role_id, []).append(perm_code)
+                all_codes.append(perm_code)
+            
+            for role_id in uncached_role_ids:
+                codes = role_perm_map.get(role_id, [])
+                await self.redis_util.set(f"role_permissions:{role_id}", codes, ex=3600)
         
-        result = await self.db.execute(query)
-        permissions = result.scalars().all()
-        
-        # 只缓存权限代码
-        permission_codes = [p.permission_code for p in permissions]
-        
-        # 将结果存入缓存，设置过期时间为1小时
-        await self.redis_util.set(cache_key, permission_codes, ex=3600)
-        
-        return permissions
+        return all_codes
     
     async def _invalidate_role_permissions_cache(self, role_id: int):
         """
@@ -176,12 +195,20 @@ class AuthService:
             HTTPException: 刷新令牌无效或过期时抛出异常
         """
         try:
-            # 验证刷新令牌
             payload = jwt.decode(
                 refresh_token,
                 settings.SECRET_KEY,
                 algorithms=["HS256"]
             )
+            
+            token_type = payload.get("type")
+            if token_type != "refresh":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="无效的令牌类型",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            
             user_id = payload.get("user_id")
             if user_id is None:
                 raise HTTPException(
@@ -199,12 +226,8 @@ class AuthService:
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             
-            # 创建新的令牌
-            permissions = []
-            for role in user.roles:
-                # 使用专门的方法获取角色权限
-                role_permissions = await self._get_role_permissions(role.id)
-                permissions.extend([p.permission_code for p in role_permissions])
+            role_ids = [role.id for role in user.roles]
+            permissions = await self._get_permissions_for_roles(role_ids)
             
             token_data = {
                 "user_id": user.id,

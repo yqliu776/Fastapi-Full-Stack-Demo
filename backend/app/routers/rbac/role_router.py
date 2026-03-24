@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Path, Body
+from fastapi import APIRouter, Depends, Query, Path, Body, HTTPException
 from typing import Optional
 
 from app.modules.schemas import (
@@ -185,19 +185,13 @@ async def assign_permissions_to_role(
     Returns:
         操作结果
     """
-    # 验证路径参数和请求体中的角色ID是否一致
     if role_id != operation.role_id:
-        return ResponseModel(
-            code=400,
-            message="请求参数不一致",
-            data=None
-        )
+        raise HTTPException(status_code=400, detail="请求参数不一致")
         
-    # 构建审计信息
     audit_info = {
-        "created_by": operation.operator,
-        "last_updated_by": operation.operator,
-        "last_update_login": operation.operation_login
+        "created_by": current_user.user_name,
+        "last_updated_by": current_user.user_name,
+        "last_update_login": current_user.user_name
     }
     
     result = await rbac_service.add_permissions_to_role(
@@ -206,11 +200,10 @@ async def assign_permissions_to_role(
         audit_info=audit_info
     )
     
-    return ResponseModel(
-        code=200 if result else 400,
-        message="权限分配成功" if result else "权限分配失败",
-        data={"success": result}
-    )
+    if not result:
+        raise HTTPException(status_code=400, detail="权限分配失败")
+    
+    return ResponseModel.success(data={"success": result}, message="权限分配成功")
 
 
 @router.delete(
@@ -235,32 +228,18 @@ async def remove_permissions_from_role(
     Returns:
         操作结果
     """
-    # 验证路径参数和请求体中的角色ID是否一致
     if role_id != operation.role_id:
-        return ResponseModel(
-            code=400,
-            message="请求参数不一致",
-            data=None
-        )
-    
-    # 构建审计信息
-    audit_info = {
-        "created_by": operation.operator,
-        "last_updated_by": operation.operator,
-        "last_update_login": operation.operation_login
-    }
+        raise HTTPException(status_code=400, detail="请求参数不一致")
         
     result = await rbac_service.remove_permissions_from_role(
         role_id=role_id,
-        permission_ids=operation.permission_ids,
-        audit_info=audit_info
+        permission_ids=operation.permission_ids
     )
     
-    return ResponseModel(
-        code=200 if result else 400,
-        message="权限移除成功" if result else "权限移除失败",
-        data={"success": result}
-    )
+    if not result:
+        raise HTTPException(status_code=400, detail="权限移除失败")
+    
+    return ResponseModel.success(data={"success": result}, message="权限移除成功")
 
 
 @router.post(
@@ -272,32 +251,19 @@ async def remove_permissions_from_role(
 async def assign_menus_to_role(
     role_id: int = Path(..., description="角色ID"),
     operation: RoleMenuOperation = Body(...),
-    rbac_service: RbacService = Depends()
+    rbac_service: RbacService = Depends(),
+    current_user = Depends(get_current_user)
 ) -> ResponseModel:
     """
     为角色分配菜单
-    
-    Args:
-        role_id: 角色ID
-        operation: 角色菜单操作数据
-        rbac_service: RBAC服务实例
-        
-    Returns:
-        操作结果
     """
-    # 验证路径参数和请求体中的角色ID是否一致
     if role_id != operation.role_id:
-        return ResponseModel(
-            code=400,
-            message="请求参数不一致",
-            data=None
-        )
+        raise HTTPException(status_code=400, detail="请求参数不一致")
         
-    # 构建审计信息
     audit_info = {
-        "created_by": operation.operator,
-        "last_updated_by": operation.operator,
-        "last_update_login": operation.operation_login
+        "created_by": current_user.user_name,
+        "last_updated_by": current_user.user_name,
+        "last_update_login": current_user.user_name
     }
     
     result = await rbac_service.add_menus_to_role(
@@ -306,11 +272,10 @@ async def assign_menus_to_role(
         audit_info=audit_info
     )
     
-    return ResponseModel(
-        code=200 if result else 400,
-        message="菜单分配成功" if result else "菜单分配失败",
-        data={"success": result}
-    )
+    if not result:
+        raise HTTPException(status_code=400, detail="菜单分配失败")
+    
+    return ResponseModel.success(data={"success": result}, message="菜单分配成功")
 
 
 @router.delete(
@@ -326,38 +291,16 @@ async def remove_menus_from_role(
 ) -> ResponseModel:
     """
     移除角色的菜单
-    
-    Args:
-        role_id: 角色ID
-        operation: 角色菜单操作数据
-        rbac_service: RBAC服务实例
-        
-    Returns:
-        操作结果
     """
-    # 验证路径参数和请求体中的角色ID是否一致
     if role_id != operation.role_id:
-        return ResponseModel(
-            code=400,
-            message="请求参数不一致",
-            data=None
-        )
-    
-    # 构建审计信息
-    audit_info = {
-        "created_by": operation.operator,
-        "last_updated_by": operation.operator,
-        "last_update_login": operation.operation_login
-    }
+        raise HTTPException(status_code=400, detail="请求参数不一致")
         
     result = await rbac_service.remove_menus_from_role(
         role_id=role_id,
-        menu_ids=operation.menu_ids,
-        audit_info=audit_info
+        menu_ids=operation.menu_ids
     )
     
-    return ResponseModel(
-        code=200 if result else 400,
-        message="菜单移除成功" if result else "菜单移除失败",
-        data={"success": result}
-    ) 
+    if not result:
+        raise HTTPException(status_code=400, detail="菜单移除失败")
+    
+    return ResponseModel.success(data={"success": result}, message="菜单移除成功") 

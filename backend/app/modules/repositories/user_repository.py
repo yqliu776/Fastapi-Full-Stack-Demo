@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, update
 from typing import Optional, List, Tuple
-import random
+import secrets
 import string
 
 from app.modules.schemas import UserCreate, UserUpdate, UserAdminCreate
@@ -88,15 +88,21 @@ class UserRepository(BaseRepository[SysUser]):
         if not role:
             return []
         
-        # 加载该角色下的所有用户
-        await self.db.refresh(role, ["users"])
-        users = role.users
-        
-        # 应用分页逻辑
-        start = min(skip, len(users))
-        end = min(skip + limit, len(users))
-        
-        return users[start:end]
+        user_query = (
+            select(SysUser)
+            .join(SysUserRole, SysUser.id == SysUserRole.user_id)
+            .where(
+                and_(
+                    SysUserRole.role_id == role.id,
+                    SysUserRole.delete_flag == 'N',
+                    SysUser.delete_flag == 'N'
+                )
+            )
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await self.db.execute(user_query)
+        return list(result.scalars().all())
     
     async def check_username_exists(self, username: str) -> bool:
         """
@@ -208,17 +214,7 @@ class UserRepository(BaseRepository[SysUser]):
         role_id = role_result.scalar_one_or_none()
         
         if not role_id:
-            # 如果角色不存在，创建一个默认用户角色
-            new_role = SysRole(
-                role_name="普通用户",
-                role_code="user",
-                created_by=created_by,
-                last_updated_by=created_by,
-                last_update_login=created_by
-            )
-            self.db.add(new_role)
-            await self.db.flush()
-            role_id = new_role.id
+            raise ValueError(f"角色代码 '{role_code}' 不存在，请先创建该角色")
         
         # 创建用户
         hashed_password = get_password_hash(user_data.password)
@@ -446,9 +442,8 @@ class UserRepository(BaseRepository[SysUser]):
         Returns:
             新密码和更新后的用户实例
         """
-        # 生成随机密码
         chars = string.ascii_letters + string.digits
-        new_password = ''.join(random.choice(chars) for _ in range(password_length))
+        new_password = ''.join(secrets.choice(chars) for _ in range(password_length))
         
         # 更新用户密码
         hashed_password = get_password_hash(new_password)

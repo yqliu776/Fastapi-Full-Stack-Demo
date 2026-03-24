@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List, Literal
-from pydantic import Field
+from pydantic import Field, model_validator
 
 
 class Settings(BaseSettings):
@@ -91,6 +91,15 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000",
                                        "http://localhost:8080"]
     
+    @model_validator(mode='after')
+    def validate_secret_key(self):
+        default_key = "please-change-in-production-environment-with-strong-key"
+        if not self.DEBUG and self.SECRET_KEY == default_key:
+            raise ValueError(
+                "生产环境禁止使用默认 SECRET_KEY，请通过环境变量或 .env 文件设置安全密钥"
+            )
+        return self
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

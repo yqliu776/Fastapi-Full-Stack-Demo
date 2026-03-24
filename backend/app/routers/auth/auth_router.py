@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 from typing import Optional
@@ -35,8 +35,18 @@ async def get_current_user(
     )
     
     try:
-        # 解析令牌
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        
+        token_type = payload.get("type")
+        if token_type != "access":
+            raise credentials_exception
+        
+        jti = payload.get("jti")
+        if jti:
+            blacklisted = await auth_service.redis_util.get(f"token_blacklist:{jti}")
+            if blacklisted is not None:
+                raise credentials_exception
+        
         user_id: Optional[int] = payload.get("user_id")
         if user_id is None:
             raise credentials_exception
@@ -130,9 +140,32 @@ async def get_user_info(current_user: UserDetail = Depends(get_current_user)) ->
         process_time=process_time
     )
 
+@router.post("/logout", response_model=ResponseModel)
+async def logout(
+    token: str = Depends(oauth2_scheme),
+    auth_service: AuthService = Depends()
+) -> ResponseModel:
+    """
+    用户登出，将当前 Token 加入黑名单
+    """
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        jti = payload.get("jti")
+        exp = payload.get("exp")
+        if jti and exp:
+            import time
+            remaining = max(int(exp - time.time()), 0)
+            if remaining > 0:
+                redis_util = auth_service.redis_util
+                await redis_util.set(f"token_blacklist:{jti}", "1", ex=remaining)
+    except JWTError:
+        pass
+    return ResponseModel.success(data=None, message="登出成功")
+
+
 @router.post("/refresh", response_model=ResponseModel)
 async def refresh_token(
-    fresh_token: str,
+    fresh_token: str = Body(..., embed=True, alias="refresh_token"),
     auth_service: AuthService = Depends()
 ) -> ResponseModel:
     """

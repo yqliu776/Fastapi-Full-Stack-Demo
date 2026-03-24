@@ -208,6 +208,14 @@ onMounted(() => {
   flex-direction: column;
 }
 
+:deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -220,10 +228,8 @@ onMounted(() => {
   flex: 1;
   position: relative;
   overflow: hidden;
-  min-height: 600px;
+  height: 100%;
   background: #fff;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
 }
 
 .swagger-iframe {

@@ -44,32 +44,22 @@ class AppLifecycle:
         self.on_shutdown = on_shutdown
 
     @staticmethod
-    async def on_startup():
-        """默认的应用启动回调函数。
-
-        此方法可作为默认的启动处理程序，初始化数据库连接并执行其他启动操作。
-        """
+    async def _default_on_startup():
+        """默认的应用启动回调函数。"""
         logger.info("执行自定义启动操作...")
-        # 初始化数据库连接
         db.init_db()
         logger.info("数据库连接已初始化")
         
-        # 初始化Redis连接
         await redis_client.init_redis()
         logger.info("Redis连接已初始化")
 
     @staticmethod
-    async def shutdown():
-        """默认的应用关闭回调函数。
-
-        此方法可作为默认的关闭处理程序，关闭数据库连接并执行其他清理操作。
-        """
+    async def _default_on_shutdown():
+        """默认的应用关闭回调函数。"""
         logger.info("执行自定义关闭操作...")
-        # 关闭数据库连接
         await db.close()
         logger.info("数据库连接已关闭")
         
-        # 关闭Redis连接
         await redis_client.close()
         logger.info("Redis连接已关闭")
 
@@ -114,7 +104,7 @@ class AppLifecycle:
         Returns:
             FastAPI: 配置好生命周期管理和中间件的 FastAPI 应用实例
         """
-        lifecycle = AppLifecycle(on_startup=AppLifecycle.on_startup, on_shutdown=AppLifecycle.shutdown)
+        lifecycle = AppLifecycle(on_startup=AppLifecycle._default_on_startup, on_shutdown=AppLifecycle._default_on_shutdown)
         
         # 创建FastAPI应用，配置Swagger和OpenAPI
         app = FastAPI(

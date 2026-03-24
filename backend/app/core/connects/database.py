@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from typing import AsyncGenerator
+import asyncio
 
 from app.core.settings import settings
 from app.core.utils import logger
@@ -94,22 +95,14 @@ class Database:
         """
         return self._base
 
+    _init_lock = asyncio.Lock()
+
     async def get_db(self) -> AsyncGenerator[AsyncSession, None]:
-        """创建数据库会话的异步生成器
-        
-        用作FastAPI依赖注入的依赖项，为每个请求提供独立的数据库会话。
-        
-        Yields:
-            AsyncSession: 异步数据库会话对象
-            
-        Example:
-            @app.get("/users")
-            async def get_users(db: AsyncSession = Depends(get_db)):
-                # 使用db会话进行数据库操作
-                pass
-        """
+        """创建数据库会话的异步生成器"""
         if not self.AsyncSessionLocal:
-            self.init_db()
+            async with self._init_lock:
+                if not self.AsyncSessionLocal:
+                    self.init_db()
             
         async with self.AsyncSessionLocal() as session:
             try:

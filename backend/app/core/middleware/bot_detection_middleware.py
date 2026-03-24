@@ -60,20 +60,22 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
             '/_debug', '/__debug__', '/.git', '/.svn'
         ]
 
+    TRUSTED_PROXIES: set = {"127.0.0.1", "::1"}
+
     def get_client_ip(self, request: Request) -> str:
-        """获取客户端真实IP地址"""
-        forwarded_for = request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            return forwarded_for.split(",")[0].strip()
+        """获取客户端真实IP地址，仅在可信代理后才使用 X-Forwarded-For"""
+        client_host = request.client.host if request.client else "unknown"
+        
+        if client_host in self.TRUSTED_PROXIES:
+            forwarded_for = request.headers.get("X-Forwarded-For")
+            if forwarded_for:
+                return forwarded_for.split(",")[0].strip()
 
-        real_ip = request.headers.get("X-Real-IP")
-        if real_ip:
-            return real_ip.strip()
+            real_ip = request.headers.get("X-Real-IP")
+            if real_ip:
+                return real_ip.strip()
 
-        if request.client:
-            return request.client.host
-
-        return "unknown"
+        return client_host
 
     def generate_request_fingerprint(self, request: Request) -> str:
         """生成请求指纹"""
@@ -85,8 +87,7 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
         # 创建指纹字符串
         fingerprint_data = f"{user_agent}|{accept}|{accept_language}|{accept_encoding}"
 
-        # 使用MD5生成指纹哈希
-        return hashlib.md5(fingerprint_data.encode()).hexdigest()
+        return hashlib.sha256(fingerprint_data.encode()).hexdigest()
 
     def analyze_user_agent(self, user_agent: str) -> Dict[str, Any]:
         """分析用户代理字符串"""

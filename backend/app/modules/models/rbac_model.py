@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, BigInteger, ForeignKey, Integer
+from sqlalchemy import Column, String, BigInteger, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from .base_model import BaseModel
@@ -75,6 +75,9 @@ class SysUserRole(BaseModel):
     """用户与角色关联表模型"""
     
     __tablename__ = "sys_user_roles"
+    __table_args__ = (
+        UniqueConstraint('user_id', 'role_id', name='uq_user_role'),
+    )
     
     user_id = Column(BigInteger, ForeignKey("sys_users.id"), nullable=False, comment="用户ID")
     role_id = Column(BigInteger, ForeignKey("sys_roles.id"), nullable=False, comment="角色ID")
@@ -87,6 +90,9 @@ class SysRolePermission(BaseModel):
     """角色与权限关联表模型"""
     
     __tablename__ = "sys_role_permissions"
+    __table_args__ = (
+        UniqueConstraint('role_id', 'permission_id', name='uq_role_permission'),
+    )
     
     role_id = Column(BigInteger, ForeignKey("sys_roles.id"), nullable=False, comment="角色ID")
     permission_id = Column(BigInteger, ForeignKey("sys_permissions.id"), nullable=False, comment="权限ID")
@@ -99,6 +105,9 @@ class SysRoleMenu(BaseModel):
     """角色与菜单关联表模型"""
     
     __tablename__ = "sys_role_menus"
+    __table_args__ = (
+        UniqueConstraint('role_id', 'menu_id', name='uq_role_menu'),
+    )
     
     role_id = Column(BigInteger, ForeignKey("sys_roles.id"), nullable=False, comment="角色ID")
     menu_id = Column(BigInteger, ForeignKey("sys_menus.id"), nullable=False, comment="菜单ID")

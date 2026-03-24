@@ -1,16 +1,21 @@
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 
 from app.core.rate_limit import RateLimiter
 from app.core.rate_limit.storage import RateLimitStorage
 from app.core.rate_limit.rate_limiter import RateLimitScope, RateLimitConfig
+from app.core.decorators import has_permission
 from app.core.models import ResponseModel
 from app.core.utils import logger
 from app.core.settings import settings
 
 # 创建API路由
-router = APIRouter(prefix="/rate-limit", tags=["限流管理"])
+router = APIRouter(
+    prefix="/rate-limit",
+    tags=["限流管理"],
+    dependencies=[Depends(has_permission(["RATE_LIMIT_MANAGE"]))]
+)
 
 # 初始化限流器
 storage = RateLimitStorage()
@@ -19,23 +24,23 @@ rate_limiter = RateLimiter(storage)
 
 class RateLimitConfigRequest(BaseModel):
     """限流配置请求模型"""
-    limit: int = Query(..., description="限制数量", ge=1, le=10000)
-    window: int = Query(..., description="时间窗口（秒）", ge=1, le=3600)
-    burst: int = Query(10, description="突发容量", ge=1, le=1000)
-    block_duration: int = Query(60, description="封禁时长（秒）", ge=1, le=86400)
-    enabled: bool = Query(True, description="是否启用")
+    limit: int = Field(..., description="限制数量", ge=1, le=10000)
+    window: int = Field(..., description="时间窗口（秒）", ge=1, le=3600)
+    burst: int = Field(10, description="突发容量", ge=1, le=1000)
+    block_duration: int = Field(60, description="封禁时长（秒）", ge=1, le=86400)
+    enabled: bool = Field(True, description="是否启用")
 
 
 class WhitelistRequest(BaseModel):
     """白名单请求模型"""
-    identifier: str = Query(..., description="标识符（IP地址或用户ID）")
-    expire_time: Optional[int] = Query(None, description="过期时间（秒）", ge=1, le=86400*30)
+    identifier: str = Field(..., description="标识符（IP地址或用户ID）")
+    expire_time: Optional[int] = Field(None, description="过期时间（秒）", ge=1, le=86400*30)
 
 
 class BlacklistRequest(BaseModel):
     """黑名单请求模型"""
-    identifier: str = Query(..., description="标识符（IP地址或用户ID）")
-    expire_time: Optional[int] = Query(None, description="过期时间（秒）", ge=1, le=86400*30)
+    identifier: str = Field(..., description="标识符（IP地址或用户ID）")
+    expire_time: Optional[int] = Field(None, description="过期时间（秒）", ge=1, le=86400*30)
 
 
 class RateLimitStats(BaseModel):

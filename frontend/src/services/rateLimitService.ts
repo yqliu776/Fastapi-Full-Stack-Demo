@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { getToken, refreshToken, clearTokens } from './authService';
+import apiClient from '@/api/client';
 
 // 响应类型定义
 export interface ResponseModel<T = any> {
@@ -54,56 +53,6 @@ export type RateLimitAlgorithm = 'token_bucket' | 'sliding_window' | 'fixed_wind
 
 // 限流存储枚举
 export type RateLimitStorage = 'redis' | 'memory' | 'database';
-
-// 创建axios实例
-const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
-  timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  }
-});
-
-// 请求拦截器
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// 响应拦截器
-apiClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  async (error) => {
-    if (error.response && error.response.status === 401) {
-      if (error.response.data.detail === "无效的身份凭证") {
-        // 尝试刷新令牌
-        try {
-          await refreshToken();
-          // 重新发送原请求
-          const originalRequest = error.config;
-          originalRequest.headers.Authorization = `Bearer ${getToken()}`;
-          return apiClient(originalRequest);
-        } catch (refreshError) {
-          // 刷新令牌失败，清除所有凭证并跳转到登录页面
-          clearTokens();
-          window.location.href = '/login';
-          return Promise.reject(refreshError);
-        }
-      }
-    }
-    return Promise.reject(error);
-  }
-);
 
 // 限流管理API服务
 export const rateLimitService = {

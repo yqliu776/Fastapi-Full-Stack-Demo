@@ -177,7 +177,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
         """
         response = ResponseModel(
             code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            message=f"数据库操作失败: {str(exc)}",
+            message="数据库操作失败，请稍后重试",
             data=None
         )
         
