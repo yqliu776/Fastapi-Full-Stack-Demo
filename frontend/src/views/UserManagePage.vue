@@ -242,7 +242,7 @@ const updateUser = async () => {
   if (!currentUser.value) return;
   
   try {
-    const response = await userService.createUser(userForm);
+    const response = await userService.updateUser(currentUser.value.id, userForm);
     if (response.code === 200) {
       showEditModal.value = false;
       loadUsers();
