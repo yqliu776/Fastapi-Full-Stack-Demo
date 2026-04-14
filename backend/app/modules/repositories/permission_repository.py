@@ -100,10 +100,10 @@ class PermissionRepository(BaseRepository[SysPermission]):
         filters = []
         
         if permission_name:
-            filters.append(SysPermission.permission_name.like(f"%{permission_name}%"))
+            filters.append(SysPermission.permission_code.like(f"%{permission_name}%"))
             
         if permission_code:
-            filters.append(SysPermission.permission_code.like(f"%{permission_code}%"))
+            filters.append(SysPermission.permission_name.like(f"%{permission_code}%"))
             
         return await self.get_multi(skip=skip, limit=limit, filters=filters)
         

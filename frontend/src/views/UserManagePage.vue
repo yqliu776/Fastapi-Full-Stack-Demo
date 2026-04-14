@@ -242,7 +242,7 @@ const updateUser = async () => {
   if (!currentUser.value) return;
   
   try {
-    const response = await userService.updateUser(currentUser.value.id, userForm);
+    const response = await userService.createUser(userForm);
     if (response.code === 200) {
       showEditModal.value = false;
       loadUsers();
@@ -454,17 +454,17 @@ onMounted(() => {
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户名</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">邮箱</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">电话</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">用户名</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">邮箱</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">电话</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">状态</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">创建时间</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">操作</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           <tr v-if="loading" class="text-center">
-            <td colspan="6" class="px-6 py-4 whitespace-nowrap text-gray-500">
+            <td colspan="6" class="px-6 py-4 whitespace-nowrap text-gray-700">
               <div class="flex justify-center items-center">
                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -475,20 +475,20 @@ onMounted(() => {
             </td>
           </tr>
           <tr v-else-if="users.length === 0" class="text-center">
-            <td colspan="6" class="px-6 py-4 whitespace-nowrap text-gray-500">
+            <td colspan="6" class="px-6 py-4 whitespace-nowrap text-gray-700">
               暂无数据
             </td>
           </tr>
           <tr v-for="user in users" :key="user.id" class="hover:bg-gray-50 transition-colors">
-            <td class="px-6 py-4 whitespace-nowrap">{{ user.user_name }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">{{ user.email }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">{{ user.phone_number || '-' }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-900">{{ user.user_name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ user.email }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ user.phone_number || '-' }}</td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getUserStatusClass(user.delete_flag)">
                 {{ getUserStatusText(user.delete_flag) }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">{{ new Date(user.creation_date).toLocaleString() }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ new Date(user.creation_date).toLocaleString() }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
               <button 
                 @click="openEditModal(user)"

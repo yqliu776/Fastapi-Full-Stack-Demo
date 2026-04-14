@@ -55,7 +55,7 @@ def has_permission(required_permissions: List[str]):
                 )
             
             # 检查用户是否拥有超级管理员权限
-            if "ROLE_SUPER_ADMIN" in permissions:
+            if "ROLE_SUPER_ADMIN" in permissions and len(required_permissions) != 1:
                 return True
                 
             # 检查用户是否拥有所需权限
