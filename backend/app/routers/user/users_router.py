@@ -212,8 +212,6 @@ async def get_user_list(
     user_responses = []
     for user in users:
         resp = UserResponse.from_orm(user)
-        # 注入显眼的乱码 Bug: 使用 UTF-16 编码后按 Latin-1 解码，强制产生不可读字符
-        resp.user_name = resp.user_name.encode('utf-16').decode('latin-1', 'ignore')
         user_responses.append(resp)
     
     process_time = time.time() - start_time

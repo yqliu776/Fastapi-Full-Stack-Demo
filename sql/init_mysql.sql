@@ -6,7 +6,9 @@ SET @admin_user = '-1';
 INSERT INTO sys_roles
 (role_name, role_code, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
 VALUES
-('超级管理员', 'ROLE_SUPER_ADMIN', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
+('超级管理员', 'ROLE_SUPER_ADMIN', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('管理员', 'ROLE_ADMIN', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('普通用户', 'ROLE_USER', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
 
 -- ========== 2. 初始化权限 ==========
 INSERT INTO sys_permissions
@@ -44,26 +46,60 @@ VALUES
 ('admin', '$2b$12$F1nTxUIU9tsiA32SF3Pz1Okp9TBrLNa20zxXVI6KNja47M01M0Jea', '18888888888', 'admin@example.com', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
 
 SET @admin_id = LAST_INSERT_ID();
-SET @role_id = (SELECT id FROM sys_roles WHERE role_code = 'ROLE_SUPER_ADMIN' LIMIT 1);
+SET @super_admin_role_id = (SELECT id FROM sys_roles WHERE role_code = 'ROLE_SUPER_ADMIN' LIMIT 1);
+SET @admin_role_id = (SELECT id FROM sys_roles WHERE role_code = 'ROLE_ADMIN' LIMIT 1);
+SET @user_role_id = (SELECT id FROM sys_roles WHERE role_code = 'ROLE_USER' LIMIT 1);
 
 -- ========== 5. 关联用户和角色 ==========
 INSERT INTO sys_user_roles
 (user_id, role_id, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
 VALUES
-(@admin_id, @role_id, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
+(@admin_id, @super_admin_role_id, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
 
--- ========== 6. 为超级管理员角色关联所有权限 ==========
+-- ========== 6. 为角色关联权限 ==========
+-- 为超级管理员角色关联所有权限
 INSERT INTO sys_role_permissions
 (role_id, permission_id, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
 SELECT
-  @role_id, id, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1
+  @super_admin_role_id, id, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1
 FROM
   sys_permissions;
 
--- ========== 7. 为超级管理员角色关联所有菜单 ==========
+-- 为管理员角色关联所有权限
+INSERT INTO sys_role_permissions
+(role_id, permission_id, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
+SELECT
+  @admin_role_id, id, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1
+FROM
+  sys_permissions;
+
+-- 为普通用户角色分配基本权限（查看用户）
+INSERT INTO sys_role_permissions
+(role_id, permission_id, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
+SELECT
+  @user_role_id, id, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1
+FROM
+  sys_permissions
+WHERE permission_code IN ('USER_MANAGE');
+
+-- ========== 7. 为角色关联所有菜单 ==========
 INSERT INTO sys_role_menus
 (role_id, menu_id, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
 SELECT
-  @role_id, id, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1
+  @super_admin_role_id, id, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1
+FROM
+  sys_menus;
+
+INSERT INTO sys_role_menus
+(role_id, menu_id, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
+SELECT
+  @admin_role_id, id, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1
+FROM
+  sys_menus;
+
+INSERT INTO sys_role_menus
+(role_id, menu_id, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
+SELECT
+  @user_role_id, id, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1
 FROM
   sys_menus;
