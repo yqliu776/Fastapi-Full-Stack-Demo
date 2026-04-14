@@ -55,25 +55,27 @@ class Database:
                     pool_size = settings.MYSQL_POOL_SIZE
                     max_overflow = settings.MYSQL_MAX_OVERFLOW
                     pool_timeout = settings.MYSQL_POOL_TIMEOUT
-                    # 替换驱动为异步版本
                     db_url = db_url.replace("pymysql", "aiomysql")
+                    connect_args = {"charset": "utf8mb4"}
                 elif db_type == "postgresql":
                     echo = settings.POSTGRES_ECHO_SQL
                     pool_size = settings.POSTGRES_POOL_SIZE
                     max_overflow = settings.POSTGRES_MAX_OVERFLOW
                     pool_timeout = settings.POSTGRES_POOL_TIMEOUT
-                    # PostgresSQL已经使用asyncpg作为异步驱动
+                    connect_args = None
                 else:
                     raise ValueError(f"不支持的数据库类型: {db_type}")
                 
-                # 创建异步引擎
-                self.engine = create_async_engine(
-                    db_url,
-                    echo=echo,
-                    pool_size=pool_size,
-                    max_overflow=max_overflow,
-                    pool_timeout=pool_timeout
-                )
+                engine_kwargs = {
+                    "echo": echo,
+                    "pool_size": pool_size,
+                    "max_overflow": max_overflow,
+                    "pool_timeout": pool_timeout
+                }
+                if connect_args:
+                    engine_kwargs["connect_args"] = connect_args
+                
+                self.engine = create_async_engine(db_url, **engine_kwargs)
                 
                 self.AsyncSessionLocal = async_sessionmaker(
                     self.engine,
