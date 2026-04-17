@@ -6,7 +6,8 @@ SET @admin_user = '-1';
 INSERT INTO sys_roles
 (role_name, role_code, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
 VALUES
-('超级管理员', 'ROLE_SUPER_ADMIN', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
+('超级管理员', 'ROLE_SUPER_ADMIN', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('普通用户', 'ROLE_USER', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
 
 -- ========== 2. 初始化权限 ==========
 INSERT INTO sys_permissions

@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     @property
     def SQLALCHEMY_DATABASE_URL(self) -> str:
         if self.DATABASE_TYPE == "mysql":
-            return f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_SERVER}/{self.MYSQL_DB}"
+            return f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_SERVER}/{self.MYSQL_DB}?charset=utf8mb4"
         elif self.DATABASE_TYPE == "postgresql":
             return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
         else:
