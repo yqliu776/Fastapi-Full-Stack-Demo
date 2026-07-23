@@ -23,8 +23,7 @@ export interface RateLimitConfig {
 // 白名单/黑名单条目接口
 export interface ListEntry {
   identifier: string;
-  created_at: string;
-  expire_time?: number;
+  ttl?: number | null;
 }
 
 // 限流检查结果接口
@@ -46,13 +45,13 @@ export interface RateLimitStats {
 }
 
 // 限流作用域枚举
-export type RateLimitScope = 'global' | 'ip' | 'user' | 'endpoint' | 'ip_user' | 'ip_endpoint' | 'user_endpoint' | 'ip_user_endpoint';
+export type RateLimitScope = 'global' | 'ip' | 'user' | 'endpoint' | 'ip_user' | 'ip_endpoint' | 'user_endpoint';
 
 // 限流算法枚举
 export type RateLimitAlgorithm = 'token_bucket' | 'sliding_window' | 'fixed_window';
 
 // 限流存储枚举
-export type RateLimitStorage = 'redis' | 'memory' | 'database';
+export type RateLimitStorage = 'redis' | 'memory';
 
 // 限流管理API服务
 export const rateLimitService = {

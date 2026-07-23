@@ -69,8 +69,7 @@ const scopeOptions = [
   { label: 'API端点', value: 'endpoint' },
   { label: 'IP+用户', value: 'ip_user' },
   { label: 'IP+端点', value: 'ip_endpoint' },
-  { label: '用户+端点', value: 'user_endpoint' },
-  { label: 'IP+用户+端点', value: 'ip_user_endpoint' }
+  { label: '用户+端点', value: 'user_endpoint' }
 ];
 
 // 算法选项
@@ -83,8 +82,7 @@ const algorithmOptions = [
 // 存储选项
 const storageOptions = [
   { label: 'Redis', value: 'redis' },
-  { label: '内存', value: 'memory' },
-  { label: '数据库', value: 'database' }
+  { label: '内存', value: 'memory' }
 ];
 
 // 获取限流配置
@@ -155,7 +153,7 @@ const checkRateLimit = async () => {
 
   try {
     loading.value = true;
-    const response = await rateLimitService.checkRateLimit(
+    const response = await rateLimitService.getRateLimitStats(
       checkForm.scope,
       checkForm.identifier.trim(),
       checkForm.endpoint || undefined,
@@ -556,8 +554,8 @@ onMounted(() => {
 
                   <tr v-for="item in whitelist" :key="item.identifier" class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.identifier }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.created_at }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.expire_time ? item.expire_time + '秒' : '永久' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.ttl ? item.ttl + '秒' : '永久' }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <el-tag type="success" size="small">
                         <el-icon><CircleCheck /></el-icon>
@@ -658,8 +656,8 @@ onMounted(() => {
 
                   <tr v-for="item in blacklist" :key="item.identifier" class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.identifier }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.created_at }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.expire_time ? item.expire_time + '秒' : '永久' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.ttl ? item.ttl + '秒' : '永久' }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <el-tag type="danger" size="small">
                         <el-icon><CircleClose /></el-icon>

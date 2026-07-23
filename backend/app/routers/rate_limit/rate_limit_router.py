@@ -99,6 +99,8 @@ async def add_to_whitelist(request: WhitelistRequest) -> ResponseModel:
             )
         else:
             raise HTTPException(status_code=500, detail="添加到白名单失败")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"添加到白名单失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"添加到白名单失败: {str(e)}")
@@ -119,11 +121,9 @@ async def remove_from_whitelist(identifier: str) -> ResponseModel:
                 data={"identifier": identifier}
             )
         else:
-            return ResponseModel(
-                code=404,
-                message=f"{identifier} 不在白名单中",
-                data={"identifier": identifier}
-            )
+            raise HTTPException(status_code=404, detail=f"{identifier} 不在白名单中")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"从白名单移除失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"从白名单移除失败: {str(e)}")
@@ -166,6 +166,8 @@ async def add_to_blacklist(request: BlacklistRequest) -> ResponseModel:
             )
         else:
             raise HTTPException(status_code=500, detail="添加到黑名单失败")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"添加到黑名单失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"添加到黑名单失败: {str(e)}")
@@ -186,11 +188,9 @@ async def remove_from_blacklist(identifier: str) -> ResponseModel:
                 data={"identifier": identifier}
             )
         else:
-            return ResponseModel(
-                code=404,
-                message=f"{identifier} 不在黑名单中",
-                data={"identifier": identifier}
-            )
+            raise HTTPException(status_code=404, detail=f"{identifier} 不在黑名单中")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"从黑名单移除失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"从黑名单移除失败: {str(e)}")

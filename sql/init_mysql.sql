@@ -18,6 +18,7 @@ VALUES
 ('角色管理', 'ROLE_MANAGE', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('权限管理', 'PERMISSION_MANAGE', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('菜单管理', 'MENU_MANAGE', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('API限流管理', 'RATE_LIMIT_MANAGE', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('系统设置', 'SYSTEM_SETTING', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
 
 -- ========== 3. 初始化菜单 ==========

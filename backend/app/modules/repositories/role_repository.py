@@ -157,6 +157,7 @@ class RoleRepository(BaseRepository[SysRole]):
             self.db.add(role_permission)
             
         await self.db.commit()
+        await self.redis_util.delete(f"role_permissions:{role_id}")
         return True
     
     async def remove_permissions_from_role(self, role_id: int, permission_ids: List[int]) -> bool:
@@ -182,6 +183,7 @@ class RoleRepository(BaseRepository[SysRole]):
         
         await self.db.execute(update_query)
         await self.db.commit()
+        await self.redis_util.delete(f"role_permissions:{role_id}")
         return True
     
     async def add_menus_to_role(self, role_id: int, menu_ids: List[int], audit_info: dict) -> bool:
