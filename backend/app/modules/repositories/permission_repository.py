@@ -130,6 +130,7 @@ class PermissionRepository(BaseRepository[SysPermission]):
         ).where(
             and_(
                 SysRolePermission.role_id == role_id,
+                SysRolePermission.delete_flag == 'N',
                 SysPermission.delete_flag == 'N'
             )
         )

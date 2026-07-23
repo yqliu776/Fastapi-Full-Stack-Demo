@@ -121,8 +121,7 @@ class RbacService:
         Raises:
             HTTPException: 角色不存在时抛出异常
         """
-        # 获取角色及其所有关联
-        role = await self.role_repository.get_role_with_all_relations(role_id)
+        role = await self.role_repository.get(role_id)
         if not role:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -140,28 +139,28 @@ class RbacService:
             "message": "获取角色详情成功"
         }
         
-        # 转换权限列表
-        permissions_list = []
-        if hasattr(role, "permissions") and role.permissions:
-            for permission in role.permissions:
-                # 确保每个权限都是字典格式
-                permissions_list.append({
-                    "id": permission.id,
-                    "permission_name": permission.permission_name,
-                    "permission_code": permission.permission_code
-                })
-        
-        # 转换菜单列表
-        menus_list = []
-        if hasattr(role, "menus") and role.menus:
-            for menu in role.menus:
-                # 确保每个菜单都是字典格式
-                menus_list.append({
-                    "id": menu.id,
-                    "menu_name": menu.menu_name,
-                    "menu_code": menu.menu_code,
-                    "menu_path": menu.menu_path if hasattr(menu, "menu_path") else None
-                })
+        permissions = await self.permission_repository.get_permissions_by_role_id(role_id)
+        permissions_list = [
+            {
+                "id": permission.id,
+                "permission_name": permission.permission_name,
+                "permission_code": permission.permission_code
+            }
+            for permission in permissions
+        ]
+
+        menus = await self.menu_repository.get_menus_by_role_id(role_id)
+        menus_list = [
+            {
+                "id": menu.id,
+                "menu_name": menu.menu_name,
+                "menu_code": menu.menu_code,
+                "menu_path": menu.menu_path,
+                "parent_id": menu.parent_id,
+                "sort_order": menu.sort_order
+            }
+            for menu in menus
+        ]
         
         # 构建完整的角色详情响应
         role_dict["permissions"] = permissions_list
@@ -317,6 +316,8 @@ class RbacService:
                 detail=f"角色ID '{role_id}' 不存在"
             )
         
+        menu_ids = await self._expand_menu_ids_with_ancestors(menu_ids)
+
         # 添加菜单
         result = await self.role_repository.add_menus_to_role(
             role_id=role_id,
@@ -325,6 +326,31 @@ class RbacService:
         )
         
         return result
+
+    async def _expand_menu_ids_with_ancestors(self, menu_ids: List[int]) -> List[int]:
+        expanded_ids = set()
+
+        for menu_id in dict.fromkeys(menu_ids):
+            menu = await self.menu_repository.get(menu_id)
+            if not menu:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"菜单ID '{menu_id}' 不存在"
+                )
+
+            expanded_ids.add(menu.id)
+            parent_id = menu.parent_id
+            while parent_id is not None:
+                parent = await self.menu_repository.get(parent_id)
+                if not parent:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"菜单ID '{menu.id}' 的父菜单不存在"
+                    )
+                expanded_ids.add(parent.id)
+                parent_id = parent.parent_id
+
+        return list(expanded_ids)
     
     async def remove_menus_from_role(
         self, 

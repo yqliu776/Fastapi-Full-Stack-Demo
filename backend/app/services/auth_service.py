@@ -155,7 +155,11 @@ class AuthService:
                     SysRolePermission,
                     SysPermission.id == SysRolePermission.permission_id
                 )
-            ).where(SysRolePermission.role_id.in_(uncached_role_ids))
+            ).where(
+                SysRolePermission.role_id.in_(uncached_role_ids),
+                SysRolePermission.delete_flag == 'N',
+                SysPermission.delete_flag == 'N'
+            )
             
             result = await self.db.execute(query)
             rows = result.all()

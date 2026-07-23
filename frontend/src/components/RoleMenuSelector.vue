@@ -39,6 +39,10 @@ const roleMenuIds = computed(() => {
   return roleMenus.value.map(m => m.id);
 });
 
+const menuById = computed(() => {
+  return new Map(allMenus.value.map(menu => [menu.id, menu]));
+});
+
 // 计算属性 - 菜单树结构
 const menuTree = computed(() => {
   if (!allMenus.value.length) return [];
@@ -77,6 +81,23 @@ const hasRoleMenu = (menuId: number) => {
   return roleMenuIds.value.includes(menuId);
 };
 
+const getAncestorIds = (menuId: number) => {
+  const ids: number[] = [];
+  let parentId = menuById.value.get(menuId)?.parent_id;
+
+  while (parentId) {
+    ids.push(parentId);
+    parentId = menuById.value.get(parentId)?.parent_id;
+  }
+
+  return ids;
+};
+
+const getDescendantIds = (menuId: number): number[] => {
+  const children = allMenus.value.filter(menu => menu.parent_id === menuId);
+  return children.flatMap(child => [child.id, ...getDescendantIds(child.id)]);
+};
+
 // 切换菜单展开状态
 const toggleExpandMenu = (menuId: number) => {
   const index = expandedMenus.value.indexOf(menuId);
@@ -94,12 +115,13 @@ const isMenuExpanded = (menuId: number) => {
 
 // 切换选择菜单
 const toggleSelectMenu = (menuId: number) => {
-  const index = selectedMenus.value.indexOf(menuId);
-  if (index === -1) {
-    selectedMenus.value.push(menuId);
+  const nextSelected = new Set(selectedMenus.value);
+  if (!nextSelected.has(menuId)) {
+    [menuId, ...getAncestorIds(menuId), ...getDescendantIds(menuId)].forEach(id => nextSelected.add(id));
   } else {
-    selectedMenus.value.splice(index, 1);
+    [menuId, ...getDescendantIds(menuId)].forEach(id => nextSelected.delete(id));
   }
+  selectedMenus.value = Array.from(nextSelected);
 };
 
 // 全选

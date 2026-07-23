@@ -147,6 +147,7 @@ class MenuRepository(BaseRepository[SysMenu]):
         ).where(
             and_(
                 SysRoleMenu.role_id == role_id,
+                SysRoleMenu.delete_flag == 'N',
                 SysMenu.delete_flag == 'N'
             )
         ).order_by(

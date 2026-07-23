@@ -146,15 +146,37 @@ class RoleRepository(BaseRepository[SysRole]):
         role = await self.get(role_id)
         if not role:
             return False
+
+        permission_ids = list(dict.fromkeys(permission_ids))
             
-        # 添加权限关联
-        for permission_id in permission_ids:
-            role_permission = SysRolePermission(
-                role_id=role_id,
-                permission_id=permission_id,
-                **audit_info
+        existing_query = select(SysRolePermission).where(
+            and_(
+                SysRolePermission.role_id == role_id,
+                SysRolePermission.permission_id.in_(permission_ids)
             )
-            self.db.add(role_permission)
+        )
+        existing_result = await self.db.execute(existing_query)
+        existing_map = {
+            item.permission_id: item
+            for item in existing_result.scalars().all()
+        }
+
+        for permission_id in permission_ids:
+            existing = existing_map.get(permission_id)
+            if existing:
+                if existing.delete_flag == 'Y':
+                    existing.delete_flag = 'N'
+                    existing.last_updated_by = audit_info["last_updated_by"]
+                    existing.last_update_login = audit_info["last_update_login"]
+                continue
+
+            self.db.add(
+                SysRolePermission(
+                    role_id=role_id,
+                    permission_id=permission_id,
+                    **audit_info
+                )
+            )
             
         await self.db.commit()
         await self.redis_util.delete(f"role_permissions:{role_id}")
@@ -202,15 +224,37 @@ class RoleRepository(BaseRepository[SysRole]):
         role = await self.get(role_id)
         if not role:
             return False
+
+        menu_ids = list(dict.fromkeys(menu_ids))
             
-        # 添加菜单关联
-        for menu_id in menu_ids:
-            role_menu = SysRoleMenu(
-                role_id=role_id,
-                menu_id=menu_id,
-                **audit_info
+        existing_query = select(SysRoleMenu).where(
+            and_(
+                SysRoleMenu.role_id == role_id,
+                SysRoleMenu.menu_id.in_(menu_ids)
             )
-            self.db.add(role_menu)
+        )
+        existing_result = await self.db.execute(existing_query)
+        existing_map = {
+            item.menu_id: item
+            for item in existing_result.scalars().all()
+        }
+
+        for menu_id in menu_ids:
+            existing = existing_map.get(menu_id)
+            if existing:
+                if existing.delete_flag == 'Y':
+                    existing.delete_flag = 'N'
+                    existing.last_updated_by = audit_info["last_updated_by"]
+                    existing.last_update_login = audit_info["last_update_login"]
+                continue
+
+            self.db.add(
+                SysRoleMenu(
+                    role_id=role_id,
+                    menu_id=menu_id,
+                    **audit_info
+                )
+            )
             
         await self.db.commit()
         return True
@@ -266,16 +310,36 @@ class RoleRepository(BaseRepository[SysRole]):
                 .values(delete_flag='Y')
             )
             
-            # 添加新的权限关联
-            for permission_id in permission_ids:
-                role_permission = SysRolePermission(
-                    role_id=role_id,
-                    permission_id=permission_id,
-                    created_by="system",
-                    last_updated_by="system",
-                    last_update_login="system"
+            permission_ids = list(dict.fromkeys(permission_ids))
+            existing_query = select(SysRolePermission).where(
+                and_(
+                    SysRolePermission.role_id == role_id,
+                    SysRolePermission.permission_id.in_(permission_ids)
                 )
-                self.db.add(role_permission)
+            )
+            existing_result = await self.db.execute(existing_query)
+            existing_map = {
+                item.permission_id: item
+                for item in existing_result.scalars().all()
+            }
+
+            for permission_id in permission_ids:
+                existing = existing_map.get(permission_id)
+                if existing:
+                    existing.delete_flag = 'N'
+                    existing.last_updated_by = "system"
+                    existing.last_update_login = "system"
+                    continue
+
+                self.db.add(
+                    SysRolePermission(
+                        role_id=role_id,
+                        permission_id=permission_id,
+                        created_by="system",
+                        last_updated_by="system",
+                        last_update_login="system"
+                    )
+                )
             
             await self.db.commit()
             
