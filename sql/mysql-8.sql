@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 -- ========== 1. 用户表 ==========
 CREATE TABLE sys_users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',

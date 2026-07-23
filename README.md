@@ -53,6 +53,7 @@
 │
 ├── sql/                    # SQL脚本和数据库相关文件
 ├── docs/                   # 项目文档
+├── docker-compose.yml      # 本地 MySQL/Redis 开发环境
 └── README.md               # 项目说明(当前文件)
 ```
 
@@ -65,34 +66,43 @@
 
 ## 快速开始
 
-### 环境设置
-项目在win11系统开发以及测试。
-1. 创建数据库和redis容器
+### 本地 Docker 环境
+
+项目默认使用 MySQL 和 Redis，本地开发不需要 PostgreSQL。根目录提供了 `docker-compose.yml`，会自动启动 MySQL 8 和 Redis 7，并在 MySQL 首次初始化时依次导入 [mysql-8.sql](sql/mysql-8.sql) 和 [init_mysql.sql](sql/init_mysql.sql)。
+
+1. 启动 MySQL 和 Redis
    ```bash
-   docker run -d `
-     --name mysql8 `
-     -e MYSQL_ROOT_PASSWORD=<password> `
-     -v D:\env\Docker\databases\MySql8:/var/lib/mysql `
-     -p 3306:3306 `
-     mysql:8.0
+   docker compose up -d mysql redis
    ```
+
+2. 查看服务状态
    ```bash
-   docker run `
-   --restart=always `
-   --log-opt max-size=100m `
-   --log-opt max-file=2 `
-   -p 6379:6379 `
-   --name redis `
-   -v D:\env\Docker\redis\conf\redis.conf:/etc/redis/redis.conf  `
-   -v D:\env\Docker\redis\data:/data `
-   -d redis redis-server /etc/redis/redis.conf `
-   --appendonly yes `
-   --requirepass <password>
+   docker compose ps
    ```
-   个人喜好可以直接使用自己本地应用。 
-   2. 导入数据库并创建数据
-   [mysql-8.sql](sql/mysql-8.sql)直接在数据库中运行sql创建数据库。
-   [init_mysql.sql](sql/init_mysql.sql)写入基础数据。
+
+3. 默认连接信息
+   ```text
+   MySQL: localhost:3306
+   Database: full-stack-demo
+   User: root
+   Password: FastFullStack123
+
+   Redis: localhost:6379
+   Password: FastFullStackRedis123
+   ```
+
+4. 默认登录账号
+   ```text
+   Username: admin
+   Password: Admin@123
+   ```
+
+如果需要重新执行初始化 SQL，可以删除 MySQL 数据卷后再启动：
+
+```bash
+docker compose down -v
+docker compose up -d mysql redis
+```
 
 #### 后端设置
 
@@ -118,12 +128,23 @@
    ```
 
 4. 配置环境变量
-   创建`.env`文件并设置数据库、Redis等配置
+   ```bash
+   # Windows PowerShell
+   Copy-Item .env.example .env
+
+   # Linux/macOS
+   cp .env.example .env
+   ```
 
 5. 启动服务
    ```bash
-   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+   uvicorn main:app --host 127.0.0.1 --port 8090 --reload
    ```
+
+6. 访问后端文档
+   浏览器打开 http://localhost:8090/api/docs
+
+> Windows 上部分机器会保留 `7981-8080` 端口段，导致 `8000` 无法绑定。本项目本地默认使用 `8090` 作为后端开发端口。
 
 #### 前端设置
 
@@ -143,11 +164,13 @@
    ```bash
    npm run dev
    # 或
-   pnpm dev
+   pnpm run dev
    ```
 
 4. 访问前端应用
    浏览器打开 http://localhost:5173
+
+前端默认读取 [frontend/.env](frontend/.env) 中的 `VITE_API_BASE_URL=http://localhost:8090` 访问后端。
 
 ## 主要功能
 

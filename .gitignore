@@ -1,6 +1,9 @@
 .vscode
 .idea
 node_modules/
+.pnpm-store/
+.codex-run/
+**/.codex-run/
 /test-results/
 /playwright-report/
 /blob-report/

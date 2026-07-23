@@ -1,0 +1,45 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: fast-full-stack-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: FastFullStack123
+      MYSQL_DATABASE: full-stack-demo
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/mysql-8.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./sql/init_mysql.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: fast-full-stack-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass FastFullStackRedis123
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "FastFullStackRedis123", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  mysql_data:
+  redis_data:

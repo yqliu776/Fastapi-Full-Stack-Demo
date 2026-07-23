@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 -- 添加API文档(Swagger UI)菜单 (MySQL版本)
 -- 在系统管理下添加API文档菜单
 

@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 -- 初始化日期变量
 SET @current_date = NOW();
 SET @admin_user = '-1';
