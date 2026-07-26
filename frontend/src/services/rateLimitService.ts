@@ -68,6 +68,18 @@ export const rateLimitService = {
   },
 
   /**
+   * 更新限流配置
+   */
+  async updateRateLimitConfig(config: RateLimitConfig): Promise<ResponseModel<RateLimitConfig>> {
+    try {
+      const response = await apiClient.put<ResponseModel<RateLimitConfig>>('/rate-limit/config', config);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  /**
    * 获取限流统计信息
    */
   async getRateLimitStats(

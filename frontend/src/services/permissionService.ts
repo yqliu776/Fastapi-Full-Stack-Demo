@@ -23,6 +23,38 @@ export interface PermissionUpdate {
   last_update_login: string;
 }
 
+export interface ApiPermission {
+  id: number;
+  method: string;
+  path_pattern: string;
+  permission_code: string;
+  description?: string | null;
+  enabled: boolean;
+  creation_date: string;
+  last_update_date: string;
+}
+
+export interface ApiPermissionCreate {
+  method: string;
+  path_pattern: string;
+  permission_code: string;
+  description?: string;
+  enabled: boolean;
+  created_by: string;
+  last_updated_by: string;
+  last_update_login: string;
+}
+
+export interface ApiPermissionUpdate {
+  method?: string;
+  path_pattern?: string;
+  permission_code?: string;
+  description?: string;
+  enabled?: boolean;
+  last_updated_by: string;
+  last_update_login: string;
+}
+
 export interface ListResponse<T> {
   code: number;
   message: string;
@@ -99,6 +131,46 @@ export const permissionService = {
   async deletePermission(permissionId: number) {
     try {
       const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/permissions/${permissionId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 获取API权限绑定列表
+  async getApiPermissions(params: { skip?: number; limit?: number; method?: string; path_pattern?: string; permission_code?: string } = {}) {
+    try {
+      const response = await apiClient.get<ListResponse<ApiPermission>>('/permissions/api-bindings', { params });
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 创建API权限绑定
+  async createApiPermission(apiPermissionData: ApiPermissionCreate) {
+    try {
+      const response = await apiClient.post<SingleResponse<ApiPermission>>('/permissions/api-bindings', apiPermissionData);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 更新API权限绑定
+  async updateApiPermission(apiPermissionId: number, apiPermissionData: ApiPermissionUpdate) {
+    try {
+      const response = await apiClient.put<SingleResponse<ApiPermission>>(`/permissions/api-bindings/${apiPermissionId}`, apiPermissionData);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 删除API权限绑定
+  async deleteApiPermission(apiPermissionId: number) {
+    try {
+      const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/permissions/api-bindings/${apiPermissionId}`);
       return response.data;
     } catch (error) {
       return Promise.reject(error);

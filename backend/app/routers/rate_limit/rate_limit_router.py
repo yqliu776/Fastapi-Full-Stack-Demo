@@ -5,10 +5,14 @@ from pydantic import BaseModel, Field
 from app.core.rate_limit import RateLimiter
 from app.core.rate_limit.storage import RateLimitStorage
 from app.core.rate_limit.rate_limiter import RateLimitScope, RateLimitConfig
+from app.core.rate_limit.runtime_config import (
+    RuntimeRateLimitConfig,
+    get_runtime_rate_limit_config,
+    save_runtime_rate_limit_config
+)
 from app.core.decorators import has_permission
 from app.core.models import ResponseModel
 from app.core.utils import logger
-from app.core.settings import settings
 
 # 创建API路由
 router = APIRouter(
@@ -20,15 +24,6 @@ router = APIRouter(
 # 初始化限流器
 storage = RateLimitStorage()
 rate_limiter = RateLimiter(storage)
-
-
-class RateLimitConfigRequest(BaseModel):
-    """限流配置请求模型"""
-    limit: int = Field(..., description="限制数量", ge=1, le=10000)
-    window: int = Field(..., description="时间窗口（秒）", ge=1, le=3600)
-    burst: int = Field(10, description="突发容量", ge=1, le=1000)
-    block_duration: int = Field(60, description="封禁时长（秒）", ge=1, le=86400)
-    enabled: bool = Field(True, description="是否启用")
 
 
 class WhitelistRequest(BaseModel):
@@ -226,15 +221,22 @@ async def check_rate_limit(
     检查指定请求的限流状态，不实际消耗限流额度
     """
     try:
-        # 执行限流检查，但不实际消耗额度
-        # 这里使用一个特殊的配置，limit设置为0，enabled为True
-        # 这样可以在不消耗实际额度的情况下检查状态
-        check_config = RateLimitConfig(limit=999999, window=60, enabled=True)
+        runtime_config = await get_runtime_rate_limit_config()
+        check_config = RateLimitConfig(
+            limit=runtime_config.default_requests,
+            window=60,
+            burst=runtime_config.default_burst,
+            block_duration=runtime_config.block_duration,
+            enabled=runtime_config.enabled,
+            enable_whitelist=runtime_config.enable_whitelist,
+            enable_blacklist=runtime_config.enable_blacklist,
+            log_violations=runtime_config.log_violations
+        )
 
         result = await rate_limiter.is_allowed(
             scope=scope,
             identifier=identifier,
-            algorithm="token_bucket",
+            algorithm=runtime_config.algorithm,
             config=check_config,
             endpoint=endpoint,
             user_id=user_id
@@ -262,23 +264,30 @@ async def get_rate_limit_config() -> ResponseModel:
     获取当前限流配置信息
     """
     try:
-        config_info = {
-            "enabled": settings.RATE_LIMIT_ENABLED,
-            "algorithm": settings.RATE_LIMIT_ALGORITHM,
-            "storage": settings.RATE_LIMIT_STORAGE,
-            "default_requests": settings.RATE_LIMIT_DEFAULT_REQUESTS,
-            "default_burst": settings.RATE_LIMIT_DEFAULT_BURST,
-            "block_duration": settings.RATE_LIMIT_BLOCK_DURATION,
-            "enable_whitelist": settings.RATE_LIMIT_ENABLE_WHITELIST,
-            "enable_blacklist": settings.RATE_LIMIT_ENABLE_BLACKLIST,
-            "log_violations": settings.RATE_LIMIT_LOG_VIOLATIONS
-        }
+        config_info = await get_runtime_rate_limit_config()
 
         return ResponseModel(
             code=200,
             message="获取限流配置成功",
-            data=config_info
+            data=config_info.model_dump()
         )
     except Exception as e:
         logger.error(f"获取限流配置失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"获取限流配置失败: {str(e)}")
+
+
+@router.put("/config", summary="更新限流配置")
+async def update_rate_limit_config(config: RuntimeRateLimitConfig) -> ResponseModel:
+    """
+    更新运行时限流配置，保存后立即生效并持久化到Redis。
+    """
+    try:
+        saved_config = await save_runtime_rate_limit_config(config)
+        return ResponseModel(
+            code=200,
+            message="限流配置保存成功",
+            data=saved_config.model_dump()
+        )
+    except Exception as e:
+        logger.error(f"保存限流配置失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"保存限流配置失败: {str(e)}")

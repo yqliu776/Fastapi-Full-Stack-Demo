@@ -6,7 +6,8 @@ from app.modules.models.rbac_model import (
     SysMenu,
     SysUserRole,
     SysRolePermission,
-    SysRoleMenu
+    SysRoleMenu,
+    SysApiPermission
 )
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "SysMenu",
     "SysUserRole",
     "SysRolePermission",
-    "SysRoleMenu"
+    "SysRoleMenu",
+    "SysApiPermission"
 ]

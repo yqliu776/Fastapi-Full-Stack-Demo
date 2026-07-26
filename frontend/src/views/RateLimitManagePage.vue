@@ -7,6 +7,7 @@ import type { RateLimitConfig, RateLimitStats, ListEntry, RateLimitScope } from 
 
 // 状态
 const loading = ref(false);
+const savingConfig = ref(false);
 const activeTab = ref('config');
 
 // 限流配置
@@ -81,8 +82,7 @@ const algorithmOptions = [
 
 // 存储选项
 const storageOptions = [
-  { label: 'Redis', value: 'redis' },
-  { label: '内存', value: 'memory' }
+  { label: 'Redis', value: 'redis' }
 ];
 
 // 获取限流配置
@@ -101,6 +101,26 @@ const loadRateLimitConfig = async () => {
     ElMessage.error('获取限流配置出错');
   } finally {
     loading.value = false;
+  }
+};
+
+// 保存限流配置
+const saveRateLimitConfig = async () => {
+  try {
+    savingConfig.value = true;
+    const response = await rateLimitService.updateRateLimitConfig({ ...rateLimitConfig });
+
+    if (response.code === 200) {
+      Object.assign(rateLimitConfig, response.data);
+      ElMessage.success('限流配置已保存并生效');
+    } else {
+      ElMessage.error('保存限流配置失败: ' + response.message);
+    }
+  } catch (error) {
+    console.error('保存限流配置出错:', error);
+    ElMessage.error('保存限流配置出错');
+  } finally {
+    savingConfig.value = false;
   }
 };
 
@@ -394,6 +414,28 @@ onMounted(() => {
               class="w-full"
             />
           </div>
+        </div>
+
+        <div class="mt-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            @click="saveRateLimitConfig"
+            :disabled="savingConfig || loading"
+            class="bg-indigo-600 text-white py-2 px-5 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 flex items-center gap-2"
+          >
+            <el-icon v-if="!savingConfig"><CircleCheck /></el-icon>
+            <span v-if="savingConfig">保存中...</span>
+            <span v-else>保存配置</span>
+          </button>
+          <button
+            type="button"
+            @click="loadRateLimitConfig"
+            :disabled="savingConfig || loading"
+            class="bg-gray-100 text-gray-700 py-2 px-5 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 flex items-center gap-2"
+          >
+            <el-icon><Refresh /></el-icon>
+            重新加载
+          </button>
         </div>
       </el-form>
     </div>

@@ -10,6 +10,10 @@ from .permission_schema import (
     PermissionBase, PermissionCreate, PermissionUpdate, PermissionResponse,
     PermissionDetail, PermissionBatchResponse
 )
+from .api_permission_schema import (
+    ApiPermissionBase, ApiPermissionCreate, ApiPermissionUpdate,
+    ApiPermissionResponse, ApiPermissionBatchResponse
+)
 from .role_schema import (
     RoleBase, RoleCreate, RoleUpdate, RoleResponse, RoleDetail, RoleBatchResponse,
     RolePermissionOperation, RoleMenuOperation
@@ -34,6 +38,8 @@ __all__ = [
     # 权限相关模型
     "PermissionBase", "PermissionCreate", "PermissionUpdate", "PermissionResponse",
     "PermissionDetail", "PermissionBatchResponse", "PermissionRead",
+    "ApiPermissionBase", "ApiPermissionCreate", "ApiPermissionUpdate",
+    "ApiPermissionResponse", "ApiPermissionBatchResponse",
     
     # 菜单相关模型
     "MenuBase", "MenuCreate", "MenuUpdate", "MenuResponse", "MenuDetail",

@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, Query, Path, Body
 from typing import List, Optional
 
 from app.modules.schemas import (
-    PermissionCreate, PermissionUpdate, PermissionResponse, PermissionDetail, PermissionBatchResponse
+    PermissionCreate, PermissionUpdate, PermissionResponse, PermissionDetail, PermissionBatchResponse,
+    ApiPermissionCreate, ApiPermissionUpdate
 )
 from app.core.decorators import has_permission
 from app.core.models import ResponseModel
@@ -70,6 +71,89 @@ async def get_permissions(
         code=200,
         message="获取权限列表成功",
         data=permissions
+    )
+
+
+@router.get(
+    "/api-bindings",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["PERMISSION_MANAGE"]))],
+    summary="获取API权限绑定列表"
+)
+async def get_api_permission_bindings(
+    skip: int = Query(0, description="跳过的记录数"),
+    limit: int = Query(100, description="返回的记录数"),
+    method: Optional[str] = Query(None, description="HTTP方法"),
+    path_pattern: Optional[str] = Query(None, description="API路径模式"),
+    permission_code: Optional[str] = Query(None, description="权限代码"),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    bindings = await rbac_service.get_all_api_permissions(
+        skip=skip,
+        limit=limit,
+        method=method,
+        path_pattern=path_pattern,
+        permission_code=permission_code
+    )
+    return ResponseModel(
+        code=200,
+        message="获取API权限绑定列表成功",
+        data=bindings
+    )
+
+
+@router.post(
+    "/api-bindings",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["PERMISSION_MANAGE"]))],
+    summary="创建API权限绑定"
+)
+async def create_api_permission_binding(
+    binding_data: ApiPermissionCreate,
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    binding = await rbac_service.create_api_permission(binding_data)
+    return ResponseModel(
+        code=200,
+        message="API权限绑定创建成功",
+        data=binding
+    )
+
+
+@router.put(
+    "/api-bindings/{api_permission_id}",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["PERMISSION_MANAGE"]))],
+    summary="更新API权限绑定"
+)
+async def update_api_permission_binding(
+    api_permission_id: int = Path(..., description="API权限绑定ID"),
+    binding_data: ApiPermissionUpdate = Body(...),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    binding = await rbac_service.update_api_permission(api_permission_id, binding_data)
+    return ResponseModel(
+        code=200,
+        message="API权限绑定更新成功",
+        data=binding
+    )
+
+
+@router.delete(
+    "/api-bindings/{api_permission_id}",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["PERMISSION_MANAGE"]))],
+    summary="删除API权限绑定"
+)
+async def delete_api_permission_binding(
+    api_permission_id: int = Path(..., description="API权限绑定ID"),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    result = await rbac_service.delete_api_permission(api_permission_id)
+    return ResponseModel(
+        code=200 if result else 400,
+        message="API权限绑定删除成功" if result else "API权限绑定删除失败",
+        data={"success": result}
     )
 
 

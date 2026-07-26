@@ -1,10 +1,17 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from typing import List, Optional, Callable
 from functools import wraps
 from jose import jwt
 
 from app.core.settings import settings
-from app.services import AuthService, oauth2_scheme
+from app.services import AuthService, RbacService, oauth2_scheme
+
+
+def _get_route_path_pattern(request: Request) -> str:
+    route = request.scope.get("route")
+    if route and getattr(route, "path", None):
+        return route.path
+    return request.url.path
 
 
 def has_permission(required_permissions: List[str]):
@@ -19,8 +26,10 @@ def has_permission(required_permissions: List[str]):
     """
     
     async def permission_checker(
+        request: Request,
         token: str = Depends(oauth2_scheme),
-        auth_service: AuthService = Depends()
+        auth_service: AuthService = Depends(),
+        rbac_service: RbacService = Depends()
     ) -> bool:
         """
         检查用户权限
@@ -34,10 +43,6 @@ def has_permission(required_permissions: List[str]):
         Raises:
             HTTPException: 权限验证失败时抛出异常
         """
-        # 如果没有要求任何权限，直接通过
-        if not required_permissions:
-            return True
-            
         try:
             # 解析令牌
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
@@ -75,9 +80,19 @@ def has_permission(required_permissions: List[str]):
             # 检查用户是否拥有超级管理员权限
             if "ROLE_SUPER_ADMIN" in permissions:
                 return True
+
+            route_permission = await rbac_service.get_api_permission_for_route(
+                request.method,
+                _get_route_path_pattern(request)
+            )
+            effective_permissions = [route_permission] if route_permission else required_permissions
+
+            # 如果没有配置API绑定，也没有要求任何权限，直接通过
+            if not effective_permissions:
+                return True
                 
             # 检查用户是否拥有所需权限
-            for permission in required_permissions:
+            for permission in effective_permissions:
                 if permission not in permissions:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,

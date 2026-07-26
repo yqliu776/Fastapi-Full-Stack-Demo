@@ -2,11 +2,14 @@ from typing import List, Optional, Dict, Any, Tuple
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.schemas import PermissionCreate, PermissionUpdate, PermissionResponse, PermissionDetail, PermissionBatchResponse
+from app.modules.schemas import (
+    PermissionCreate, PermissionUpdate, PermissionResponse, PermissionDetail, PermissionBatchResponse,
+    ApiPermissionCreate, ApiPermissionUpdate, ApiPermissionResponse, ApiPermissionBatchResponse
+)
 from app.modules.schemas import MenuCreate, MenuUpdate, MenuResponse, MenuDetail, MenuTreeNode, MenuBatchResponse
 from app.modules.schemas import RoleCreate, RoleUpdate, RoleResponse, RoleDetail, RoleBatchResponse
-from app.modules.repositories import RoleRepository, MenuRepository, PermissionRepository
-from app.modules.models import SysRole, SysPermission, SysMenu
+from app.modules.repositories import RoleRepository, MenuRepository, PermissionRepository, ApiPermissionRepository
+from app.modules.models import SysRole, SysPermission, SysMenu, SysApiPermission
 from app.core.connects import db
 
 
@@ -21,6 +24,7 @@ class RbacService:
         self.role_repository = RoleRepository(db_session)
         self.permission_repository = PermissionRepository(db_session)
         self.menu_repository = MenuRepository(db_session)
+        self.api_permission_repository = ApiPermissionRepository(db_session)
     
     #========== 角色相关方法 ==========
     
@@ -569,6 +573,126 @@ class RbacService:
             success=True,
             message="获取权限列表成功"
         )
+
+    async def create_api_permission(self, api_permission_data: ApiPermissionCreate) -> ApiPermissionResponse:
+        permission = await self.permission_repository.get_by_permission_code(
+            api_permission_data.permission_code
+        )
+        if not permission:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"权限编码 '{api_permission_data.permission_code}' 不存在"
+            )
+
+        existing = await self.api_permission_repository.get_by_route(
+            api_permission_data.method,
+            api_permission_data.path_pattern,
+            enabled_only=False
+        )
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="该API路径已绑定权限"
+            )
+
+        create_data = api_permission_data.model_dump()
+        create_data["enabled"] = 1 if api_permission_data.enabled else 0
+        api_permission = await self.api_permission_repository.create(create_data)
+        return ApiPermissionResponse.model_validate(api_permission)
+
+    async def update_api_permission(
+        self,
+        api_permission_id: int,
+        api_permission_data: ApiPermissionUpdate
+    ) -> ApiPermissionResponse:
+        api_permission = await self.api_permission_repository.get(api_permission_id)
+        if not api_permission:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"API权限绑定ID '{api_permission_id}' 不存在"
+            )
+
+        update_data = api_permission_data.model_dump(exclude_unset=True)
+        if "permission_code" in update_data:
+            permission = await self.permission_repository.get_by_permission_code(
+                update_data["permission_code"]
+            )
+            if not permission:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"权限编码 '{update_data['permission_code']}' 不存在"
+                )
+
+        method = update_data.get("method", api_permission.method)
+        path_pattern = update_data.get("path_pattern", api_permission.path_pattern)
+        if method != api_permission.method or path_pattern != api_permission.path_pattern:
+            existing = await self.api_permission_repository.get_by_route(
+                method,
+                path_pattern,
+                enabled_only=False
+            )
+            if existing and existing.id != api_permission_id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="该API路径已绑定权限"
+                )
+
+        if "enabled" in update_data:
+            update_data["enabled"] = 1 if update_data["enabled"] else 0
+
+        updated_api_permission = await self.api_permission_repository.update(
+            id_=api_permission_id,
+            obj_in=update_data
+        )
+        return ApiPermissionResponse.model_validate(updated_api_permission)
+
+    async def delete_api_permission(self, api_permission_id: int) -> bool:
+        api_permission = await self.api_permission_repository.get(api_permission_id)
+        if not api_permission:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"API权限绑定ID '{api_permission_id}' 不存在"
+            )
+
+        result = await self.api_permission_repository.delete(id_=api_permission_id)
+        return result is not None
+
+    async def get_all_api_permissions(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        method: Optional[str] = None,
+        path_pattern: Optional[str] = None,
+        permission_code: Optional[str] = None
+    ) -> ApiPermissionBatchResponse:
+        api_permissions = await self.api_permission_repository.get_api_permissions_by_filter(
+            skip=skip,
+            limit=limit,
+            method=method,
+            path_pattern=path_pattern,
+            permission_code=permission_code
+        )
+
+        filters = []
+        if method:
+            filters.append(SysApiPermission.method == method.upper())
+        if path_pattern:
+            filters.append(SysApiPermission.path_pattern.like(f"%{path_pattern}%"))
+        if permission_code:
+            filters.append(SysApiPermission.permission_code.like(f"%{permission_code}%"))
+
+        total = await self.api_permission_repository.get_count(filters=filters)
+
+        return ApiPermissionBatchResponse(
+            items=[ApiPermissionResponse.model_validate(item) for item in api_permissions],
+            total=total,
+            success=True,
+            message="获取API权限绑定列表成功"
+        )
+
+    async def get_api_permission_for_route(self, method: str, path_pattern: str) -> Optional[str]:
+        api_permission = await self.api_permission_repository.get_by_route(method, path_pattern)
+        return api_permission.permission_code if api_permission else None
     
     async def get_permissions_by_role_id(self, role_id: int) -> List[PermissionResponse]:
         """

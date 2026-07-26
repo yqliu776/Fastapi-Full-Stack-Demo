@@ -114,3 +114,21 @@ class SysRoleMenu(BaseModel):
     
     def __repr__(self) -> str:
         return f"<SysRoleMenu(id={self.id}, role_id={self.role_id}, menu_id={self.menu_id})>" 
+
+
+class SysApiPermission(BaseModel):
+    """API与权限编码绑定表模型"""
+
+    __tablename__ = "sys_api_permissions"
+    __table_args__ = (
+        UniqueConstraint('method', 'path_pattern', name='uq_api_permission_route'),
+    )
+
+    method = Column(String(10), nullable=False, comment="HTTP方法")
+    path_pattern = Column(String(255), nullable=False, comment="API路径模式")
+    permission_code = Column(String(50), nullable=False, comment="权限编码")
+    description = Column(String(200), nullable=True, comment="说明")
+    enabled = Column(Integer, nullable=False, default=1, comment="是否启用")
+
+    def __repr__(self) -> str:
+        return f"<SysApiPermission(id={self.id}, method={self.method}, path_pattern={self.path_pattern}, permission_code={self.permission_code})>"

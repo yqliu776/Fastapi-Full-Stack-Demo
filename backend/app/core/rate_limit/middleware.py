@@ -7,6 +7,7 @@ import time
 from app.core.rate_limit import RateLimiter
 from app.core.rate_limit.storage import RateLimitStorage
 from app.core.rate_limit.rate_limiter import RateLimitScope, RateLimitConfig
+from app.core.rate_limit.runtime_config import RuntimeRateLimitConfig, get_runtime_rate_limit_config
 from app.core.models import ResponseModel
 from app.core.settings import settings
 from app.core.utils import logger
@@ -119,7 +120,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         except Exception:
             return None
 
-    def get_rate_limit_config(self, path: str, method: str = "GET") -> RateLimitConfig:
+    def get_rate_limit_config(
+        self,
+        path: str,
+        runtime_config: RuntimeRateLimitConfig,
+        method: str = "GET"
+    ) -> RateLimitConfig:
         """
         获取限流配置
 
@@ -132,15 +138,31 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """
         # 精确匹配
         if path in self.rate_limit_rules:
-            return self.rate_limit_rules[path]
+            config = self.rate_limit_rules[path]
+            config.enable_whitelist = runtime_config.enable_whitelist
+            config.enable_blacklist = runtime_config.enable_blacklist
+            config.log_violations = runtime_config.log_violations
+            return config
 
         # 前缀匹配
         for rule_path, config in self.rate_limit_rules.items():
             if path.startswith(rule_path):
+                config.enable_whitelist = runtime_config.enable_whitelist
+                config.enable_blacklist = runtime_config.enable_blacklist
+                config.log_violations = runtime_config.log_violations
                 return config
 
         # 返回默认配置
-        return self.rate_limit_rules["default"]
+        return RateLimitConfig(
+            limit=runtime_config.default_requests,
+            window=60,
+            burst=runtime_config.default_burst,
+            block_duration=runtime_config.block_duration,
+            enabled=runtime_config.enabled,
+            enable_whitelist=runtime_config.enable_whitelist,
+            enable_blacklist=runtime_config.enable_blacklist,
+            log_violations=runtime_config.log_violations
+        )
 
     def build_rate_limit_info(self, result: Any, config: RateLimitConfig) -> Dict[str, str]:
         """
@@ -175,8 +197,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not self.should_rate_limit(request.url.path):
             return await call_next(request)
 
+        runtime_config = await get_runtime_rate_limit_config()
+
         # 如果全局禁用限流，直接通过
-        if not settings.RATE_LIMIT_ENABLED:
+        if not runtime_config.enabled:
             return await call_next(request)
 
         try:
@@ -187,7 +211,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             method = request.method
 
             # 获取限流配置
-            config = self.get_rate_limit_config(endpoint, method)
+            config = self.get_rate_limit_config(endpoint, runtime_config, method)
 
             # 根据配置决定限流策略
             # 这里使用IP限流为主，用户限流为辅的策略
@@ -203,7 +227,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             result = await self.rate_limiter.is_allowed(
                 scope=scope,
                 identifier=identifier,
-                algorithm=settings.RATE_LIMIT_ALGORITHM,
+                algorithm=runtime_config.algorithm,
                 config=config,
                 endpoint=endpoint,
                 user_id=user_id

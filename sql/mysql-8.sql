@@ -56,6 +56,28 @@ CREATE TABLE sys_permissions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='权限信息表';
 
 
+-- ========== 3.1 API权限绑定表 ==========
+CREATE TABLE sys_api_permissions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    method VARCHAR(10) NOT NULL COMMENT 'HTTP方法',
+    path_pattern VARCHAR(255) NOT NULL COMMENT 'API路径模式',
+    permission_code VARCHAR(50) NOT NULL COMMENT '权限编码',
+    description VARCHAR(200) DEFAULT NULL COMMENT '说明',
+    enabled TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用',
+
+    creation_date DATETIME NOT NULL COMMENT '创建时间',
+    created_by VARCHAR(50) NOT NULL COMMENT '创建人',
+    last_update_date DATETIME NOT NULL COMMENT '修改时间',
+    last_updated_by VARCHAR(50) NOT NULL COMMENT '修改人',
+    last_update_login VARCHAR(50) NOT NULL COMMENT '最后登录ID',
+    delete_flag CHAR(1) NOT NULL DEFAULT 'N' COMMENT '删除标识，Y/N',
+    version_num INT NOT NULL DEFAULT 1 COMMENT '版本号',
+
+    UNIQUE KEY uk_api_permission_route (method, path_pattern),
+    KEY idx_api_permission_code (permission_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API权限绑定表';
+
+
 -- ========== 4. 菜单表 ==========
 CREATE TABLE sys_menus (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',

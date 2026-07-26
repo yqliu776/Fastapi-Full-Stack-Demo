@@ -8,11 +8,13 @@ from .user_repository import UserRepository
 from .permission_repository import PermissionRepository
 from .role_repository import RoleRepository
 from .menu_repository import MenuRepository
+from .api_permission_repository import ApiPermissionRepository
 
 __all__ = [
     "BaseRepository",
     "UserRepository",
     "RoleRepository",
     "PermissionRepository",
-    "MenuRepository"
+    "MenuRepository",
+    "ApiPermissionRepository"
 ] 

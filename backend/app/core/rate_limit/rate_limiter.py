@@ -4,6 +4,7 @@ from enum import Enum
 
 from app.core.rate_limit.algorithms import TokenBucket, SlidingWindow, FixedWindow
 from app.core.rate_limit.storage import RateLimitStorage
+from app.core.rate_limit.runtime_config import get_runtime_rate_limit_config
 from app.core.models import AppException
 from app.core.utils import logger
 
@@ -59,7 +60,10 @@ class RateLimitConfig:
                  window: int = 60,
                  burst: int = 10,
                  block_duration: int = 60,
-                 enabled: bool = True):
+                 enabled: bool = True,
+                 enable_whitelist: bool = True,
+                 enable_blacklist: bool = True,
+                 log_violations: bool = True):
         """
         初始化限流配置
 
@@ -75,6 +79,9 @@ class RateLimitConfig:
         self.burst = burst
         self.block_duration = block_duration
         self.enabled = enabled
+        self.enable_whitelist = enable_whitelist
+        self.enable_blacklist = enable_blacklist
+        self.log_violations = log_violations
 
 
 class RateLimiter:
@@ -152,24 +159,20 @@ class RateLimiter:
         Returns:
             限流结果
         """
-        from app.core.settings import settings
 
-        # 如果限流被禁用，直接允许
-        if not settings.RATE_LIMIT_ENABLED:
-            return RateLimitResult(
-                allowed=True,
-                remaining=999999,
-                reset_time=int(time.time()) + 3600,
-                limit=999999
-            )
+        runtime_config = await get_runtime_rate_limit_config()
 
         # 使用默认配置
         if config is None:
             config = RateLimitConfig(
-                limit=settings.RATE_LIMIT_DEFAULT_REQUESTS,
+                limit=runtime_config.default_requests,
                 window=60,
-                burst=settings.RATE_LIMIT_DEFAULT_BURST,
-                block_duration=settings.RATE_LIMIT_BLOCK_DURATION
+                burst=runtime_config.default_burst,
+                block_duration=runtime_config.block_duration,
+                enabled=runtime_config.enabled,
+                enable_whitelist=runtime_config.enable_whitelist,
+                enable_blacklist=runtime_config.enable_blacklist,
+                log_violations=runtime_config.log_violations
             )
 
         # 如果配置禁用限流，直接允许
@@ -186,7 +189,7 @@ class RateLimiter:
             rate_limit_key = self._build_rate_limit_key(scope, identifier, endpoint, user_id)
 
             # 检查是否在黑名单中
-            if await self.storage.is_blacklisted(identifier):
+            if config.enable_blacklist and await self.storage.is_blacklisted(identifier):
                 logger.warning(f"IP {identifier} 在黑名单中，拒绝请求")
                 return RateLimitResult(
                     allowed=False,
@@ -197,7 +200,7 @@ class RateLimiter:
                 )
 
             # 检查是否在白名单中
-            if await self.storage.is_whitelisted(identifier):
+            if config.enable_whitelist and await self.storage.is_whitelisted(identifier):
                 logger.info(f"IP {identifier} 在白名单中，允许请求")
                 return RateLimitResult(
                     allowed=True,
@@ -224,7 +227,7 @@ class RateLimiter:
             reset_time = await algorithm_instance.get_reset_time(self.storage.redis_client)
 
             # 如果被限流，记录违规日志
-            if not allowed and settings.RATE_LIMIT_LOG_VIOLATIONS:
+            if not allowed and config.log_violations:
                 logger.warning(f"限流触发: key={rate_limit_key}, identifier={identifier}")
 
             retry_after = None
@@ -315,14 +318,21 @@ class RateLimiter:
         """
         try:
             rate_limit_key = self._build_rate_limit_key(scope, identifier, endpoint, user_id)
+            runtime_config = await get_runtime_rate_limit_config()
 
             # 获取各种算法的基础统计信息
             stats = {
                 "scope": scope.value,
                 "identifier": identifier,
                 "rate_limit_key": rate_limit_key,
-                "whitelisted": await self.storage.is_whitelisted(identifier),
-                "blacklisted": await self.storage.is_blacklisted(identifier)
+                "whitelisted": (
+                    runtime_config.enable_whitelist and
+                    await self.storage.is_whitelisted(identifier)
+                ),
+                "blacklisted": (
+                    runtime_config.enable_blacklist and
+                    await self.storage.is_blacklisted(identifier)
+                )
             }
 
             return stats
