@@ -5,26 +5,67 @@ import type { Menu } from '@/services/menuService';
 import type { RouteRecordRaw } from 'vue-router';
 import router from '@/router';
 
-// 组件映射表，将后端返回的menu_path映射到对应的组件
-const componentMap: Record<string, () => Promise<any>> = {
-  '/dashboard': () => import('@/views/DashboardHome.vue'),
-  '/dashboard/profile': () => import('@/views/ProfilePage.vue'),
-  '/dashboard/roles': () => import('@/views/RoleManagePage.vue'),
-  '/dashboard/permissions': () => import('@/views/PermissionManagePage.vue'),
-  '/dashboard/menus': () => import('@/views/MenuManagePage.vue'),
-  '/dashboard/users': () => import('@/views/UserManagePage.vue'),
-  '/dashboard/rate-limit': () => import('@/views/RateLimitManagePage.vue'),
-  // 添加系统管理相关路径映射
-  '/system': () => import('@/views/DashboardHome.vue'),
-  '/system/user': () => import('@/views/UserManagePage.vue'),
-  '/system/role': () => import('@/views/RoleManagePage.vue'),
-  '/system/permission': () => import('@/views/PermissionManagePage.vue'),
-  '/system/menu': () => import('@/views/MenuManagePage.vue'),
-  '/system/api-rate-limit': () => import('@/views/RateLimitManagePage.vue'),
-  '/system/swagger-ui': () => import('@/views/SwaggerUIPage.vue'),
-  // 添加以下默认映射，确保即使找不到确切的映射也能返回一个合理的组件
-  'default': () => import('@/views/DashboardHome.vue')
+const componentRegistry: Record<string, () => Promise<any>> = {
+  dashboard: () => import('@/views/DashboardHome.vue'),
+  profile: () => import('@/views/ProfilePage.vue'),
+  user: () => import('@/views/UserManagePage.vue'),
+  role: () => import('@/views/RoleManagePage.vue'),
+  permission: () => import('@/views/PermissionManagePage.vue'),
+  menu: () => import('@/views/MenuManagePage.vue'),
+  rate_limit: () => import('@/views/RateLimitManagePage.vue'),
+  swagger: () => import('@/views/SwaggerUIPage.vue'),
+  unsupported: () => import('@/views/UnsupportedMenuPage.vue')
 };
+
+const componentAliases: Record<string, string> = {
+  dashboard: 'dashboard',
+  home: 'dashboard',
+  system: 'dashboard',
+  profile: 'profile',
+  user: 'user',
+  user_manage: 'user',
+  role: 'role',
+  role_manage: 'role',
+  permission: 'permission',
+  permission_manage: 'permission',
+  menu: 'menu',
+  menu_manage: 'menu',
+  api_rate_limit: 'rate_limit',
+  rate_limit: 'rate_limit',
+  swagger: 'swagger',
+  api_docs: 'swagger',
+  swagger_ui: 'swagger'
+};
+
+const pathComponentAliases: Record<string, string> = {
+  '/dashboard': 'dashboard',
+  '/dashboard/profile': 'profile',
+  '/dashboard/roles': 'role',
+  '/dashboard/permissions': 'permission',
+  '/dashboard/menus': 'menu',
+  '/dashboard/users': 'user',
+  '/dashboard/rate-limit': 'rate_limit',
+  '/system': 'dashboard',
+  '/system/user': 'user',
+  '/system/role': 'role',
+  '/system/permission': 'permission',
+  '/system/menu': 'menu',
+  '/system/api-rate-limit': 'rate_limit',
+  '/system/swagger-ui': 'swagger'
+};
+
+const normalizeKey = (key: string) => key.trim().toLowerCase().replace(/-/g, '_');
+
+const resolveComponent = (menu: Menu) => {
+  const explicitKey = menu.component_key ? normalizeKey(menu.component_key) : '';
+  const codeKey = normalizeKey(menu.menu_code || '');
+  const pathKey = pathComponentAliases[menu.menu_path || ''];
+  const registryKey = componentAliases[explicitKey] || componentAliases[codeKey] || pathKey;
+
+  return componentRegistry[registryKey] || componentRegistry.unsupported;
+};
+
+const isShellRoutePath = (path: string) => path === '/dashboard' || path === '/system';
 
 // 将菜单项转换为路由配置
 const menuToRoute = (menu: Menu): RouteRecordRaw => {
@@ -50,7 +91,7 @@ const menuToRoute = (menu: Menu): RouteRecordRaw => {
       title: menu.menu_name,
       requiresAuth: true 
     },
-    component: componentMap[menu.menu_path] || componentMap['default']
+    component: resolveComponent(menu)
   };
 
   return route;
@@ -71,7 +112,7 @@ export const useMenuStore = defineStore('menu', () => {
     try {
       loading.value = true;
       error.value = null;
-      const response = await menuService.getMenus();
+      const response = await menuService.getCurrentMenus();
       if (response.code === 200) {
         menuList.value = response.data.items;
         return true;
@@ -93,7 +134,7 @@ export const useMenuStore = defineStore('menu', () => {
     try {
       loading.value = true;
       error.value = null;
-      const response = await menuService.getMenuTree();
+      const response = await menuService.getCurrentMenuTree();
       if (response.code === 200) {
         menuTree.value = response.data;
         return true;
@@ -116,7 +157,11 @@ export const useMenuStore = defineStore('menu', () => {
     
     // 处理所有有效的菜单项作为路由
     menuList.value.forEach(menu => {
-      if (menu.menu_path && (menu.menu_path.startsWith('/dashboard') || menu.menu_path.startsWith('/system'))) {
+      if (
+        menu.menu_path &&
+        !isShellRoutePath(menu.menu_path) &&
+        (menu.menu_path.startsWith('/dashboard') || menu.menu_path.startsWith('/system'))
+      ) {
         const route = menuToRoute(menu);
         menuRoutes.push(route);
       }

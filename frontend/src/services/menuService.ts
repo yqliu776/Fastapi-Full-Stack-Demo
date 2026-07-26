@@ -6,6 +6,7 @@ export interface Menu {
   menu_name: string;
   menu_code: string;
   menu_path: string;
+  component_key?: string;
   parent_id?: number;
   sort_order: number;
   creation_date: string;
@@ -69,6 +70,26 @@ export const menuService = {
   async getMenuTree() {
     try {
       const response = await apiClient.get<SingleResponse<Menu[]>>('/menus/tree');
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 获取当前用户菜单列表
+  async getCurrentMenus() {
+    try {
+      const response = await apiClient.get<ListResponse<Menu>>('/menus/current');
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 获取当前用户菜单树
+  async getCurrentMenuTree() {
+    try {
+      const response = await apiClient.get<SingleResponse<Menu[]>>('/menus/current/tree');
       return response.data;
     } catch (error) {
       return Promise.reject(error);

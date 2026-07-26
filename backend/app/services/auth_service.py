@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from app.modules.repositories import UserRepository, PermissionRepository, RoleRepository
 from app.core.utils import verify_password, create_access_token, create_refresh_token
-from app.modules.models import SysUser, SysPermission, SysRolePermission
+from app.modules.models import SysUser, SysPermission, SysRole, SysRolePermission, SysUserRole
 from app.modules.schemas import TokenResponse, LoginRequest, TokenData
 from .session_service import session_service
 from app.core.connects.database import db
@@ -184,6 +184,21 @@ class AuthService:
         """
         cache_key = f"role_permissions:{role_id}"
         await self.redis_util.delete(cache_key)
+
+    async def get_permission_codes_for_user(self, user_id: int) -> list:
+        """按当前用户角色获取实时权限代码列表。"""
+        role_query = (
+            select(SysUserRole.role_id)
+            .join(SysRole, SysRole.id == SysUserRole.role_id)
+            .where(
+                SysUserRole.user_id == user_id,
+                SysUserRole.delete_flag == 'N',
+                SysRole.delete_flag == 'N'
+            )
+        )
+        role_result = await self.db.execute(role_query)
+        role_ids = [row[0] for row in role_result.all()]
+        return list(set(await self._get_permissions_for_roles(role_ids)))
     
     async def refresh_token(self, refresh_token: str) -> TokenResponse:
         """

@@ -6,6 +6,7 @@ from app.modules.schemas import (
 )
 from app.core.decorators import has_permission
 from app.core.models import ResponseModel
+from app.routers.auth import get_current_user
 from app.services import RbacService
 
 
@@ -120,6 +121,46 @@ async def get_menus_by_role(
         code=200,
         message="获取角色菜单成功",
         data=menus
+    )
+
+
+@router.get(
+    "/current",
+    response_model=ResponseModel,
+    summary="获取当前用户菜单列表"
+)
+async def get_current_user_menus(
+    current_user = Depends(get_current_user),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    获取当前登录用户可访问的菜单列表
+    """
+    menus = await rbac_service.get_menus_by_user_id(current_user.id)
+    return ResponseModel(
+        code=200,
+        message="获取当前用户菜单成功",
+        data=menus
+    )
+
+
+@router.get(
+    "/current/tree",
+    response_model=ResponseModel,
+    summary="获取当前用户菜单树"
+)
+async def get_current_user_menu_tree(
+    current_user = Depends(get_current_user),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    获取当前登录用户可访问的菜单树
+    """
+    menu_tree = await rbac_service.get_menu_tree_by_user_id(current_user.id)
+    return ResponseModel(
+        code=200,
+        message="获取当前用户菜单树成功",
+        data=menu_tree
     )
 
 

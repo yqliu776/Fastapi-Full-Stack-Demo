@@ -4,7 +4,7 @@ from functools import wraps
 from jose import jwt
 
 from app.core.settings import settings
-from app.services import oauth2_scheme
+from app.services import AuthService, oauth2_scheme
 
 
 def has_permission(required_permissions: List[str]):
@@ -18,7 +18,10 @@ def has_permission(required_permissions: List[str]):
         依赖函数，用于FastAPI路由的权限验证
     """
     
-    def permission_checker(token: str = Depends(oauth2_scheme)) -> bool:
+    async def permission_checker(
+        token: str = Depends(oauth2_scheme),
+        auth_service: AuthService = Depends()
+    ) -> bool:
         """
         检查用户权限
         
@@ -38,13 +41,6 @@ def has_permission(required_permissions: List[str]):
         try:
             # 解析令牌
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-            permissions: Optional[List[str]] = payload.get("permissions") or []
-            if not permissions:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="无权限信息"
-                )
-            
             # 检查token类型，只允许access token
             token_type = payload.get("type")
             if token_type != "access":
@@ -52,6 +48,28 @@ def has_permission(required_permissions: List[str]):
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="无效的令牌类型",
                     headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            jti = payload.get("jti")
+            if jti:
+                blacklisted = await auth_service.redis_util.get(f"token_blacklist:{jti}")
+                if blacklisted is not None:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="无效的身份凭证",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+
+            user_id = payload.get("user_id")
+            if user_id is not None:
+                permissions = await auth_service.get_permission_codes_for_user(user_id)
+            else:
+                permissions: Optional[List[str]] = payload.get("permissions") or []
+
+            if not permissions:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="无权限信息"
                 )
             
             # 检查用户是否拥有超级管理员权限

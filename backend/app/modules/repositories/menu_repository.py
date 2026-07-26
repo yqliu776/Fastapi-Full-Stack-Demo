@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from typing import Optional, List
 
-from app.modules.models import SysMenu, SysRoleMenu
+from app.modules.models import SysMenu, SysRole, SysRoleMenu, SysUserRole
 from .base_repository import BaseRepository
 
 
@@ -158,5 +158,40 @@ class MenuRepository(BaseRepository[SysMenu]):
             SysMenu.sort_order
         )
         
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def get_menus_by_user_id(self, user_id: int) -> List[SysMenu]:
+        """
+        获取当前用户通过角色拥有的所有菜单。
+
+        Args:
+            user_id: 用户ID
+
+        Returns:
+            菜单模型实例列表
+        """
+        query = (
+            select(SysMenu)
+            .distinct()
+            .join(SysRoleMenu, SysMenu.id == SysRoleMenu.menu_id)
+            .join(SysRole, SysRole.id == SysRoleMenu.role_id)
+            .join(SysUserRole, SysUserRole.role_id == SysRole.id)
+            .where(
+                and_(
+                    SysUserRole.user_id == user_id,
+                    SysUserRole.delete_flag == 'N',
+                    SysRole.delete_flag == 'N',
+                    SysRoleMenu.delete_flag == 'N',
+                    SysMenu.delete_flag == 'N'
+                )
+            )
+            .order_by(
+                SysMenu.parent_id.is_(None).desc(),
+                SysMenu.parent_id,
+                SysMenu.sort_order
+            )
+        )
+
         result = await self.db.execute(query)
         return list(result.scalars().all())

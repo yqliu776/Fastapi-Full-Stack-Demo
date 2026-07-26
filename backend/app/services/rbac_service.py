@@ -864,11 +864,31 @@ class RbacService:
         """
         # 获取所有菜单
         all_menus = await self.menu_repository.get_menu_tree()
-        
-        # 构建菜单树
+        return self._build_menu_tree_nodes(all_menus)
+
+    async def get_menus_by_user_id(self, user_id: int) -> MenuBatchResponse:
+        """
+        获取当前用户可访问的菜单列表
+        """
+        menus = await self.menu_repository.get_menus_by_user_id(user_id)
+
+        return MenuBatchResponse(
+            items=[MenuResponse.model_validate(menu) for menu in menus],
+            total=len(menus),
+            success=True,
+            message="获取当前用户菜单成功"
+        )
+
+    async def get_menu_tree_by_user_id(self, user_id: int) -> List[MenuTreeNode]:
+        """
+        获取当前用户可访问的菜单树
+        """
+        all_menus = await self.menu_repository.get_menus_by_user_id(user_id)
+        return self._build_menu_tree_nodes(all_menus)
+
+    def _build_menu_tree_nodes(self, all_menus: List[SysMenu]) -> List[MenuTreeNode]:
         menu_map = {}
         for menu in all_menus:
-            # 确保每个菜单都是字典格式
             menu_dict = {
                 "id": menu.id,
                 "menu_name": menu.menu_name,
@@ -879,21 +899,20 @@ class RbacService:
                 "children": []
             }
             menu_map[menu.id] = MenuTreeNode.model_validate(menu_dict)
-            
-        # 构建树形结构
+
         root_menus = []
         for menu_id, menu_node in menu_map.items():
             if menu_node.parent_id is None:
-                # 顶级菜单
                 root_menus.append(menu_node)
             else:
-                # 子菜单
                 parent = menu_map.get(menu_node.parent_id)
                 if parent:
                     if parent.children is None:
                         parent.children = []
                     parent.children.append(menu_node)
-        
+                else:
+                    root_menus.append(menu_node)
+
         return root_menus
     
     async def get_menus_by_role_id(self, role_id: int) -> List[MenuResponse]:
