@@ -8,8 +8,11 @@ class SysUser(BaseModel):
     """用户信息表模型"""
     
     __tablename__ = "sys_users"
+    __table_args__ = (
+        UniqueConstraint('user_name', name='uk_user_name'),
+    )
     
-    user_name = Column(String(50), nullable=False, unique=True, comment="用户名")
+    user_name = Column(String(50), nullable=False, comment="用户名")
     password = Column(String(100), nullable=False, comment="密码")
     phone_number = Column(String(20), nullable=True, comment="手机号")
     email = Column(String(100), nullable=True, comment="邮箱")
@@ -25,9 +28,12 @@ class SysRole(BaseModel):
     """角色信息表模型"""
     
     __tablename__ = "sys_roles"
+    __table_args__ = (
+        UniqueConstraint('role_code', name='uk_role_code'),
+    )
     
     role_name = Column(String(50), nullable=False, comment="角色名称")
-    role_code = Column(String(50), nullable=False, unique=True, comment="角色编码")
+    role_code = Column(String(50), nullable=False, comment="角色编码")
     
     # 关联关系
     users = relationship("SysUser", secondary="sys_user_roles", back_populates="roles")
@@ -42,9 +48,12 @@ class SysPermission(BaseModel):
     """权限信息表模型"""
     
     __tablename__ = "sys_permissions"
+    __table_args__ = (
+        UniqueConstraint('permission_code', name='uk_permission_code'),
+    )
     
     permission_name = Column(String(50), nullable=False, comment="权限名称")
-    permission_code = Column(String(50), nullable=False, unique=True, comment="权限编码")
+    permission_code = Column(String(50), nullable=False, comment="权限编码")
     
     # 关联关系
     roles = relationship("SysRole", secondary="sys_role_permissions", back_populates="permissions")
@@ -57,9 +66,12 @@ class SysMenu(BaseModel):
     """菜单信息表模型"""
     
     __tablename__ = "sys_menus"
+    __table_args__ = (
+        UniqueConstraint('menu_code', name='uk_menu_code'),
+    )
     
     menu_name = Column(String(50), nullable=False, comment="菜单名称")
-    menu_code = Column(String(50), nullable=False, unique=True, comment="菜单编码")
+    menu_code = Column(String(50), nullable=False, comment="菜单编码")
     menu_path = Column(String(200), nullable=True, comment="菜单路径")
     parent_id = Column(BigInteger, nullable=True, comment="父菜单ID")
     sort_order = Column(Integer, nullable=True, default=0, comment="显示顺序")
@@ -76,7 +88,7 @@ class SysUserRole(BaseModel):
     
     __tablename__ = "sys_user_roles"
     __table_args__ = (
-        UniqueConstraint('user_id', 'role_id', name='uq_user_role'),
+        UniqueConstraint('user_id', 'role_id', name='uk_user_id_role_id'),
     )
     
     user_id = Column(BigInteger, ForeignKey("sys_users.id"), nullable=False, comment="用户ID")
@@ -91,7 +103,7 @@ class SysRolePermission(BaseModel):
     
     __tablename__ = "sys_role_permissions"
     __table_args__ = (
-        UniqueConstraint('role_id', 'permission_id', name='uq_role_permission'),
+        UniqueConstraint('role_id', 'permission_id', name='uk_role_id_permission_id'),
     )
     
     role_id = Column(BigInteger, ForeignKey("sys_roles.id"), nullable=False, comment="角色ID")
@@ -106,7 +118,7 @@ class SysRoleMenu(BaseModel):
     
     __tablename__ = "sys_role_menus"
     __table_args__ = (
-        UniqueConstraint('role_id', 'menu_id', name='uq_role_menu'),
+        UniqueConstraint('role_id', 'menu_id', name='uk_role_id_menu_id'),
     )
     
     role_id = Column(BigInteger, ForeignKey("sys_roles.id"), nullable=False, comment="角色ID")
@@ -121,7 +133,7 @@ class SysApiPermission(BaseModel):
 
     __tablename__ = "sys_api_permissions"
     __table_args__ = (
-        UniqueConstraint('method', 'path_pattern', name='uq_api_permission_route'),
+        UniqueConstraint('method', 'path_pattern', name='uk_api_permission_route'),
     )
 
     method = Column(String(10), nullable=False, comment="HTTP方法")
