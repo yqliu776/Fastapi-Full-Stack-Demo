@@ -141,8 +141,19 @@ docker compose up -d mysql redis
    uvicorn main:app --host 127.0.0.1 --port 8090 --reload
    ```
 
-6. 访问后端文档
-   浏览器打开 http://localhost:8090/api/docs
+6. 访问后端入口
+   ```text
+   API: http://localhost:8090
+   Health: http://localhost:8090/health
+   Swagger: http://localhost:8090/api/docs
+   ReDoc: http://localhost:8090/api/redoc
+   ```
+
+如果使用空数据库或需要把已有数据库升级到最新结构，可以在 `backend` 目录执行：
+
+```bash
+uv run alembic upgrade head
+```
 
 > Windows 上部分机器会保留 `7981-8080` 端口段，导致 `8000` 无法绑定。本项目本地默认使用 `8090` 作为后端开发端口。
 

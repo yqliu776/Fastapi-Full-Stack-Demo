@@ -3,6 +3,8 @@ from fastapi.security import OAuth2PasswordBearer
 from typing import Callable, Awaitable, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.core.middleware import LoggingMiddleware, ErrorHandlerMiddleware, RateLimitMiddleware, BotDetectionMiddleware
 from app.routers import auth_router, role_router, permission_router, menu_router, user_router, rate_limit_router
@@ -221,6 +223,42 @@ class AppLifecycle:
         
         # 替换OpenAPI生成函数
         app.openapi = custom_openapi
+
+        @app.get("/health", tags=["系统"])
+        async def health_check():
+            database_ok = False
+            redis_ok = False
+            details = {}
+
+            try:
+                if not db.AsyncSessionLocal:
+                    db.init_db()
+                async with db.AsyncSessionLocal() as session:
+                    await session.execute(text("SELECT 1"))
+                database_ok = True
+            except Exception as exc:
+                details["database_error"] = str(exc)
+
+            try:
+                redis_ok = await redis_client.ping()
+            except Exception as exc:
+                details["redis_error"] = str(exc)
+
+            healthy = database_ok and redis_ok
+            payload = {
+                "status": "ok" if healthy else "degraded",
+                "app": settings.PROJECT_NAME,
+                "version": settings.VERSION,
+                "database": "ok" if database_ok else "error",
+                "redis": "ok" if redis_ok else "error",
+            }
+            if details:
+                payload["details"] = details
+
+            return JSONResponse(
+                status_code=200 if healthy else 503,
+                content=payload
+            )
         
         # 添加路由 - 需要在定义openapi后添加路由
         router_list = [
