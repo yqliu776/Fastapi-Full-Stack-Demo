@@ -3,11 +3,6 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { menuService } from '@/services/menuService';
 import type { Menu } from '@/services/menuService';
 import { roleService } from '@/services/roleService';
-import type { RoleMenuOperation } from '@/services/roleService';
-import { useUserStore } from '@/stores/user';
-
-// 获取用户信息
-const userStore = useUserStore();
 
 // 组件属性
 const props = defineProps<{
@@ -141,14 +136,9 @@ const menuStats = computed(() => {
     assigned: roleMenus.value.length,
     selected: selectedMenus.value.length,
     toAssign: selectedMenus.value.filter(id => !roleMenuIds.value.includes(id)).length,
-    toRemove: selectedMenus.value.filter(id => roleMenuIds.value.includes(id)).length
+    toRemove: roleMenuIds.value.filter(id => !selectedMenus.value.includes(id)).length
   };
 });
-
-// 获取用户ID或默认值
-const getUserId = () => {
-  return userStore.userInfo?.id.toString() || '-1';
-};
 
 // 初始化方法
 const init = async () => {
@@ -189,11 +179,13 @@ const loadRoleMenus = async () => {
     if (roleResponse.code === 200 && roleResponse.data.menus) {
       // 使用更具体的类型转换方式
       roleMenus.value = roleResponse.data.menus as unknown as Menu[];
+      selectedMenus.value = roleMenus.value.map(menu => menu.id);
     } else {
       // 如果角色详情中没有menus或获取失败，尝试使用菜单服务获取
       const response = await menuService.getRoleMenus(props.roleId);
       if (response.code === 200) {
         roleMenus.value = response.data.items;
+        selectedMenus.value = roleMenus.value.map(menu => menu.id);
       } else {
         console.error('加载角色菜单失败:', response.message);
         errorMsg.value = '加载角色菜单失败: ' + response.message;
@@ -207,83 +199,25 @@ const loadRoleMenus = async () => {
   }
 };
 
-// 为角色分配菜单
-const assignMenus = async () => {
-  if (selectedMenus.value.length === 0) return;
+// 保存角色菜单完整集合
+const saveMenus = async () => {
   errorMsg.value = '';
   
   loading.value.submit = true;
   try {
-    // 筛选出未分配给角色的菜单
-    const menusToAssign = selectedMenus.value.filter(
-      id => !roleMenuIds.value.includes(id)
-    );
-    
-    if (menusToAssign.length === 0) {
-      loading.value.submit = false;
-      return;
-    }
-    
-    const userId = getUserId();
-    const operation: RoleMenuOperation = {
-      menu_ids: menusToAssign,
-      operator: userId,
-      operation_login: userId,
-      role_id: props.roleId
-    };
-    
-    const response = await roleService.assignMenusToRole(props.roleId, operation);
+    const response = await roleService.replaceMenusForRole(props.roleId, {
+      menu_ids: selectedMenus.value
+    });
     if (response.code === 200) {
       await loadRoleMenus();
       emit('update');
     } else {
-      console.error('分配菜单失败:', response.message);
-      errorMsg.value = '分配菜单失败: ' + response.message;
+      console.error('保存菜单失败:', response.message);
+      errorMsg.value = '保存菜单失败: ' + response.message;
     }
   } catch (error) {
-    console.error('分配菜单出错:', error);
-    errorMsg.value = '分配菜单出错';
-  } finally {
-    loading.value.submit = false;
-  }
-};
-
-// 移除角色菜单
-const removeMenus = async () => {
-  if (selectedMenus.value.length === 0) return;
-  errorMsg.value = '';
-  
-  loading.value.submit = true;
-  try {
-    // 筛选出已分配给角色的菜单
-    const menusToRemove = selectedMenus.value.filter(
-      id => roleMenuIds.value.includes(id)
-    );
-    
-    if (menusToRemove.length === 0) {
-      loading.value.submit = false;
-      return;
-    }
-    
-    const userId = getUserId();
-    const operation: RoleMenuOperation = {
-      menu_ids: menusToRemove,
-      operator: userId,
-      operation_login: userId,
-      role_id: props.roleId
-    };
-    
-    const response = await roleService.removeMenusFromRole(props.roleId, operation);
-    if (response.code === 200) {
-      await loadRoleMenus();
-      emit('update');
-    } else {
-      console.error('移除菜单失败:', response.message);
-      errorMsg.value = '移除菜单失败: ' + response.message;
-    }
-  } catch (error) {
-    console.error('移除菜单出错:', error);
-    errorMsg.value = '移除菜单出错';
+    console.error('保存菜单出错:', error);
+    errorMsg.value = '保存菜单出错';
   } finally {
     loading.value.submit = false;
   }
@@ -354,7 +288,7 @@ onMounted(() => {
         <div>已分配: <span class="font-semibold text-green-600">{{ menuStats.assigned }}</span></div>
         <div>已选择: <span class="font-semibold text-blue-600">{{ menuStats.selected }}</span></div>
         <div v-if="menuStats.toAssign > 0">待分配: <span class="font-semibold text-indigo-600">{{ menuStats.toAssign }}</span></div>
-        <div v-if="menuStats.toRemove > 0">待移除: <span class="font-semibold text-red-600">{{ menuStats.toRemove }}</span></div>
+        <div v-if="menuStats.toRemove > 0">保存后移除: <span class="font-semibold text-red-600">{{ menuStats.toRemove }}</span></div>
       </div>
     </div>
     
@@ -562,24 +496,16 @@ onMounted(() => {
     <!-- 底部按钮 -->
     <div class="flex justify-between">
       <div>
-        <span class="text-sm text-gray-500">已选择 {{ selectedMenus.length }} 项</span>
+        <span class="text-sm text-gray-500">保存后拥有 {{ selectedMenus.length }} 项菜单</span>
       </div>
       <div class="flex space-x-2">
         <button
-          @click="assignMenus"
-          :disabled="loading.submit || menuStats.toAssign === 0"
-          class="bg-green-600 text-white py-1 px-3 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          @click="saveMenus"
+          :disabled="loading.submit"
+          class="bg-indigo-600 text-white py-1 px-3 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <span v-if="loading.submit && menuStats.toAssign > 0" class="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></span>
-          分配菜单 {{ menuStats.toAssign > 0 ? `(${menuStats.toAssign})` : '' }}
-        </button>
-        <button
-          @click="removeMenus"
-          :disabled="loading.submit || menuStats.toRemove === 0"
-          class="bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <span v-if="loading.submit && menuStats.toRemove > 0" class="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></span>
-          移除菜单 {{ menuStats.toRemove > 0 ? `(${menuStats.toRemove})` : '' }}
+          <span v-if="loading.submit" class="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></span>
+          保存菜单
         </button>
       </div>
     </div>

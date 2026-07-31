@@ -284,7 +284,12 @@ class RoleRepository(BaseRepository[SysRole]):
         await self.db.commit()
         return True
     
-    async def update_role_permissions(self, role_id: int, permission_ids: List[int]) -> bool:
+    async def update_role_permissions(
+        self,
+        role_id: int,
+        permission_ids: List[int],
+        audit_info: dict
+    ) -> bool:
         """
         更新角色的权限列表（软删除旧关联 + 创建新关联）
         
@@ -307,7 +312,11 @@ class RoleRepository(BaseRepository[SysRole]):
                         SysRolePermission.delete_flag == 'N'
                     )
                 )
-                .values(delete_flag='Y')
+                .values(
+                    delete_flag='Y',
+                    last_updated_by=audit_info["last_updated_by"],
+                    last_update_login=audit_info["last_update_login"]
+                )
             )
             
             permission_ids = list(dict.fromkeys(permission_ids))
@@ -327,17 +336,15 @@ class RoleRepository(BaseRepository[SysRole]):
                 existing = existing_map.get(permission_id)
                 if existing:
                     existing.delete_flag = 'N'
-                    existing.last_updated_by = "system"
-                    existing.last_update_login = "system"
+                    existing.last_updated_by = audit_info["last_updated_by"]
+                    existing.last_update_login = audit_info["last_update_login"]
                     continue
 
                 self.db.add(
                     SysRolePermission(
                         role_id=role_id,
                         permission_id=permission_id,
-                        created_by="system",
-                        last_updated_by="system",
-                        last_update_login="system"
+                        **audit_info
                     )
                 )
             
@@ -346,6 +353,68 @@ class RoleRepository(BaseRepository[SysRole]):
             # 使权限缓存失效
             await self.redis_util.delete(f"role_permissions:{role_id}")
             
+            return True
+        except Exception as e:
+            await self.db.rollback()
+            raise e
+
+    async def update_role_menus(
+        self,
+        role_id: int,
+        menu_ids: List[int],
+        audit_info: dict
+    ) -> bool:
+        """
+        更新角色的菜单列表（软删除旧关联 + 恢复/创建新关联）
+        """
+        from sqlalchemy import update as sql_update
+
+        try:
+            await self.db.execute(
+                sql_update(SysRoleMenu)
+                .where(
+                    and_(
+                        SysRoleMenu.role_id == role_id,
+                        SysRoleMenu.delete_flag == 'N'
+                    )
+                )
+                .values(
+                    delete_flag='Y',
+                    last_updated_by=audit_info["last_updated_by"],
+                    last_update_login=audit_info["last_update_login"]
+                )
+            )
+
+            menu_ids = list(dict.fromkeys(menu_ids))
+            existing_query = select(SysRoleMenu).where(
+                and_(
+                    SysRoleMenu.role_id == role_id,
+                    SysRoleMenu.menu_id.in_(menu_ids)
+                )
+            )
+            existing_result = await self.db.execute(existing_query)
+            existing_map = {
+                item.menu_id: item
+                for item in existing_result.scalars().all()
+            }
+
+            for menu_id in menu_ids:
+                existing = existing_map.get(menu_id)
+                if existing:
+                    existing.delete_flag = 'N'
+                    existing.last_updated_by = audit_info["last_updated_by"]
+                    existing.last_update_login = audit_info["last_update_login"]
+                    continue
+
+                self.db.add(
+                    SysRoleMenu(
+                        role_id=role_id,
+                        menu_id=menu_id,
+                        **audit_info
+                    )
+                )
+
+            await self.db.commit()
             return True
         except Exception as e:
             await self.db.rollback()

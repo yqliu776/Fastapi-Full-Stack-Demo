@@ -14,6 +14,7 @@ export interface Menu {
   menu_name: string;
   menu_code: string;
   menu_path: string;
+  component_key?: string;
   parent_id?: number;
   sort_order?: number;
   creation_date: string;
@@ -58,6 +59,14 @@ export interface RoleMenuOperation {
   operator: string;
   operation_login: string;
   role_id: number;
+}
+
+export interface RolePermissionReplace {
+  permission_ids: number[];
+}
+
+export interface RoleMenuReplace {
+  menu_ids: number[];
 }
 
 export interface ListResponse<T> {
@@ -155,6 +164,16 @@ export const roleService = {
     }
   },
 
+  // 保存角色权限完整集合
+  async replacePermissionsForRole(roleId: number, operation: RolePermissionReplace) {
+    try {
+      const response = await apiClient.put<SingleResponse<OperationResponse>>(`/roles/${roleId}/permissions`, operation);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
   // 为角色分配菜单
   async assignMenusToRole(roleId: number, operation: RoleMenuOperation) {
     try {
@@ -171,6 +190,16 @@ export const roleService = {
       const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/roles/${roleId}/menus`, {
         data: operation
       });
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 保存角色菜单完整集合
+  async replaceMenusForRole(roleId: number, operation: RoleMenuReplace) {
+    try {
+      const response = await apiClient.put<SingleResponse<OperationResponse>>(`/roles/${roleId}/menus`, operation);
       return response.data;
     } catch (error) {
       return Promise.reject(error);

@@ -73,6 +73,7 @@ class SysMenu(BaseModel):
     menu_name = Column(String(50), nullable=False, comment="菜单名称")
     menu_code = Column(String(50), nullable=False, comment="菜单编码")
     menu_path = Column(String(200), nullable=True, comment="菜单路径")
+    component_key = Column(String(100), nullable=True, comment="前端组件Key")
     parent_id = Column(BigInteger, nullable=True, comment="父菜单ID")
     sort_order = Column(Integer, nullable=True, default=0, comment="显示顺序")
     

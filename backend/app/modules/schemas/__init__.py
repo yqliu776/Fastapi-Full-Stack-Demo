@@ -16,7 +16,7 @@ from .api_permission_schema import (
 )
 from .role_schema import (
     RoleBase, RoleCreate, RoleUpdate, RoleResponse, RoleDetail, RoleBatchResponse,
-    RolePermissionOperation, RoleMenuOperation
+    RolePermissionOperation, RolePermissionReplace, RoleMenuOperation, RoleMenuReplace
 )
 from .user_schema import (
     UserBase, UserCreate, UserUpdate, UserResponse, UserResponseWithRoles,
@@ -33,7 +33,8 @@ __all__ = [
     
     # 角色相关模型
     "RoleBase", "RoleCreate", "RoleUpdate", "RoleResponse", "RoleDetail", "RoleBatchResponse",
-    "RolePermissionOperation", "RoleMenuOperation", "RoleRead", "RoleDTO",
+    "RolePermissionOperation", "RolePermissionReplace", "RoleMenuOperation", "RoleMenuReplace",
+    "RoleRead", "RoleDTO",
     
     # 权限相关模型
     "PermissionBase", "PermissionCreate", "PermissionUpdate", "PermissionResponse",

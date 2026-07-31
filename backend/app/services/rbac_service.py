@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict, Any, Tuple
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
 
 from app.modules.schemas import (
     PermissionCreate, PermissionUpdate, PermissionResponse, PermissionDetail, PermissionBatchResponse,
@@ -160,6 +161,7 @@ class RbacService:
                 "menu_name": menu.menu_name,
                 "menu_code": menu.menu_code,
                 "menu_path": menu.menu_path,
+                "component_key": menu.component_key,
                 "parent_id": menu.parent_id,
                 "sort_order": menu.sort_order
             }
@@ -331,6 +333,46 @@ class RbacService:
         
         return result
 
+    async def replace_permissions_for_role(
+        self,
+        role_id: int,
+        permission_ids: List[int],
+        audit_info: Dict[str, Any]
+    ) -> bool:
+        """
+        保存角色权限完整集合。
+        """
+        role = await self.role_repository.get(role_id)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"角色ID '{role_id}' 不存在"
+            )
+
+        permission_ids = list(dict.fromkeys(permission_ids))
+        if permission_ids:
+            query = select(SysPermission.id).where(
+                and_(
+                    SysPermission.id.in_(permission_ids),
+                    SysPermission.delete_flag == 'N'
+                )
+            )
+            result = await self.db.execute(query)
+            existing_ids = set(result.scalars().all())
+            missing_ids = set(permission_ids) - existing_ids
+            if missing_ids:
+                missing_text = ", ".join(str(item) for item in sorted(missing_ids))
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"权限ID不存在或已删除: {missing_text}"
+                )
+
+        return await self.role_repository.update_role_permissions(
+            role_id=role_id,
+            permission_ids=permission_ids,
+            audit_info=audit_info
+        )
+
     async def _expand_menu_ids_with_ancestors(self, menu_ids: List[int]) -> List[int]:
         expanded_ids = set()
 
@@ -391,6 +433,29 @@ class RbacService:
         )
         
         return result
+
+    async def replace_menus_for_role(
+        self,
+        role_id: int,
+        menu_ids: List[int],
+        audit_info: Dict[str, Any]
+    ) -> bool:
+        """
+        保存角色菜单完整集合。
+        """
+        role = await self.role_repository.get(role_id)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"角色ID '{role_id}' 不存在"
+            )
+
+        menu_ids = await self._expand_menu_ids_with_ancestors(menu_ids)
+        return await self.role_repository.update_role_menus(
+            role_id=role_id,
+            menu_ids=menu_ids,
+            audit_info=audit_info
+        )
     
     #========== 权限相关方法 ==========
     
@@ -878,6 +943,7 @@ class RbacService:
             "menu_name": menu.menu_name,
             "menu_code": menu.menu_code,
             "menu_path": menu.menu_path,
+            "component_key": menu.component_key,
             "parent_id": menu.parent_id,
             "sort_order": menu.sort_order,
             "creation_date": menu.creation_date,
@@ -910,6 +976,7 @@ class RbacService:
                     "menu_name": child.menu_name,
                     "menu_code": child.menu_code,
                     "menu_path": child.menu_path,
+                    "component_key": child.component_key,
                     "parent_id": child.parent_id,
                     "sort_order": child.sort_order,
                     "creation_date": child.creation_date,
@@ -929,6 +996,7 @@ class RbacService:
                             "menu_name": grandchild.menu_name,
                             "menu_code": grandchild.menu_code,
                             "menu_path": grandchild.menu_path,
+                            "component_key": grandchild.component_key,
                             "parent_id": grandchild.parent_id,
                             "sort_order": grandchild.sort_order,
                             "creation_date": grandchild.creation_date,
@@ -1018,6 +1086,7 @@ class RbacService:
                 "menu_name": menu.menu_name,
                 "menu_code": menu.menu_code,
                 "menu_path": menu.menu_path,
+                "component_key": menu.component_key,
                 "parent_id": menu.parent_id,
                 "sort_order": menu.sort_order,
                 "children": []
@@ -1071,6 +1140,7 @@ class RbacService:
                 "menu_name": menu.menu_name,
                 "menu_code": menu.menu_code,
                 "menu_path": menu.menu_path,
+                "component_key": menu.component_key,
                 "parent_id": menu.parent_id,
                 "sort_order": menu.sort_order,
                 "creation_date": menu.creation_date,

@@ -3,7 +3,7 @@ from typing import Optional
 
 from app.modules.schemas import (
     RoleCreate, RoleUpdate, RoleResponse, RoleDetail, RoleBatchResponse,
-    RolePermissionOperation, RoleMenuOperation
+    RolePermissionOperation, RolePermissionReplace, RoleMenuOperation, RoleMenuReplace
 )
 from app.core.models.response_models import ResponseModel
 from app.core.decorators import has_permission
@@ -242,6 +242,36 @@ async def remove_permissions_from_role(
     return ResponseModel.success(data={"success": result}, message="权限移除成功")
 
 
+@router.put(
+    "/{role_id}/permissions",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["ROLE_MANAGE"]))],
+    summary="保存角色权限完整集合"
+)
+async def replace_role_permissions(
+    role_id: int = Path(..., description="角色ID"),
+    operation: RolePermissionReplace = Body(...),
+    rbac_service: RbacService = Depends(),
+    current_user = Depends(get_current_user)
+) -> ResponseModel:
+    audit_info = {
+        "created_by": current_user.user_name,
+        "last_updated_by": current_user.user_name,
+        "last_update_login": current_user.user_name
+    }
+
+    result = await rbac_service.replace_permissions_for_role(
+        role_id=role_id,
+        permission_ids=operation.permission_ids,
+        audit_info=audit_info
+    )
+
+    if not result:
+        raise HTTPException(status_code=400, detail="权限保存失败")
+
+    return ResponseModel.success(data={"success": result}, message="权限保存成功")
+
+
 @router.post(
     "/{role_id}/menus",
     response_model=ResponseModel,
@@ -304,3 +334,33 @@ async def remove_menus_from_role(
         raise HTTPException(status_code=400, detail="菜单移除失败")
     
     return ResponseModel.success(data={"success": result}, message="菜单移除成功") 
+
+
+@router.put(
+    "/{role_id}/menus",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["ROLE_MANAGE"]))],
+    summary="保存角色菜单完整集合"
+)
+async def replace_role_menus(
+    role_id: int = Path(..., description="角色ID"),
+    operation: RoleMenuReplace = Body(...),
+    rbac_service: RbacService = Depends(),
+    current_user = Depends(get_current_user)
+) -> ResponseModel:
+    audit_info = {
+        "created_by": current_user.user_name,
+        "last_updated_by": current_user.user_name,
+        "last_update_login": current_user.user_name
+    }
+
+    result = await rbac_service.replace_menus_for_role(
+        role_id=role_id,
+        menu_ids=operation.menu_ids,
+        audit_info=audit_info
+    )
+
+    if not result:
+        raise HTTPException(status_code=400, detail="菜单保存失败")
+
+    return ResponseModel.success(data={"success": result}, message="菜单保存成功")

@@ -3,11 +3,6 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { permissionService } from '@/services/permissionService';
 import type { Permission } from '@/services/permissionService';
 import { roleService } from '@/services/roleService';
-import type { RolePermissionOperation } from '@/services/roleService';
-import { useUserStore } from '@/stores/user';
-
-// 获取用户信息
-const userStore = useUserStore();
 
 // 组件属性
 const props = defineProps<{
@@ -67,7 +62,7 @@ const permissionStats = computed(() => {
     assigned: rolePermissions.value.length,
     selected: selectedPermissions.value.length,
     toAssign: selectedPermissions.value.filter(id => !rolePermissionIds.value.includes(id)).length,
-    toRemove: selectedPermissions.value.filter(id => rolePermissionIds.value.includes(id)).length
+    toRemove: rolePermissionIds.value.filter(id => !selectedPermissions.value.includes(id)).length
   };
 });
 
@@ -110,11 +105,13 @@ const loadRolePermissions = async () => {
     if (roleResponse.code === 200 && roleResponse.data.permissions) {
       // 使用类型转换确保类型匹配
       rolePermissions.value = roleResponse.data.permissions as unknown as Permission[];
+      selectedPermissions.value = rolePermissions.value.map(permission => permission.id);
     } else {
       // 如果角色详情中没有permissions或获取失败，尝试使用权限服务获取
       const response = await permissionService.getRolePermissions(props.roleId);
       if (response.code === 200) {
         rolePermissions.value = response.data.items;
+        selectedPermissions.value = rolePermissions.value.map(permission => permission.id);
       } else {
         console.error('加载角色权限失败:', response.message);
         errorMsg.value = '加载角色权限失败: ' + response.message;
@@ -148,88 +145,25 @@ const deselectAll = () => {
   selectedPermissions.value = [];
 };
 
-// 获取用户ID或默认值
-const getUserId = () => {
-  return userStore.userInfo?.id.toString() || '-1';
-};
-
-// 为角色分配权限
-const assignPermissions = async () => {
-  if (selectedPermissions.value.length === 0) return;
+// 保存角色权限完整集合
+const savePermissions = async () => {
   errorMsg.value = '';
   
   loading.value.submit = true;
   try {
-    // 筛选出未分配给角色的权限
-    const permissionsToAssign = selectedPermissions.value.filter(
-      id => !rolePermissionIds.value.includes(id)
-    );
-    
-    if (permissionsToAssign.length === 0) {
-      loading.value.submit = false;
-      return;
-    }
-    
-    const userId = getUserId();
-    const operation: RolePermissionOperation = {
-      permission_ids: permissionsToAssign,
-      operator: userId,
-      operation_login: userId,
-      role_id: props.roleId
-    };
-    
-    const response = await roleService.assignPermissionsToRole(props.roleId, operation);
+    const response = await roleService.replacePermissionsForRole(props.roleId, {
+      permission_ids: selectedPermissions.value
+    });
     if (response.code === 200) {
       await loadRolePermissions();
       emit('update');
     } else {
-      console.error('分配权限失败:', response.message);
-      errorMsg.value = '分配权限失败: ' + response.message;
+      console.error('保存权限失败:', response.message);
+      errorMsg.value = '保存权限失败: ' + response.message;
     }
   } catch (error) {
-    console.error('分配权限出错:', error);
-    errorMsg.value = '分配权限出错';
-  } finally {
-    loading.value.submit = false;
-  }
-};
-
-// 移除角色权限
-const removePermissions = async () => {
-  if (selectedPermissions.value.length === 0) return;
-  errorMsg.value = '';
-  
-  loading.value.submit = true;
-  try {
-    // 筛选出已分配给角色的权限
-    const permissionsToRemove = selectedPermissions.value.filter(
-      id => rolePermissionIds.value.includes(id)
-    );
-    
-    if (permissionsToRemove.length === 0) {
-      loading.value.submit = false;
-      return;
-    }
-    
-    const userId = getUserId();
-    const operation: RolePermissionOperation = {
-      permission_ids: permissionsToRemove,
-      operator: userId,
-      operation_login: userId,
-      role_id: props.roleId
-    };
-    
-    const response = await roleService.removePermissionsFromRole(props.roleId, operation);
-    if (response.code === 200) {
-      await loadRolePermissions();
-      emit('update');
-    } else {
-      console.error('移除权限失败:', response.message);
-      errorMsg.value = '移除权限失败: ' + response.message;
-    }
-  } catch (error) {
-    console.error('移除权限出错:', error);
-    errorMsg.value = '移除权限出错';
+    console.error('保存权限出错:', error);
+    errorMsg.value = '保存权限出错';
   } finally {
     loading.value.submit = false;
   }
@@ -299,7 +233,7 @@ onMounted(() => {
         <div>已分配: <span class="font-semibold text-green-600">{{ permissionStats.assigned }}</span></div>
         <div>已选择: <span class="font-semibold text-blue-600">{{ permissionStats.selected }}</span></div>
         <div v-if="permissionStats.toAssign > 0">待分配: <span class="font-semibold text-indigo-600">{{ permissionStats.toAssign }}</span></div>
-        <div v-if="permissionStats.toRemove > 0">待移除: <span class="font-semibold text-red-600">{{ permissionStats.toRemove }}</span></div>
+        <div v-if="permissionStats.toRemove > 0">保存后移除: <span class="font-semibold text-red-600">{{ permissionStats.toRemove }}</span></div>
       </div>
     </div>
     
@@ -364,24 +298,16 @@ onMounted(() => {
     <!-- 底部按钮 -->
     <div class="flex justify-between">
       <div>
-        <span class="text-sm text-gray-500">已选择 {{ selectedPermissions.length }} 项</span>
+        <span class="text-sm text-gray-500">保存后拥有 {{ selectedPermissions.length }} 项权限</span>
       </div>
       <div class="flex space-x-2">
         <button
-          @click="assignPermissions"
-          :disabled="loading.submit || permissionStats.toAssign === 0"
-          class="bg-green-600 text-white py-1 px-3 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          @click="savePermissions"
+          :disabled="loading.submit"
+          class="bg-indigo-600 text-white py-1 px-3 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <span v-if="loading.submit && permissionStats.toAssign > 0" class="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></span>
-          分配权限 {{ permissionStats.toAssign > 0 ? `(${permissionStats.toAssign})` : '' }}
-        </button>
-        <button
-          @click="removePermissions"
-          :disabled="loading.submit || permissionStats.toRemove === 0"
-          class="bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <span v-if="loading.submit && permissionStats.toRemove > 0" class="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></span>
-          移除权限 {{ permissionStats.toRemove > 0 ? `(${permissionStats.toRemove})` : '' }}
+          <span v-if="loading.submit" class="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></span>
+          保存权限
         </button>
       </div>
     </div>

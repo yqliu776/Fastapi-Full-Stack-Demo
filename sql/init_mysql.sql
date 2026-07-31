@@ -41,8 +41,10 @@ VALUES
 ('DELETE', '/roles/{role_id}', 'ROLE_MANAGE', '删除角色', 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('POST', '/roles/{role_id}/permissions', 'ROLE_MANAGE', '为角色分配权限', 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('DELETE', '/roles/{role_id}/permissions', 'ROLE_MANAGE', '移除角色的权限', 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('PUT', '/roles/{role_id}/permissions', 'ROLE_MANAGE', '保存角色权限完整集合', 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('POST', '/roles/{role_id}/menus', 'ROLE_MANAGE', '为角色分配菜单', 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('DELETE', '/roles/{role_id}/menus', 'ROLE_MANAGE', '移除角色的菜单', 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('PUT', '/roles/{role_id}/menus', 'ROLE_MANAGE', '保存角色菜单完整集合', 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('POST', '/permissions', 'PERMISSION_MANAGE', '创建权限', 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('GET', '/permissions', 'PERMISSION_MANAGE', '获取权限列表', 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
 ('GET', '/permissions/api-bindings', 'PERMISSION_MANAGE', '获取API权限绑定列表', 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
@@ -73,21 +75,21 @@ VALUES
 
 -- ========== 3. 初始化菜单 ==========
 INSERT INTO sys_menus
-(menu_name, menu_code, menu_path, parent_id, sort_order, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
+(menu_name, menu_code, menu_path, component_key, parent_id, sort_order, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
 VALUES
-('系统管理', 'SYSTEM', '/system', NULL, 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
+('系统管理', 'SYSTEM', '/system', 'dashboard', NULL, 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
 
 SET @system_menu_id = LAST_INSERT_ID();
 
 INSERT INTO sys_menus
-(menu_name, menu_code, menu_path, parent_id, sort_order, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
+(menu_name, menu_code, menu_path, component_key, parent_id, sort_order, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
 VALUES
-('用户管理', 'USER', '/system/user', @system_menu_id, 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
-('角色管理', 'ROLE', '/system/role', @system_menu_id, 2, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
-('权限管理', 'PERMISSION', '/system/permission', @system_menu_id, 3, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
-('菜单管理', 'MENU', '/system/menu', @system_menu_id, 4, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
-('API限流管理', 'API_RATE_LIMIT', '/system/api-rate-limit', @system_menu_id, 5, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
-('API文档', 'API_DOCS', '/system/swagger-ui', @system_menu_id, 6, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
+('用户管理', 'USER', '/system/user', 'user', @system_menu_id, 1, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('角色管理', 'ROLE', '/system/role', 'role', @system_menu_id, 2, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('权限管理', 'PERMISSION', '/system/permission', 'permission', @system_menu_id, 3, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('菜单管理', 'MENU', '/system/menu', 'menu', @system_menu_id, 4, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('API限流管理', 'API_RATE_LIMIT', '/system/api-rate-limit', 'rate_limit', @system_menu_id, 5, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1),
+('API文档', 'API_DOCS', '/system/swagger-ui', 'swagger', @system_menu_id, 6, @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
 
 -- ========== 4. 创建超级管理员用户 ==========
 -- 密码为 Admin@123，使用bcrypt加密

@@ -55,9 +55,19 @@ class RolePermissionOperation(BaseModel):
     operation_login: str = Field(..., description="操作登录ID")
 
 
+class RolePermissionReplace(BaseModel):
+    """角色权限全量保存模型"""
+    permission_ids: List[int] = Field(..., description="权限ID完整集合")
+
+
 class RoleMenuOperation(BaseModel):
     """角色菜单操作模型"""
     role_id: int = Field(..., description="角色ID")
     menu_ids: List[int] = Field(..., description="菜单ID列表")
     operator: str = Field(..., description="操作人")
     operation_login: str = Field(..., description="操作登录ID") 
+
+
+class RoleMenuReplace(BaseModel):
+    """角色菜单全量保存模型"""
+    menu_ids: List[int] = Field(..., description="菜单ID完整集合")

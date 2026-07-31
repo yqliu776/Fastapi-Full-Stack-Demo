@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue';
+import { ref, onMounted, reactive, computed } from 'vue';
 import { menuService } from '@/services/menuService';
 import type { Menu, MenuCreate, MenuUpdate } from '@/services/menuService';
 import { useUserStore } from '@/stores/user';
@@ -16,6 +16,18 @@ const pageSize = ref(10);
 const searchForm = reactive({
   menu_name: ''
 });
+const componentOptions = [
+  { key: '', label: '自动匹配' },
+  { key: 'dashboard', label: 'dashboard - 仪表盘/系统父级' },
+  { key: 'profile', label: 'profile - 个人中心' },
+  { key: 'user', label: 'user - 用户管理' },
+  { key: 'role', label: 'role - 角色管理' },
+  { key: 'permission', label: 'permission - 权限管理' },
+  { key: 'menu', label: 'menu - 菜单管理' },
+  { key: 'rate_limit', label: 'rate_limit - API限流管理' },
+  { key: 'swagger', label: 'swagger - API文档' },
+  { key: 'unsupported', label: 'unsupported - 未绑定页面' }
+];
 
 // 模态框状态
 const showCreateModal = ref(false);
@@ -37,11 +49,38 @@ const menuForm = reactive<MenuCreate & MenuUpdate>({
   menu_name: '',
   menu_code: '',
   menu_path: '',
+  component_key: '',
   parent_id: undefined,
   sort_order: 0,
   created_by: '-1',
   last_updated_by: '-1',
   last_update_login: '-1'
+});
+
+const selectedParentMenu = computed(() => {
+  if (!menuForm.parent_id) return null;
+  return parentMenus.value.find(menu => menu.id === menuForm.parent_id) || null;
+});
+
+const menuPathError = computed(() => {
+  if (!menuForm.menu_path) return '菜单路径不能为空';
+  if (!menuForm.menu_path.startsWith('/')) return '菜单路径必须以 / 开头';
+  if (/\s/.test(menuForm.menu_path)) return '菜单路径不能包含空格';
+  if (!menuForm.menu_path.startsWith('/system') && !menuForm.menu_path.startsWith('/dashboard')) {
+    return '菜单路径需位于 /system 或 /dashboard 下';
+  }
+  return '';
+});
+
+const parentChildPreview = computed(() => {
+  const parentName = selectedParentMenu.value ? selectedParentMenu.value.menu_name : '顶级菜单';
+  const currentName = menuForm.menu_name || '当前菜单';
+  return `${parentName} / ${currentName}`;
+});
+
+const normalizeMenuPayload = () => ({
+  ...menuForm,
+  component_key: menuForm.component_key || undefined
 });
 
 // 显示通知
@@ -116,6 +155,7 @@ const openCreateModal = () => {
   menuForm.menu_name = '';
   menuForm.menu_code = '';
   menuForm.menu_path = '';
+  menuForm.component_key = '';
   menuForm.parent_id = undefined;
   menuForm.sort_order = 0;
   menuForm.created_by = userId;
@@ -127,8 +167,12 @@ const openCreateModal = () => {
 
 // 创建菜单
 const createMenu = async () => {
+  if (menuPathError.value) {
+    showNotification(menuPathError.value, 'warning');
+    return;
+  }
   try {
-    const response = await menuService.createMenu(menuForm);
+    const response = await menuService.createMenu(normalizeMenuPayload());
     if (response.code === 200) {
       showCreateModal.value = false;
       loadMenus();
@@ -153,6 +197,7 @@ const openEditModal = (menu: Menu) => {
   menuForm.menu_name = menu.menu_name;
   menuForm.menu_code = menu.menu_code;
   menuForm.menu_path = menu.menu_path;
+  menuForm.component_key = menu.component_key || '';
   menuForm.parent_id = menu.parent_id;
   menuForm.sort_order = menu.sort_order;
   menuForm.last_updated_by = userId;
@@ -164,9 +209,13 @@ const openEditModal = (menu: Menu) => {
 // 更新菜单
 const updateMenu = async () => {
   if (!currentMenu.value) return;
+  if (menuPathError.value) {
+    showNotification(menuPathError.value, 'warning');
+    return;
+  }
   
   try {
-    const response = await menuService.updateMenu(currentMenu.value.id, menuForm);
+    const response = await menuService.updateMenu(currentMenu.value.id, normalizeMenuPayload());
     if (response.code === 200) {
       showEditModal.value = false;
       loadMenus();
@@ -283,6 +332,7 @@ onMounted(() => {
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">菜单名称</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">菜单代码</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">菜单路径</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">组件Key</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">父菜单</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">排序</th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
@@ -291,12 +341,12 @@ onMounted(() => {
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="loading" class="text-center">
-              <td colspan="8" class="px-6 py-4 whitespace-nowrap">
+              <td colspan="9" class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-500 text-center w-full">加载中...</div>
               </td>
             </tr>
             <tr v-else-if="menus.length === 0" class="text-center">
-              <td colspan="8" class="px-6 py-4 whitespace-nowrap">
+              <td colspan="9" class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-500 text-center w-full">暂无菜单数据</div>
               </td>
             </tr>
@@ -310,6 +360,9 @@ onMounted(() => {
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-500">{{ menu.menu_path }}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-500">{{ menu.component_key || '自动匹配' }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-500">{{ getParentMenuName(menu.parent_id) }}</div>
@@ -431,6 +484,21 @@ onMounted(() => {
                   placeholder="请输入菜单路径"
                   required
                 />
+                <p v-if="menuPathError" class="mt-1 text-xs text-red-500">{{ menuPathError }}</p>
+                <p v-else class="mt-1 text-xs text-gray-500">用于浏览器地址和旧版动态路由回退</p>
+              </div>
+              <div class="mb-4">
+                <label for="component_key" class="block text-sm font-medium text-gray-700 mb-1">组件Key</label>
+                <select
+                  id="component_key"
+                  v-model="menuForm.component_key"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                  <option v-for="option in componentOptions" :key="option.key" :value="option.key">
+                    {{ option.label }}
+                  </option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500">优先用组件Key绑定页面；留空时按菜单代码和路径自动匹配</p>
               </div>
               <div class="mb-4">
                 <label for="parent_id" class="block text-sm font-medium text-gray-700 mb-1">父菜单</label>
@@ -444,6 +512,7 @@ onMounted(() => {
                     {{ menu.menu_name }} ({{ menu.menu_code }})
                   </option>
                 </select>
+                <p class="mt-1 text-xs text-gray-500">父子预览：{{ parentChildPreview }}</p>
               </div>
               <div class="mb-4">
                 <label for="sort_order" class="block text-sm font-medium text-gray-700 mb-1">排序号</label>
@@ -521,6 +590,21 @@ onMounted(() => {
                   placeholder="请输入菜单路径"
                   required
                 />
+                <p v-if="menuPathError" class="mt-1 text-xs text-red-500">{{ menuPathError }}</p>
+                <p v-else class="mt-1 text-xs text-gray-500">用于浏览器地址和旧版动态路由回退</p>
+              </div>
+              <div class="mb-4">
+                <label for="edit_component_key" class="block text-sm font-medium text-gray-700 mb-1">组件Key</label>
+                <select
+                  id="edit_component_key"
+                  v-model="menuForm.component_key"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                  <option v-for="option in componentOptions" :key="option.key" :value="option.key">
+                    {{ option.label }}
+                  </option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500">优先用组件Key绑定页面；留空时按菜单代码和路径自动匹配</p>
               </div>
               <div class="mb-4">
                 <label for="edit_parent_id" class="block text-sm font-medium text-gray-700 mb-1">父菜单</label>
@@ -538,7 +622,7 @@ onMounted(() => {
                     {{ menu.menu_name }} ({{ menu.menu_code }})
                   </option>
                 </select>
-                <p class="mt-1 text-xs text-gray-500">菜单不能选择自己作为父菜单</p>
+                <p class="mt-1 text-xs text-gray-500">父子预览：{{ parentChildPreview }}；菜单不能选择自己作为父菜单</p>
               </div>
               <div class="mb-4">
                 <label for="edit_sort_order" class="block text-sm font-medium text-gray-700 mb-1">排序号</label>

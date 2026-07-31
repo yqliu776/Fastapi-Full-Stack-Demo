@@ -18,6 +18,7 @@ export interface MenuCreate {
   menu_name: string;
   menu_code: string;
   menu_path: string;
+  component_key?: string;
   parent_id?: number;
   sort_order?: number;
   created_by: string;
@@ -28,6 +29,7 @@ export interface MenuCreate {
 export interface MenuUpdate {
   menu_name?: string;
   menu_path?: string;
+  component_key?: string;
   parent_id?: number;
   sort_order?: number;
   last_updated_by: string;

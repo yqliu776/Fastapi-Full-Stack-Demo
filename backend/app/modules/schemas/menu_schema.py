@@ -10,6 +10,7 @@ class MenuBase(BaseModel):
     menu_name: str = Field(..., description="菜单名称", example="系统管理")
     menu_code: str = Field(..., description="菜单代码", example="SYSTEM")
     menu_path: str = Field(..., description="菜单路径", example="/system")
+    component_key: Optional[str] = Field(None, description="前端组件Key", example="dashboard")
     parent_id: Optional[int] = Field(None, description="父菜单ID")
     sort_order: Optional[int] = Field(0, description="排序号")
 
@@ -25,6 +26,7 @@ class MenuUpdate(BaseModel):
     """菜单更新模型"""
     menu_name: Optional[str] = Field(None, description="菜单名称", example="系统管理")
     menu_path: Optional[str] = Field(None, description="菜单路径", example="/system")
+    component_key: Optional[str] = Field(None, description="前端组件Key", example="dashboard")
     parent_id: Optional[int] = Field(None, description="父菜单ID")
     sort_order: Optional[int] = Field(None, description="排序号")
     last_updated_by: str = Field(..., description="最后更新人")
@@ -57,6 +59,7 @@ class MenuTreeNode(BaseModel):
     menu_name: str = Field(..., description="菜单名称")
     menu_code: str = Field(..., description="菜单代码")
     menu_path: str = Field(..., description="菜单路径")
+    component_key: Optional[str] = Field(None, description="前端组件Key")
     parent_id: Optional[int] = Field(None, description="父菜单ID")
     sort_order: int = Field(0, description="排序号")
     children: Optional[List['MenuTreeNode']] = Field(None, description="子菜单列表")

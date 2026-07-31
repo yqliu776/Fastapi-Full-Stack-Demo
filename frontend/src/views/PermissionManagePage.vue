@@ -239,7 +239,11 @@ const updatePermission = async () => {
   if (!currentPermission.value) return;
   
   try {
-    const response = await permissionService.updatePermission(currentPermission.value.id, permissionForm);
+    const response = await permissionService.updatePermission(currentPermission.value.id, {
+      permission_name: permissionForm.permission_name,
+      last_updated_by: permissionForm.last_updated_by,
+      last_update_login: permissionForm.last_update_login
+    });
     if (response.code === 200) {
       showEditModal.value = false;
       loadPermissions();
@@ -790,7 +794,7 @@ onMounted(() => {
                   required
                   disabled
                 />
-                <p class="mt-1 text-xs text-gray-500">权限代码不可修改</p>
+                <p class="mt-1 text-xs text-gray-500">权限代码创建后不可修改，代码会用于 API 绑定和路由鉴权</p>
               </div>
             </div>
           </div>

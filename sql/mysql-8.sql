@@ -84,6 +84,7 @@ CREATE TABLE sys_menus (
     menu_name VARCHAR(50) NOT NULL COMMENT '菜单名称',
     menu_code VARCHAR(50) NOT NULL COMMENT '菜单编码',
     menu_path VARCHAR(200) DEFAULT NULL COMMENT '菜单路径',
+    component_key VARCHAR(100) DEFAULT NULL COMMENT '前端组件Key',
     parent_id BIGINT DEFAULT NULL COMMENT '父菜单ID',
     sort_order INT DEFAULT 0 COMMENT '显示顺序',
     
