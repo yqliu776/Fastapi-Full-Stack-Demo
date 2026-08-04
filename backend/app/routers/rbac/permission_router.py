@@ -88,6 +88,22 @@ async def get_api_permission_bindings(
     permission_code: Optional[str] = Query(None, description="权限代码"),
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
+    """
+    获取API权限绑定列表。
+
+    支持按 HTTP 方法、接口路径模式和权限编码过滤，用于维护接口与权限码的映射关系。
+
+    Args:
+        skip: 跳过的记录数。
+        limit: 返回的记录数。
+        method: 可选 HTTP 方法过滤条件。
+        path_pattern: 可选 API 路径模式过滤条件。
+        permission_code: 可选权限代码过滤条件。
+        rbac_service: RBAC服务实例。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为API权限绑定分页列表。
+    """
     bindings = await rbac_service.get_all_api_permissions(
         skip=skip,
         limit=limit,
@@ -112,6 +128,18 @@ async def create_api_permission_binding(
     binding_data: ApiPermissionCreate,
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
+    """
+    创建API权限绑定。
+
+    将指定 HTTP 方法和路径模式绑定到权限编码，供权限校验装饰器识别接口访问权限。
+
+    Args:
+        binding_data: API权限绑定创建数据。
+        rbac_service: RBAC服务实例。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为创建后的API权限绑定。
+    """
     binding = await rbac_service.create_api_permission(binding_data)
     return ResponseModel(
         code=200,
@@ -131,6 +159,19 @@ async def update_api_permission_binding(
     binding_data: ApiPermissionUpdate = Body(...),
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
+    """
+    更新API权限绑定。
+
+    修改指定 API 权限绑定的 HTTP 方法、路径模式、权限编码或描述信息。
+
+    Args:
+        api_permission_id: API权限绑定ID。
+        binding_data: API权限绑定更新数据。
+        rbac_service: RBAC服务实例。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为更新后的API权限绑定。
+    """
     binding = await rbac_service.update_api_permission(api_permission_id, binding_data)
     return ResponseModel(
         code=200,
@@ -149,6 +190,18 @@ async def delete_api_permission_binding(
     api_permission_id: int = Path(..., description="API权限绑定ID"),
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
+    """
+    删除API权限绑定。
+
+    删除指定接口路径与权限编码的绑定关系，删除后该绑定不再参与接口权限校验。
+
+    Args:
+        api_permission_id: API权限绑定ID。
+        rbac_service: RBAC服务实例。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 包含删除成功标记。
+    """
     result = await rbac_service.delete_api_permission(api_permission_id)
     return ResponseModel(
         code=200 if result else 400,

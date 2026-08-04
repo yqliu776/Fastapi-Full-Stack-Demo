@@ -6,8 +6,15 @@ from fastapi import FastAPI, APIRouter
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from app.core.middleware import LoggingMiddleware, ErrorHandlerMiddleware, RateLimitMiddleware, BotDetectionMiddleware
+from app.core.middleware import (
+    LoggingMiddleware,
+    ErrorHandlerMiddleware,
+    RateLimitMiddleware,
+    BotDetectionMiddleware,
+    register_exception_handlers,
+)
 from app.routers import auth_router, role_router, permission_router, menu_router, user_router, rate_limit_router
+from app.core.models import ResponseModel
 from app.core.utils import logger_manager, logger
 from app.core.connects import db, redis_client
 from app.core.settings import settings
@@ -224,8 +231,23 @@ class AppLifecycle:
         # 替换OpenAPI生成函数
         app.openapi = custom_openapi
 
-        @app.get("/health", tags=["系统"])
-        async def health_check():
+        register_exception_handlers(app)
+
+        @app.get("/health", response_model=ResponseModel, tags=["系统"], summary="健康检查")
+        async def health_check() -> JSONResponse:
+            """
+            系统健康检查接口。
+
+            检查后端应用依赖的数据库和 Redis 连接状态，并返回应用名称、版本、
+            依赖状态和异常详情。任一依赖不可用时，HTTP 状态码返回 503，
+            响应体仍保持统一响应模板。
+
+            Args:
+                无。
+
+            Returns:
+                JSONResponse: 统一响应模型，data 包含应用状态、数据库状态和 Redis 状态。
+            """
             database_ok = False
             redis_ok = False
             details = {}
@@ -255,9 +277,15 @@ class AppLifecycle:
             if details:
                 payload["details"] = details
 
+            status_code = 200 if healthy else 503
+            response = ResponseModel(
+                code=status_code,
+                message="健康检查通过" if healthy else "健康检查降级",
+                data=payload,
+            )
             return JSONResponse(
-                status_code=200 if healthy else 503,
-                content=payload
+                status_code=status_code,
+                content=response.model_dump()
             )
         
         # 添加路由 - 需要在定义openapi后添加路由

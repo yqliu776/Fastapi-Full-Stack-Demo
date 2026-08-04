@@ -254,6 +254,23 @@ async def replace_role_permissions(
     rbac_service: RbacService = Depends(),
     current_user = Depends(get_current_user)
 ) -> ResponseModel:
+    """
+    保存角色权限完整集合。
+
+    用请求中的权限ID列表替换角色当前所有权限关系，适用于权限编辑页面一次性保存勾选结果。
+
+    Args:
+        role_id: 角色ID。
+        operation: 角色权限替换数据，包含完整权限ID集合。
+        rbac_service: RBAC服务实例。
+        current_user: 当前认证用户，用于审计字段。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 包含保存成功标记。
+
+    Raises:
+        HTTPException: 权限保存失败时返回 400。
+    """
     audit_info = {
         "created_by": current_user.user_name,
         "last_updated_by": current_user.user_name,
@@ -285,7 +302,21 @@ async def assign_menus_to_role(
     current_user = Depends(get_current_user)
 ) -> ResponseModel:
     """
-    为角色分配菜单
+    为角色分配菜单。
+
+    将请求中的菜单ID追加分配给指定角色，保留角色已有菜单关系。
+
+    Args:
+        role_id: 角色ID。
+        operation: 角色菜单分配数据，包含待追加的菜单ID集合。
+        rbac_service: RBAC服务实例。
+        current_user: 当前认证用户，用于审计字段。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 包含分配成功标记。
+
+    Raises:
+        HTTPException: 路径角色ID与请求体不一致，或菜单分配失败时返回 400。
     """
     if role_id != operation.role_id:
         raise HTTPException(status_code=400, detail="请求参数不一致")
@@ -320,7 +351,20 @@ async def remove_menus_from_role(
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
-    移除角色的菜单
+    移除角色的菜单。
+
+    从指定角色移除请求中的菜单ID集合，其他菜单授权保持不变。
+
+    Args:
+        role_id: 角色ID。
+        operation: 角色菜单移除数据，包含待移除的菜单ID集合。
+        rbac_service: RBAC服务实例。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 包含移除成功标记。
+
+    Raises:
+        HTTPException: 路径角色ID与请求体不一致，或菜单移除失败时返回 400。
     """
     if role_id != operation.role_id:
         raise HTTPException(status_code=400, detail="请求参数不一致")
@@ -348,6 +392,23 @@ async def replace_role_menus(
     rbac_service: RbacService = Depends(),
     current_user = Depends(get_current_user)
 ) -> ResponseModel:
+    """
+    保存角色菜单完整集合。
+
+    用请求中的菜单ID列表替换角色当前所有菜单关系，适用于菜单授权页面一次性保存勾选结果。
+
+    Args:
+        role_id: 角色ID。
+        operation: 角色菜单替换数据，包含完整菜单ID集合。
+        rbac_service: RBAC服务实例。
+        current_user: 当前认证用户，用于审计字段。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 包含保存成功标记。
+
+    Raises:
+        HTTPException: 菜单保存失败时返回 400。
+    """
     audit_info = {
         "created_by": current_user.user_name,
         "last_updated_by": current_user.user_name,

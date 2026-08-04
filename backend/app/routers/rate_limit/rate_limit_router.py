@@ -47,7 +47,7 @@ class RateLimitStats(BaseModel):
     blacklisted: bool
 
 
-@router.get("/stats", summary="获取限流统计信息")
+@router.get("/stats", response_model=ResponseModel, summary="获取限流统计信息")
 async def get_rate_limit_stats(
     scope: RateLimitScope = Query(..., description="限流作用域"),
     identifier: str = Query(..., description="标识符"),
@@ -55,7 +55,22 @@ async def get_rate_limit_stats(
     user_id: Optional[str] = Query(None, description="用户ID")
 ) -> ResponseModel:
     """
-    获取指定标识符的限流统计信息
+    获取指定标识符的限流统计信息。
+
+    按 IP、用户或接口维度查询当前限流键、白名单状态和黑名单状态，用于排查
+    请求被拦截或额度变化的原因。
+
+    Args:
+        scope: 限流作用域。
+        identifier: 限流标识符，通常为 IP 地址或用户标识。
+        endpoint: 可选 API 端点，用于查询接口级限流。
+        user_id: 可选用户 ID，用于查询用户维度或组合维度限流。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为限流统计信息。
+
+    Raises:
+        HTTPException: 查询限流统计失败时返回 500。
     """
     try:
         stats = await rate_limiter.get_stats(
@@ -75,10 +90,21 @@ async def get_rate_limit_stats(
         raise HTTPException(status_code=500, detail=f"获取限流统计失败: {str(e)}")
 
 
-@router.post("/whitelist", summary="添加到白名单")
+@router.post("/whitelist", response_model=ResponseModel, summary="添加到白名单")
 async def add_to_whitelist(request: WhitelistRequest) -> ResponseModel:
     """
-    将指定标识符添加到白名单
+    将指定标识符添加到白名单。
+
+    白名单中的标识符会绕过启用白名单支持的限流规则，可设置过期时间用于临时放行。
+
+    Args:
+        request: 白名单请求参数，包含标识符和可选过期时间。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 包含写入的标识符和过期时间。
+
+    Raises:
+        HTTPException: 添加失败时返回 500。
     """
     try:
         success = await rate_limiter.add_to_whitelist(
@@ -101,10 +127,21 @@ async def add_to_whitelist(request: WhitelistRequest) -> ResponseModel:
         raise HTTPException(status_code=500, detail=f"添加到白名单失败: {str(e)}")
 
 
-@router.delete("/whitelist/{identifier}", summary="从白名单移除")
+@router.delete("/whitelist/{identifier}", response_model=ResponseModel, summary="从白名单移除")
 async def remove_from_whitelist(identifier: str) -> ResponseModel:
     """
-    将指定标识符从白名单移除
+    将指定标识符从白名单移除。
+
+    移除后该标识符会重新受限流规则约束。
+
+    Args:
+        identifier: 要移除的白名单标识符。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 包含被移除的标识符。
+
+    Raises:
+        HTTPException: 标识符不存在时返回 404，移除失败时返回 500。
     """
     try:
         success = await rate_limiter.remove_from_whitelist(identifier=identifier)
@@ -124,10 +161,21 @@ async def remove_from_whitelist(identifier: str) -> ResponseModel:
         raise HTTPException(status_code=500, detail=f"从白名单移除失败: {str(e)}")
 
 
-@router.get("/whitelist", summary="获取白名单列表")
+@router.get("/whitelist", response_model=ResponseModel, summary="获取白名单列表")
 async def get_whitelist() -> ResponseModel:
     """
-    获取当前白名单列表
+    获取当前白名单列表。
+
+    查询限流存储中的全部白名单标识符，供后台限流管理页面展示。
+
+    Args:
+        无。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为白名单列表。
+
+    Raises:
+        HTTPException: 读取白名单失败时返回 500。
     """
     try:
         whitelist = await storage.get_whitelist()
@@ -142,10 +190,21 @@ async def get_whitelist() -> ResponseModel:
         raise HTTPException(status_code=500, detail=f"获取白名单失败: {str(e)}")
 
 
-@router.post("/blacklist", summary="添加到黑名单")
+@router.post("/blacklist", response_model=ResponseModel, summary="添加到黑名单")
 async def add_to_blacklist(request: BlacklistRequest) -> ResponseModel:
     """
-    将指定标识符添加到黑名单
+    将指定标识符添加到黑名单。
+
+    黑名单中的标识符会被限流中间件直接拦截，可设置过期时间用于临时封禁。
+
+    Args:
+        request: 黑名单请求参数，包含标识符和可选过期时间。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 包含写入的标识符和过期时间。
+
+    Raises:
+        HTTPException: 添加失败时返回 500。
     """
     try:
         success = await rate_limiter.add_to_blacklist(
@@ -168,10 +227,21 @@ async def add_to_blacklist(request: BlacklistRequest) -> ResponseModel:
         raise HTTPException(status_code=500, detail=f"添加到黑名单失败: {str(e)}")
 
 
-@router.delete("/blacklist/{identifier}", summary="从黑名单移除")
+@router.delete("/blacklist/{identifier}", response_model=ResponseModel, summary="从黑名单移除")
 async def remove_from_blacklist(identifier: str) -> ResponseModel:
     """
-    将指定标识符从黑名单移除
+    将指定标识符从黑名单移除。
+
+    移除后该标识符不再被黑名单规则直接拦截。
+
+    Args:
+        identifier: 要移除的黑名单标识符。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 包含被移除的标识符。
+
+    Raises:
+        HTTPException: 标识符不存在时返回 404，移除失败时返回 500。
     """
     try:
         success = await rate_limiter.remove_from_blacklist(identifier=identifier)
@@ -191,10 +261,21 @@ async def remove_from_blacklist(identifier: str) -> ResponseModel:
         raise HTTPException(status_code=500, detail=f"从黑名单移除失败: {str(e)}")
 
 
-@router.get("/blacklist", summary="获取黑名单列表")
+@router.get("/blacklist", response_model=ResponseModel, summary="获取黑名单列表")
 async def get_blacklist() -> ResponseModel:
     """
-    获取当前黑名单列表
+    获取当前黑名单列表。
+
+    查询限流存储中的全部黑名单标识符，供后台限流管理页面展示。
+
+    Args:
+        无。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为黑名单列表。
+
+    Raises:
+        HTTPException: 读取黑名单失败时返回 500。
     """
     try:
         blacklist = await storage.get_blacklist()
@@ -209,7 +290,7 @@ async def get_blacklist() -> ResponseModel:
         raise HTTPException(status_code=500, detail=f"获取黑名单失败: {str(e)}")
 
 
-@router.post("/check", summary="检查限流状态")
+@router.post("/check", response_model=ResponseModel, summary="检查限流状态")
 async def check_rate_limit(
     request: Request,
     scope: RateLimitScope = Query(..., description="限流作用域"),
@@ -218,7 +299,23 @@ async def check_rate_limit(
     user_id: Optional[str] = Query(None, description="用户ID")
 ) -> ResponseModel:
     """
-    检查指定请求的限流状态，不实际消耗限流额度
+    检查指定请求的限流状态。
+
+    根据运行时配置计算给定标识符当前是否允许访问，并返回剩余额度、
+    重置时间和重试等待时间；该接口用于管理端诊断，不实际消耗限流额度。
+
+    Args:
+        request: 当前 HTTP 请求对象。
+        scope: 限流作用域。
+        identifier: 限流标识符，通常为 IP 地址或用户标识。
+        endpoint: 可选 API 端点，用于接口级限流检查。
+        user_id: 可选用户 ID，用于用户维度或组合维度检查。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 包含 allowed、remaining、reset_time、limit 和 retry_after。
+
+    Raises:
+        HTTPException: 限流检查失败时返回 500。
     """
     try:
         runtime_config = await get_runtime_rate_limit_config()
@@ -258,10 +355,21 @@ async def check_rate_limit(
         raise HTTPException(status_code=500, detail=f"限流检查失败: {str(e)}")
 
 
-@router.get("/config", summary="获取限流配置")
+@router.get("/config", response_model=ResponseModel, summary="获取限流配置")
 async def get_rate_limit_config() -> ResponseModel:
     """
-    获取当前限流配置信息
+    获取当前限流配置信息。
+
+    从运行时配置存储读取限流开关、算法、默认额度、突发容量、封禁时长和日志策略。
+
+    Args:
+        无。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为当前运行时限流配置。
+
+    Raises:
+        HTTPException: 读取配置失败时返回 500。
     """
     try:
         config_info = await get_runtime_rate_limit_config()
@@ -276,10 +384,19 @@ async def get_rate_limit_config() -> ResponseModel:
         raise HTTPException(status_code=500, detail=f"获取限流配置失败: {str(e)}")
 
 
-@router.put("/config", summary="更新限流配置")
+@router.put("/config", response_model=ResponseModel, summary="更新限流配置")
 async def update_rate_limit_config(config: RuntimeRateLimitConfig) -> ResponseModel:
     """
     更新运行时限流配置，保存后立即生效并持久化到Redis。
+
+    Args:
+        config: 新的运行时限流配置。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为保存后的运行时限流配置。
+
+    Raises:
+        HTTPException: 保存配置失败时返回 500。
     """
     try:
         saved_config = await save_runtime_rate_limit_config(config)

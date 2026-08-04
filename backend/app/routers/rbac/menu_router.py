@@ -134,7 +134,16 @@ async def get_current_user_menus(
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
-    获取当前登录用户可访问的菜单列表
+    获取当前登录用户可访问的菜单列表。
+
+    根据当前用户拥有的角色查询可访问菜单，不返回其他角色独有的菜单项。
+
+    Args:
+        current_user: 当前认证用户。
+        rbac_service: RBAC服务实例。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为当前用户可访问菜单列表。
     """
     menus = await rbac_service.get_menus_by_user_id(current_user.id)
     return ResponseModel(
@@ -154,7 +163,16 @@ async def get_current_user_menu_tree(
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
-    获取当前登录用户可访问的菜单树
+    获取当前登录用户可访问的菜单树。
+
+    根据当前用户拥有的角色查询可访问菜单，并按父子关系组装为树形结构。
+
+    Args:
+        current_user: 当前认证用户。
+        rbac_service: RBAC服务实例。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为当前用户可访问菜单树。
     """
     menu_tree = await rbac_service.get_menu_tree_by_user_id(current_user.id)
     return ResponseModel(

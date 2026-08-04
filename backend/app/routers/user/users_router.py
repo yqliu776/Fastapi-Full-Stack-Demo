@@ -58,7 +58,7 @@ async def get_users(
     )
 
 # 用户注册接口
-@user_router.post("/register", response_model=ResponseModel)
+@user_router.post("/register", response_model=ResponseModel, summary="用户注册")
 async def register_user(
     user_data: UserCreate,
     auth_service: AuthService = Depends()

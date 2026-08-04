@@ -186,7 +186,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=response.model_dump()
         )
-    
+
     def _handle_internal_exception(self, exc: Exception, request: Request) -> JSONResponse:
         """处理内部服务器异常
         
@@ -222,4 +222,32 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=response.model_dump()
-        ) 
+        )
+
+
+def register_exception_handlers(app: FastAPI) -> None:
+    """Register exception handlers that always return the unified response model."""
+
+    @app.exception_handler(AppException)
+    async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+        return ErrorHandlerMiddleware._handle_app_exception(exc)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        return ErrorHandlerMiddleware._handle_http_exception(exc)
+
+    @app.exception_handler(RequestValidationError)
+    async def request_validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        return ErrorHandlerMiddleware._handle_validation_exception(exc)
+
+    @app.exception_handler(ValidationError)
+    async def pydantic_validation_exception_handler(request: Request, exc: ValidationError) -> JSONResponse:
+        return ErrorHandlerMiddleware._handle_pydantic_validation(exc)
+
+    @app.exception_handler(SQLAlchemyError)
+    async def database_exception_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+        return ErrorHandlerMiddleware._handle_database_exception(exc)
+
+    @app.exception_handler(Exception)
+    async def internal_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        return ErrorHandlerMiddleware(app)._handle_internal_exception(exc, request)

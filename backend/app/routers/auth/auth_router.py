@@ -69,7 +69,7 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-@router.post("/login", response_model=ResponseModel)
+@router.post("/login", response_model=ResponseModel, summary="用户登录")
 async def login(
     login_data: LoginRequest,
     auth_service: AuthService = Depends()
@@ -93,7 +93,7 @@ async def login(
         process_time=process_time
     )
 
-@router.post("/login/oauth", response_model=ResponseModel)
+@router.post("/login/oauth", response_model=ResponseModel, summary="OAuth2密码模式登录")
 async def oauth_login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     auth_service: AuthService = Depends()
@@ -121,7 +121,7 @@ async def oauth_login(
         process_time=process_time
     )
 
-@router.get("/me", response_model=ResponseModel)
+@router.get("/me", response_model=ResponseModel, summary="获取当前用户信息")
 async def get_user_info(current_user: UserDetail = Depends(get_current_user)) -> ResponseModel:
     """
     获取当前登录用户信息
@@ -140,13 +140,23 @@ async def get_user_info(current_user: UserDetail = Depends(get_current_user)) ->
         process_time=process_time
     )
 
-@router.post("/logout", response_model=ResponseModel)
+@router.post("/logout", response_model=ResponseModel, summary="用户登出")
 async def logout(
     token: str = Depends(oauth2_scheme),
     auth_service: AuthService = Depends()
 ) -> ResponseModel:
     """
-    用户登出，将当前 Token 加入黑名单
+    用户登出接口。
+
+    将当前访问令牌加入 Redis 黑名单，使该令牌在过期前不再可用；如果令牌已经无效，
+    仍会清理前端登录状态并返回登出成功。
+
+    Args:
+        token: 当前请求携带的 Bearer Token。
+        auth_service: 认证服务实例。
+
+    Returns:
+        ResponseModel: 统一响应模型，data 为 None，message 为登出结果。
     """
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
@@ -163,7 +173,7 @@ async def logout(
     return ResponseModel.success(data=None, message="登出成功")
 
 
-@router.post("/refresh", response_model=ResponseModel)
+@router.post("/refresh", response_model=ResponseModel, summary="刷新访问令牌")
 async def refresh_token(
     fresh_token: str = Body(..., embed=True, alias="refresh_token"),
     auth_service: AuthService = Depends()
