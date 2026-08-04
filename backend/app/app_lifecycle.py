@@ -1,10 +1,13 @@
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.staticfiles import StaticFiles
 from typing import Callable, Awaitable, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from pathlib import Path
 
 from app.core.middleware import (
     LoggingMiddleware,
@@ -160,7 +163,7 @@ class AppLifecycle:
             },
             
             # Redoc UI配置
-            redoc_url="/api/redoc",  # ReDoc文档访问路径
+            redoc_url=None,  # 使用本地静态资源自定义 ReDoc 页面，避免依赖外部 CDN
             
             # 安全定义
             swagger_ui_init_oauth={
@@ -230,6 +233,18 @@ class AppLifecycle:
         
         # 替换OpenAPI生成函数
         app.openapi = custom_openapi
+
+        static_dir = Path(__file__).parent / "static"
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+        @app.get("/api/redoc", include_in_schema=False)
+        async def redoc_html():
+            return get_redoc_html(
+                openapi_url=app.openapi_url,
+                title=f"{app.title} - ReDoc",
+                redoc_js_url="/static/docs/redoc.standalone.js",
+                with_google_fonts=False,
+            )
 
         register_exception_handlers(app)
 

@@ -198,6 +198,7 @@ uv run alembic upgrade head
 
 - 后端文档：[backend/README.md](backend/README.md)
 - 前端文档：[frontend/README.md](frontend/README.md)
+- 项目开发规范：[docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)
 
 ## 贡献指南
 

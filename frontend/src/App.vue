@@ -51,4 +51,13 @@ a {
   width: 100%;
   color: inherit;
 }
+
+/* Element Plus message boxes are teleported to body, so keep the logout confirm button global. */
+.logout-confirm-button,
+.logout-confirm-button:hover,
+.logout-confirm-button:focus {
+  color: #fff !important;
+  background-color: var(--el-color-primary) !important;
+  border-color: var(--el-color-primary) !important;
+}
 </style>
