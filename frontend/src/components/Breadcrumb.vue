@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import { useRoute, useRouter, type RouteLocationMatched } from 'vue-router';
 import { ElBreadcrumb, ElBreadcrumbItem } from 'element-plus';
+import { ADMIN_HOME_PATH } from '@/config/adminRoute';
 
 const route = useRoute();
 const router = useRouter();
@@ -29,9 +30,9 @@ const getBreadcrumb = () => {
   }));
   
   // 如果第一个不是dashboard，添加dashboard作为首页
-  if (breadcrumbs.length > 0 && breadcrumbs[0].path !== '/dashboard') {
+  if (breadcrumbs.length > 0 && breadcrumbs[0].path !== ADMIN_HOME_PATH) {
     breadcrumbs.unshift({
-      path: '/dashboard',
+      path: ADMIN_HOME_PATH,
       title: '首页'
     });
   }

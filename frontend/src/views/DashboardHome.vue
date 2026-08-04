@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useUserStore } from '@/stores/user';
+import { toAdminPath } from '@/config/adminRoute';
 
 const userStore = useUserStore();
 </script>
@@ -44,10 +45,10 @@ const userStore = useUserStore();
           <div class="mt-2 max-w-xl text-sm text-gray-500">
             <ul class="divide-y divide-gray-200">
               <li class="py-2">
-                <router-link to="/dashboard/profile" class="text-indigo-600 hover:text-indigo-900">个人信息</router-link>
+                <router-link :to="toAdminPath('/dashboard/profile')" class="text-indigo-600 hover:text-indigo-900">个人信息</router-link>
               </li>
               <li class="py-2">
-                <router-link to="/dashboard/settings" class="text-indigo-600 hover:text-indigo-900">系统设置</router-link>
+                <router-link :to="toAdminPath('/dashboard/settings')" class="text-indigo-600 hover:text-indigo-900">系统设置</router-link>
               </li>
             </ul>
           </div>

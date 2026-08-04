@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getToken, getRefreshToken, setToken, setRefreshToken, clearTokens } from '@/services/authService';
+import { ADMIN_LOGIN_PATH } from '@/config/adminRoute';
 
 interface CustomError extends Error {
   response?: any;
@@ -71,7 +72,7 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         clearTokens();
         pendingRequests = [];
-        window.location.href = '/login';
+        window.location.href = ADMIN_LOGIN_PATH;
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

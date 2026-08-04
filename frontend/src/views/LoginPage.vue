@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useUserStore } from '@/stores/user';
+import { ADMIN_HOME_PATH, ADMIN_REGISTER_PATH } from '@/config/adminRoute';
 
 const username = ref('');
 const password = ref('');
@@ -34,7 +35,7 @@ async function handleLogin() {
   const success = await userStore.login(username.value, password.value);
 
   if (success) {
-    router.push('/dashboard');
+    router.push((route.query.redirect as string) || ADMIN_HOME_PATH);
   }
   isLoading.value = false;
 }
@@ -175,7 +176,7 @@ function clearSuccessMessage() {
         </div>
         <div class="flex items-center justify-center mt-4">
           <div class="text-sm">
-            <router-link to="/register" class="font-medium text-indigo-600 hover:text-indigo-500">
+            <router-link :to="ADMIN_REGISTER_PATH" class="font-medium text-indigo-600 hover:text-indigo-500">
               还没有账号？点此注册
             </router-link>
           </div>

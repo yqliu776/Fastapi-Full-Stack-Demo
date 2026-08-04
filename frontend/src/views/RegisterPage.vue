@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { register } from '@/services/authService';
+import { ADMIN_LOGIN_PATH } from '@/config/adminRoute';
 
 const router = useRouter();
 
@@ -103,7 +104,7 @@ async function handleRegister() {
     if (response.code === 200) {
       // 注册成功，跳转到登录页
       router.push({
-        path: '/login',
+        path: ADMIN_LOGIN_PATH,
         query: { 
           registered: 'true',
           username: username.value
@@ -272,7 +273,7 @@ function clearError() {
         </div>
         <div class="flex items-center justify-center">
           <div class="text-sm">
-            <router-link to="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
+            <router-link :to="ADMIN_LOGIN_PATH" class="font-medium text-indigo-600 hover:text-indigo-500">
               已有账号？点此登录
             </router-link>
           </div>

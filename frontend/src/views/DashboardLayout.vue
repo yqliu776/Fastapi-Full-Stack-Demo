@@ -7,6 +7,7 @@ import { logout } from '@/services/authService';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import TagsView from '@/components/TagsView.vue';
+import { ADMIN_HOME_PATH, ADMIN_LOGIN_PATH, toAdminPath } from '@/config/adminRoute';
 
 const userStore = useUserStore();
 const menuStore = useMenuStore();
@@ -53,7 +54,7 @@ const handleLogout = async () => {
     menuStore.resetState();
     logout();
     ElMessage.success('退出成功');
-    router.push('/login');
+    router.push(ADMIN_LOGIN_PATH);
   } catch (error) {
     console.error('退出登录失败:', error);
   }
@@ -80,9 +81,12 @@ const navItems = computed<MenuItem[]>(() => {
   const dynamicMenus = menuStore.menuTree.filter(menu => !menu.parent_id).map(menu => ({
     id: menu.id,
     name: menu.menu_name,
-    path: menu.menu_path,
+    path: toAdminPath(menu.menu_path),
     icon: getIconByMenuCode(menu.menu_code),
-    children: menu.children || []
+    children: (menu.children || []).map(child => ({
+      ...child,
+      menu_path: toAdminPath(child.menu_path)
+    }))
   }));
   
   return dynamicMenus;
@@ -145,7 +149,7 @@ onMounted(async () => {
     
     // 自动展开包含当前路由的父菜单
     menuStore.menuTree.forEach(menu => {
-      if (menu.id && menu.children?.some(child => child.menu_path === route.path)) {
+      if (menu.id && menu.children?.some(child => toAdminPath(child.menu_path) === route.path)) {
         expandedMenus.value.add(menu.id);
       }
     });
@@ -181,7 +185,7 @@ watch(
       :class="{ 'is-collapse': isCollapse }"
     >
       <div class="logo-container">
-        <router-link to="/dashboard" class="logo-link">
+        <router-link :to="ADMIN_HOME_PATH" class="logo-link">
           <span v-if="!isCollapse" class="logo-title">管理系统</span>
           <el-icon v-else><HomeFilled /></el-icon>
         </router-link>
@@ -263,7 +267,7 @@ watch(
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item>
-                  <router-link to="/dashboard/profile">
+                  <router-link :to="toAdminPath('/dashboard/profile')">
                     <el-icon><User /></el-icon>
                     个人信息
                   </router-link>

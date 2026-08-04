@@ -2,6 +2,7 @@
 import { ref, watch, computed, nextTick, onMounted } from 'vue';
 import { useRoute, useRouter, type RouteLocationNormalizedLoaded } from 'vue-router';
 import { ElScrollbar, ElDropdown, ElDropdownMenu, ElDropdownItem } from 'element-plus';
+import { ADMIN_HOME_PATH } from '@/config/adminRoute';
 
 const route = useRoute();
 const router = useRouter();
@@ -74,7 +75,7 @@ const closeAllTags = () => {
   if (!isCurrentInTags && visitedViews.value.length) {
     router.push(visitedViews.value[0].path);
   } else if (!visitedViews.value.length) {
-    router.push('/');
+    router.push(ADMIN_HOME_PATH);
   }
 };
 
@@ -90,7 +91,7 @@ const toLastView = (visitedViews: TagView[], view: TagView) => {
     router.push(latestView.path);
   } else {
     // 如果没有其他标签，则跳转到首页
-    router.push('/');
+    router.push(ADMIN_HOME_PATH);
   }
 };
 

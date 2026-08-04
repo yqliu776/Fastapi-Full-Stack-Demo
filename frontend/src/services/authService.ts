@@ -1,4 +1,5 @@
 import apiClient from '@/api/client';
+import { ADMIN_LOGIN_PATH } from '@/config/adminRoute';
 
 // Token操作相关函数
 const TOKEN_KEY = 'access_token';
@@ -90,10 +91,10 @@ export async function logout() {
     clearTokens();
     const { resetDynamicRoutesFlag } = await import('@/router');
     resetDynamicRoutesFlag();
-    window.location.href = '/login';
+    window.location.href = ADMIN_LOGIN_PATH;
   } catch (error) {
     console.error('登出过程中发生错误:', error);
-    window.location.href = '/login';
+    window.location.href = ADMIN_LOGIN_PATH;
   }
 }
 
