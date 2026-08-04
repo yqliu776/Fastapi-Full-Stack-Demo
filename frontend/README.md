@@ -51,32 +51,21 @@
 
 ```
 frontend/
-├── public/                 # 静态资源目录
 ├── src/                    # 源代码目录
 │   ├── api/               # API接口服务层
 │   ├── assets/            # 静态资源(CSS, 图片, 字体等)
+│   │   └── svgs/          # SVG图标资源
 │   ├── components/        # 公共Vue组件
-│   │   ├── common/       # 通用组件
-│   │   └── business/     # 业务组件
-│   ├── composables/      # Vue组合式函数
-│   ├── directives/       # 自定义Vue指令
-│   ├── layouts/          # 布局组件
 │   ├── router/           # 路由配置
-│   │   ├── index.ts      # 路由主文件
-│   │   └── routes/       # 路由模块
 │   ├── stores/           # Pinia状态管理
-│   │   ├── modules/      # 状态模块
-│   │   └── index.ts      # 状态管理入口
-│   ├── styles/           # 全局样式
-│   ├── types/            # TypeScript类型定义
+│   ├── services/         # 业务接口服务
 │   ├── utils/            # 工具函数
 │   ├── views/            # 页面视图组件
 │   ├── App.vue           # 根组件
 │   └── main.ts           # 应用入口文件
-├── tests/                  # 测试文件
-├── cypress/               # E2E测试配置
-├── .vscode/               # VSCode配置
 ├── .env*                  # 环境变量配置
+├── cypress.config.ts      # Cypress E2E配置
+├── eslint.config.ts       # ESLint配置
 ├── vite.config.ts         # Vite构建配置
 ├── tailwind.config.js     # Tailwind CSS配置
 ├── tsconfig.json          # TypeScript配置
@@ -126,9 +115,10 @@ cp .env.example .env.production   # 生产环境
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
-| `VITE_API_BASE_URL` | API基础URL | `http://localhost:8080` |
-| `VITE_APP_TITLE` | 应用标题 | `Fast Full Stack Demo` |
-| `VITE_APP_VERSION` | 应用版本 | `1.0.0` |
+| `VITE_API_BASE_URL` | API基础URL | `http://localhost:8090` |
+| `VITE_OAUTH_CLIENT_ID` | OAuth2公开客户端ID | `frontend` |
+
+> `VITE_` 环境变量会被打包到前端产物中，不要在这里配置 OAuth client secret、数据库密码、JWT 密钥等敏感信息。
 
 ## 🚀 快速开始
 
@@ -237,10 +227,10 @@ npm run lint && npm run type-check
 
 ### API配置
 
-项目使用axios进行HTTP请求，基础配置在 `src/services/request.ts` 中：
+项目使用axios进行HTTP请求，基础配置在 `src/api/client.ts` 中：
 
 - **基础URL**: 通过环境变量 `VITE_API_BASE_URL` 配置
-- **超时时间**: 默认30秒
+- **超时时间**: 默认15秒
 - **认证方式**: JWT Token
 - **错误处理**: 统一错误拦截和处理
 
@@ -250,7 +240,7 @@ npm run lint && npm run type-check
 
 ```bash
 # 开发环境（默认）
-http://localhost:8080
+http://localhost:8090
 
 # 生产环境
 https://your-api-domain.com
@@ -365,32 +355,32 @@ const doubleCount = computed(() => count.value * 2)
 ### API服务开发
 
 ```typescript
-// src/api/user.ts
-import request from '@/services/request'
-import type { UserInfo, LoginParams } from '@/types/user'
+// src/services/authService.ts
+import apiClient from '@/api/client'
 
-/**
- * 用户登录
- */
-export function login(data: LoginParams) {
-  return request.post<{ token: string }>('/auth/login', data)
+export async function login(username: string, password: string) {
+  const response = await apiClient.post('/auth/login', { username, password })
+  return response.data
 }
 
-/**
- * 获取用户信息
- */
-export function getUserInfo() {
-  return request.get<UserInfo>('/user/info')
+export async function getUserInfo() {
+  const response = await apiClient.get('/auth/me')
+  return response.data
 }
 ```
 
 ### 状态管理开发
 
 ```typescript
-// src/stores/modules/user.ts
+// src/stores/user.ts
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { UserInfo } from '@/types/user'
+
+interface UserInfo {
+  id: number
+  user_name: string
+  email: string
+}
 
 export const useUserStore = defineStore('user', () => {
   // 状态
@@ -457,7 +447,7 @@ server {
 
     # API代理（解决跨域）
     location /api/ {
-        proxy_pass http://localhost:8080/;
+        proxy_pass http://localhost:8090/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -602,4 +592,3 @@ npm run build
 <p align="center">
   ⭐ 如果这个项目对您有帮助，请给我一个星星！
 </p>
-

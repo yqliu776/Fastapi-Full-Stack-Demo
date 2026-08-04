@@ -1,7 +1,7 @@
 # API限流和防刷策略测试文档
 
 ## 测试环境
-- 基础URL: http://localhost:8000
+- 基础URL: http://localhost:8090
 - 测试工具: curl + bash脚本
 - 预期响应头: X-RateLimit-* 系列头信息
 
@@ -18,7 +18,7 @@
 
 ```bash
 # 测试用例1: 正常登录请求
- curl -X POST "http://localhost:8000/auth/login" \
+ curl -X POST "http://localhost:8090/auth/login" \
   -H "Content-Type: application/json" \
   -d '{
     "username": "test_user",
@@ -35,7 +35,7 @@
 # 测试用例2: 触发限流 - 连续11次请求
  for i in {1..11}; do
   echo "请求 $i:"
-  curl -s -X POST "http://localhost:8000/auth/login" \
+  curl -s -X POST "http://localhost:8090/auth/login" \
     -H "Content-Type: application/json" \
     -d '{
       "username": "test_user",
@@ -57,7 +57,7 @@
 # 测试用例3: 注册接口限流测试
  for i in {1..6}; do
   echo "注册请求 $i:"
-  curl -s -X POST "http://localhost:8000/users/register" \
+  curl -s -X POST "http://localhost:8090/users/register" \
     -H "Content-Type: application/json" \
     -d '{
       "username": "newuser'$i'",
@@ -78,7 +78,7 @@
 
 ```bash
 # 测试用例4: 一般API接口测试
- curl -X GET "http://localhost:8000/rate-limit/config" \
+ curl -X GET "http://localhost:8090/rate-limit/config" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -w "Limit: %{header{X-RateLimit-Limit}}, Remaining: %{header{X-RateLimit-Remaining}}\n"
 
@@ -93,7 +93,7 @@
 # 测试用例5: 令牌桶算法 (突发流量测试)
 # 快速连续发送10个请求
  for i in {1..10}; do
-  curl -s "http://localhost:8000/rate-limit/config" \
+  curl -s "http://localhost:8090/rate-limit/config" \
     -H "Authorization: Bearer YOUR_TOKEN" \
     -w "请求$i - 剩余: %{header{X-RateLimit-Remaining}}\n" &
  done
@@ -115,7 +115,7 @@
 
 ```bash
 # 测试用例7: 可疑User-Agent (python-requests)
- curl -X GET "http://localhost:8000/auth/login" \
+ curl -X GET "http://localhost:8090/auth/login" \
   -H "User-Agent: python-requests/2.28.1" \
   -H "X-Bot-Debug: true" \
   -w "Bot Score: %{header{X-Bot-Score}}\n"
@@ -127,7 +127,7 @@
 
 ```bash
 # 测试用例8: 可疑User-Agent (curl)
- curl -X GET "http://localhost:8000/auth/login" \
+ curl -X GET "http://localhost:8090/auth/login" \
   -H "User-Agent: curl/7.68.0" \
   -w "Bot Score: %{header{X-Bot-Score}}\n"
 
@@ -136,7 +136,7 @@
 
 ```bash
 # 测试用例9: 正常User-Agent (Chrome)
- curl -X GET "http://localhost:8000/auth/login" \
+ curl -X GET "http://localhost:8090/auth/login" \
   -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" \
   -w "Bot Score: %{header{X-Bot-Score}}\n"
 
@@ -161,7 +161,7 @@
 
  for path in "${paths[@]}"; do
   echo "测试路径: $path"
-  curl -s -I "http://localhost:8000$path" \
+  curl -s -I "http://localhost:8090$path" \
     -H "User-Agent: python-requests/2.28.1" \
     -w "HTTP状态: %{http_code}, X-Bot-Detected: %{header{X-Bot-Detected}}\n"
  done
@@ -178,7 +178,7 @@
 ```bash
 # 测试用例11: 规律间隔请求 (机器人特征)
  for i in {1..10}; do
-  curl -s "http://localhost:8000/auth/login" \
+  curl -s "http://localhost:8090/auth/login" \
     -H "User-Agent: python-requests/2.28.1" \
     -o /dev/null \
     -w "请求$i - 状态: %{http_code}\n"
@@ -191,7 +191,7 @@
 ```bash
 # 测试用例12: 超快速请求 (超过人类速度)
  for i in {1..10}; do
-  curl -s "http://localhost:8000/auth/login" \
+  curl -s "http://localhost:8090/auth/login" \
     -H "User-Agent: python-requests/2.28.1" \
     -o /dev/null \
     -w "请求$i - 状态: %{http_code}\n" &
@@ -204,7 +204,7 @@
 ```bash
 # 测试用例13: 突发大量请求
  for i in {1..70}; do
-  curl -s "http://localhost:8000/auth/login" \
+  curl -s "http://localhost:8090/auth/login" \
     -H "User-Agent: python-requests/2.28.1" \
     -o /dev/null \
     -w "." &
@@ -222,7 +222,7 @@
 # 测试用例14: 触发验证码挑战
 # 组合多种可疑行为
  for i in {1..15}; do
-  curl -s -X POST "http://localhost:8000/auth/login" \
+  curl -s -X POST "http://localhost:8090/auth/login" \
     -H "User-Agent: python-requests/2.28.1" \
     -H "X-Forwarded-For: 192.168.1.$i" \
     -d '{"username":"admin","password":"admin123"}' \
@@ -252,7 +252,7 @@
     "Wget/1.20.3"
   )
 
-  curl -s -X POST "http://localhost:8000/auth/login" \
+  curl -s -X POST "http://localhost:8090/auth/login" \
     -H "User-Agent: ${user_agents[$ua_index]}" \
     -H "X-Forwarded-For: $ip" \
     -d '{"username":"admin","password":"password123"}' \
@@ -273,7 +273,7 @@
 
 ```bash
 # 测试用例16: 添加IP到白名单
- curl -X POST "http://localhost:8000/rate-limit/whitelist" \
+ curl -X POST "http://localhost:8090/rate-limit/whitelist" \
   -H "Content-Type: application/json" \
   -d '{
     "identifier": "127.0.0.1",
@@ -287,7 +287,7 @@
 
 ```bash
 # 测试用例17: 添加可疑IP到黑名单
- curl -X POST "http://localhost:8000/rate-limit/blacklist" \
+ curl -X POST "http://localhost:8090/rate-limit/blacklist" \
   -H "Content-Type: application/json" \
   -d '{
     "identifier": "192.168.1.100",
@@ -303,7 +303,7 @@
 
 ```bash
 # 测试用例18: 查询限流统计
- curl -X GET "http://localhost:8000/rate-limit/stats?scope=ip&identifier=127.0.0.1"
+ curl -X GET "http://localhost:8090/rate-limit/stats?scope=ip&identifier=127.0.0.1"
 
 # 预期响应:
 # {
@@ -323,7 +323,7 @@
 
 ```bash
 # 测试用例19: 查询当前限流配置
- curl -X GET "http://localhost:8000/rate-limit/config"
+ curl -X GET "http://localhost:8090/rate-limit/config"
 
 # 预期响应: 当前系统限流配置的详细信息
 ```
@@ -332,10 +332,10 @@
 
 ```bash
 # 测试用例20: 查询白名单
- curl -X GET "http://localhost:8000/rate-limit/whitelist"
+ curl -X GET "http://localhost:8090/rate-limit/whitelist"
 
 # 测试用例21: 查询黑名单
- curl -X GET "http://localhost:8000/rate-limit/blacklist"
+ curl -X GET "http://localhost:8090/rate-limit/blacklist"
 ```
 
 ## 五、性能测试
@@ -347,7 +347,7 @@
  ab -n 1000 -c 50 -T 'application/json' \
   -p login_data.json \
   -H "User-Agent: python-requests/2.28.1" \
-  http://localhost:8000/auth/login
+  http://localhost:8090/auth/login
 
 # login_data.json 内容:
 # {"username":"test","password":"test"}
@@ -360,7 +360,7 @@
  for minute in {1..5}; do
   echo "第 $minute 分钟测试"
   for i in {1..120}; do  # 每分钟120个请求
-    curl -s "http://localhost:8000/auth/login" \
+    curl -s "http://localhost:8090/auth/login" \
       -H "User-Agent: python-requests/2.28.1" \
       -o /dev/null &
     sleep 0.5
@@ -392,7 +392,7 @@
 ```bash
 #!/bin/bash
 
-BASE_URL="http://localhost:8000"
+BASE_URL="http://localhost:8090"
 TEST_RESULTS=""
 
 # 颜色定义

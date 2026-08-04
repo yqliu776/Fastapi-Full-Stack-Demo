@@ -17,7 +17,7 @@ const iframeHeight = computed(() => {
 // 获取Swagger UI URL
 const loadSwaggerUrl = () => {
   // 使用后端提供的Swagger UI地址
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8090';
   swaggerUrl.value = `${baseUrl}/api/docs`;
   iframeLoadError.value = false;
 };

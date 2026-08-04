@@ -3,7 +3,7 @@
 # API限流和防刷策略自动化测试脚本
 # 使用方法: ./test_rate_limit.sh [base_url] [test_user] [test_password]
 
-BASE_URL="${1:-http://localhost:8000}"
+BASE_URL="${1:-http://localhost:8090}"
 TEST_USERS=("testuser001" "testuser002" "testuser003")
 TEST_PASSWORDS=("testuser001" "testuser002" "testuser003")
 CURRENT_USER_INDEX=0
