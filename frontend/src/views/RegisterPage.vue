@@ -234,7 +234,6 @@ function clearSuccess() {
           class="submit-btn"
           :loading="isLoading"
           native-type="submit"
-          @click="handleRegister"
         >
           {{ isLoading ? '注册中...' : '注 册' }}
         </el-button>

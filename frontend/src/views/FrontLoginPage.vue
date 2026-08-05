@@ -114,7 +114,6 @@ function clearSuccessMessage() {
           class="submit-btn"
           :loading="isLoading"
           native-type="submit"
-          @click="handleLogin"
         >
           {{ isLoading ? '登录中...' : '登 录' }}
         </el-button>

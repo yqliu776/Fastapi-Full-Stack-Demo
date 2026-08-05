@@ -1,0 +1,1269 @@
+[
+  {
+    "test": "full frontend system flow covers front guest pages, registration, login, user center, and logout",
+    "method": "POST",
+    "path": "/users/register",
+    "status": 200,
+    "requestBody": {
+      "user_name": "e2e_front_5932070101",
+      "email": "e2e_front_5932070101@example.com",
+      "phone_number": "13832070101",
+      "password": "E2ePass123"
+    },
+    "responseCode": 200,
+    "responseMessage": "注册成功"
+  },
+  {
+    "test": "full frontend system flow covers front guest pages, registration, login, user center, and logout",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 200,
+    "requestBody": {
+      "username": "e2e_front_5932070101",
+      "password": "E2ePass123"
+    },
+    "responseCode": 200,
+    "responseMessage": "登录成功"
+  },
+  {
+    "test": "full frontend system flow covers front guest pages, registration, login, user center, and logout",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers front guest pages, registration, login, user center, and logout",
+    "method": "POST",
+    "path": "/auth/logout",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "登出成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "POST",
+    "path": "/auth/login",
+    "status": 200,
+    "requestBody": {
+      "username": "admin",
+      "password": "Admin@123"
+    },
+    "responseCode": 200,
+    "responseMessage": "登录成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/users/list?skip=0&limit=10&user_name=&email=&delete_flag=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户列表成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/roles?limit=500",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/roles?skip=0&limit=10&role_name=&role_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/permissions?skip=0&limit=1000",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取权限列表成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/permissions?skip=0&limit=10&permission_name=&permission_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取权限列表成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/permissions/api-bindings?skip=0&limit=10&method=&path_pattern=&permission_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取API权限绑定列表成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus?skip=0&limit=10&menu_name=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus?limit=999",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/rate-limit/config",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取限流配置成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers admin login, dynamic menu loading, and all main admin pages",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/roles?limit=500",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/users/list?skip=0&limit=10&user_name=&email=&delete_flag=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户列表成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "POST",
+    "path": "/users/admin/create",
+    "status": 200,
+    "requestBody": {
+      "user_name": "e2e_admin_5932070101",
+      "email": "e2e_admin_5932070101@example.com",
+      "phone_number": "13932070101",
+      "password": "E2ePass123",
+      "delete_flag": "N",
+      "created_by": "1",
+      "last_updated_by": "1",
+      "last_update_login": "1",
+      "role_codes": [
+        "ROLE_USER"
+      ]
+    },
+    "responseCode": 200,
+    "responseMessage": "用户创建成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/users/list?skip=0&limit=10&user_name=&email=&delete_flag=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户列表成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/users/list?skip=0&limit=10&user_name=e2e_admin_5932070101&email=&delete_flag=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户列表成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "PUT",
+    "path": "/users/update/16",
+    "status": 200,
+    "requestBody": {
+      "email": "e2e_admin_5932070101.updated@example.com",
+      "phone_number": "13732070101",
+      "delete_flag": "N",
+      "last_updated_by": "1",
+      "last_update_login": "1"
+    },
+    "responseCode": 200,
+    "responseMessage": "用户更新成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/users/list?skip=0&limit=10&user_name=e2e_admin_5932070101&email=&delete_flag=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户列表成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "POST",
+    "path": "/users/reset-password/16",
+    "status": 200,
+    "requestBody": {
+      "password": "E2ePass123x",
+      "last_updated_by": "1",
+      "last_update_login": "1"
+    },
+    "responseCode": 200,
+    "responseMessage": "密码重置成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/users/list?skip=0&limit=10&user_name=admin&email=&delete_flag=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户列表成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/roles?limit=500",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "GET",
+    "path": "/users/detail/1",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户详情成功"
+  },
+  {
+    "test": "full frontend system flow covers user create/edit/password and protects admin super role assignment",
+    "method": "POST",
+    "path": "/users/assign-roles/1",
+    "status": 400,
+    "requestBody": {
+      "role_codes": [
+        "ROLE_USER"
+      ],
+      "operator": "1",
+      "operation_login": "1"
+    },
+    "responseCode": 400,
+    "responseMessage": "默认管理员 admin 必须保留 ROLE_SUPER_ADMIN"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles?skip=0&limit=10&role_name=&role_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "POST",
+    "path": "/roles",
+    "status": 200,
+    "requestBody": {
+      "role_name": "E2E角色5932070101",
+      "role_code": "ROLE_E2E_5932070101",
+      "created_by": "1",
+      "last_updated_by": "1",
+      "last_update_login": "1"
+    },
+    "responseCode": 200,
+    "responseMessage": "角色创建成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles?skip=0&limit=10&role_name=&role_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles?skip=0&limit=10&role_name=&role_code=ROLE_E2E_5932070101",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "PUT",
+    "path": "/roles/9",
+    "status": 200,
+    "requestBody": {
+      "role_name": "E2E角色更新5932070101",
+      "last_updated_by": "1",
+      "last_update_login": "1"
+    },
+    "responseCode": 200,
+    "responseMessage": "角色更新成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles?skip=0&limit=10&role_name=&role_code=ROLE_E2E_5932070101",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/permissions?limit=1000",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取权限列表成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles/9",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色详情成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "PUT",
+    "path": "/roles/9/permissions",
+    "status": 200,
+    "requestBody": {
+      "permission_ids": [
+        1
+      ]
+    },
+    "responseCode": 200,
+    "responseMessage": "权限保存成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles/9",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色详情成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles?skip=0&limit=10&role_name=&role_code=ROLE_E2E_5932070101",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/menus?limit=1000",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles/9",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色详情成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "PUT",
+    "path": "/roles/9/menus",
+    "status": 200,
+    "requestBody": {
+      "menu_ids": [
+        2,
+        1
+      ]
+    },
+    "responseCode": 200,
+    "responseMessage": "菜单保存成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles/9",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色详情成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles?skip=0&limit=10&role_name=&role_code=ROLE_E2E_5932070101",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "DELETE",
+    "path": "/roles/9",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "角色删除成功"
+  },
+  {
+    "test": "full frontend system flow covers role CRUD, role permission replacement, and role menu replacement",
+    "method": "GET",
+    "path": "/roles?skip=0&limit=10&role_name=&role_code=ROLE_E2E_5932070101",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取角色列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions?skip=0&limit=10&permission_name=&permission_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取权限列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions?skip=0&limit=1000",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取权限列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions/api-bindings?skip=0&limit=10&method=&path_pattern=&permission_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取API权限绑定列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "POST",
+    "path": "/permissions",
+    "status": 200,
+    "requestBody": {
+      "permission_name": "E2E权限5932070101",
+      "permission_code": "E2E_PERMISSION_5932070101",
+      "created_by": "1",
+      "last_updated_by": "1",
+      "last_update_login": "1"
+    },
+    "responseCode": 200,
+    "responseMessage": "权限创建成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions?skip=0&limit=10&permission_name=&permission_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取权限列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions?skip=0&limit=1000",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取权限列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions?skip=0&limit=10&permission_name=&permission_code=E2E_PERMISSION_5932070101",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取权限列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "PUT",
+    "path": "/permissions/12",
+    "status": 200,
+    "requestBody": {
+      "permission_name": "E2E权限更新5932070101",
+      "last_updated_by": "1",
+      "last_update_login": "1"
+    },
+    "responseCode": 200,
+    "responseMessage": "权限更新成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions?skip=0&limit=10&permission_name=&permission_code=E2E_PERMISSION_5932070101",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取权限列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions?skip=0&limit=1000",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取权限列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "POST",
+    "path": "/permissions/api-bindings",
+    "status": 200,
+    "requestBody": {
+      "method": "GET",
+      "path_pattern": "/e2e/5932070101",
+      "permission_code": "E2E_PERMISSION_5932070101",
+      "description": "E2E API 5932070101",
+      "enabled": true,
+      "created_by": "1",
+      "last_updated_by": "1",
+      "last_update_login": "1"
+    },
+    "responseCode": 200,
+    "responseMessage": "API权限绑定创建成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions/api-bindings?skip=0&limit=10&method=&path_pattern=&permission_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取API权限绑定列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions/api-bindings?skip=0&limit=10&method=&path_pattern=%2Fe2e%2F5932070101&permission_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取API权限绑定列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "PUT",
+    "path": "/permissions/api-bindings/51",
+    "status": 200,
+    "requestBody": {
+      "method": "GET",
+      "path_pattern": "/e2e/5932070101",
+      "permission_code": "E2E_PERMISSION_5932070101",
+      "description": "E2E API updated 5932070101",
+      "enabled": true,
+      "last_updated_by": "1",
+      "last_update_login": "1"
+    },
+    "responseCode": 200,
+    "responseMessage": "API权限绑定更新成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions/api-bindings?skip=0&limit=10&method=&path_pattern=%2Fe2e%2F5932070101&permission_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取API权限绑定列表成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "DELETE",
+    "path": "/permissions/api-bindings/51",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "API权限绑定删除成功"
+  },
+  {
+    "test": "full frontend system flow covers permission CRUD and API permission binding CRUD",
+    "method": "GET",
+    "path": "/permissions/api-bindings?skip=0&limit=10&method=&path_pattern=%2Fe2e%2F5932070101&permission_code=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取API权限绑定列表成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus?skip=0&limit=10&menu_name=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus?limit=999",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "POST",
+    "path": "/menus",
+    "status": 200,
+    "requestBody": {
+      "menu_name": "E2E菜单5932070101",
+      "menu_code": "E2E_MENU_5932070101",
+      "menu_path": "/system/e2e-5932070101",
+      "sort_order": 0,
+      "created_by": "1",
+      "last_updated_by": "1",
+      "last_update_login": "1"
+    },
+    "responseCode": 200,
+    "responseMessage": "菜单创建成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus?skip=0&limit=10&menu_name=",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus?limit=999",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus?skip=0&limit=10&menu_name=E2E%E8%8F%9C%E5%8D%955932070101",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "PUT",
+    "path": "/menus/12",
+    "status": 200,
+    "requestBody": {
+      "menu_name": "E2E菜单更新5932070101",
+      "menu_path": "/system/e2e-5932070101-updated",
+      "parent_id": null,
+      "sort_order": 0,
+      "last_updated_by": "1",
+      "last_update_login": "1"
+    },
+    "responseCode": 200,
+    "responseMessage": "菜单更新成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus?skip=0&limit=10&menu_name=E2E%E8%8F%9C%E5%8D%955932070101",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus?limit=999",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "DELETE",
+    "path": "/menus/12",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "菜单删除成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus?skip=0&limit=10&menu_name=E2E%E8%8F%9C%E5%8D%955932070101",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers menu CRUD and verifies menu update payload contract",
+    "method": "GET",
+    "path": "/menus?limit=999",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取菜单列表成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/rate-limit/config",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取限流配置成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/rate-limit/stats?scope=global&identifier=10.250.1.1",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取限流统计成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/rate-limit/whitelist",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取白名单成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "POST",
+    "path": "/rate-limit/whitelist",
+    "status": 200,
+    "requestBody": {
+      "identifier": "10.250.1.1",
+      "expire_time": 3600
+    },
+    "responseCode": 200,
+    "responseMessage": "已将 10.250.1.1 添加到白名单"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/rate-limit/whitelist",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取白名单成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/rate-limit/blacklist",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取黑名单成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "POST",
+    "path": "/rate-limit/blacklist",
+    "status": 200,
+    "requestBody": {
+      "identifier": "10.251.1.1",
+      "expire_time": 3600
+    },
+    "responseCode": 200,
+    "responseMessage": "已将 10.251.1.1 添加到黑名单"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/rate-limit/blacklist",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取黑名单成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/menus/current",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/menus/current/tree",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取当前用户菜单树成功"
+  },
+  {
+    "test": "full frontend system flow covers rate limit management and swagger page network availability",
+    "method": "GET",
+    "path": "/auth/me",
+    "status": 200,
+    "requestBody": "",
+    "responseCode": 200,
+    "responseMessage": "获取用户信息成功"
+  }
+]

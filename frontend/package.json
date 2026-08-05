@@ -11,6 +11,8 @@
     "test:unit": "vitest",
     "test:e2e": "start-server-and-test preview http://localhost:4173 'cypress run --e2e'",
     "test:e2e:dev": "start-server-and-test 'vite dev --port 4173' http://localhost:4173 'cypress open --e2e'",
+    "test:e2e:system": "cypress run --e2e --spec cypress/e2e/full-system.cy.ts --browser electron",
+    "test:e2e:system:dev": "start-server-and-test 'vite dev --host 127.0.0.1 --port 5173' http://localhost:5173 'cypress run --e2e --spec cypress/e2e/full-system.cy.ts --browser electron'",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
