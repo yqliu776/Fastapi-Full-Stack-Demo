@@ -45,6 +45,12 @@ const router = createRouter({
           name: 'dashboardHome',
           component: () => import('@/views/DashboardHome.vue'),
           meta: { title: '控制台' }
+        },
+        {
+          path: 'profile',
+          name: 'profile',
+          component: () => import('@/views/ProfilePage.vue'),
+          meta: { title: '个人信息' }
         }
         // 其他子路由将通过动态路由添加
       ]
@@ -61,7 +67,9 @@ const router = createRouter({
     },
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/'
+      name: 'notFound',
+      component: () => import('@/views/UnsupportedMenuPage.vue'),
+      meta: { requiresAuth: false, title: '页面不存在' }
     }
   ],
 })
@@ -98,14 +106,20 @@ router.beforeEach(async (to, from, next) => {
       // 设置本地标记已经加载过动态路由
       dynamicRoutesAdded = true;
       
-      // 重新触发当前导航，此时应该能够正确匹配到路由了
-      next({ ...to, replace: true });
+      // 重新触发当前导航（按 path 解析，避免 catch-all 的 name 干扰），
+      // 此时动态路由已就绪，应该能够正确匹配到目标页面
+      next({ path: to.path, query: to.query, hash: to.hash, replace: true });
     } catch (error) {
       console.error('加载动态路由失败:', error);
       next(ADMIN_HOME_PATH); // 出错时转到首页
     }
   } else {
-    next();
+    // 未匹配任何路由：动态路由已加载仍找不到时回到首页
+    if (to.name === 'notFound') {
+      next('/');
+    } else {
+      next();
+    }
   }
 });
 

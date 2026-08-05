@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { menuService } from '@/services/menuService';
 import type { Menu, MenuCreate, MenuUpdate } from '@/services/menuService';
 import { useUserStore } from '@/stores/user';
 
-// 获取用户信息
 const userStore = useUserStore();
 
 // 状态
@@ -36,13 +36,6 @@ const currentMenu = ref<Menu | null>(null);
 
 // 父菜单选择相关
 const parentMenus = ref<Menu[]>([]);
-
-// 消息通知状态
-const notification = reactive({
-  show: false,
-  message: '',
-  type: 'success' // success, error, warning
-});
 
 // 表单数据
 const menuForm = reactive<MenuCreate & MenuUpdate>({
@@ -83,18 +76,6 @@ const normalizeMenuPayload = () => ({
   component_key: menuForm.component_key || undefined
 });
 
-// 显示通知
-const showNotification = (message: string, type: 'success' | 'error' | 'warning') => {
-  notification.message = message;
-  notification.type = type;
-  notification.show = true;
-  
-  // 3秒后自动关闭
-  setTimeout(() => {
-    notification.show = false;
-  }, 3000);
-};
-
 // 加载菜单列表
 const loadMenus = async () => {
   loading.value = true;
@@ -110,12 +91,11 @@ const loadMenus = async () => {
       menus.value = response.data.items;
       totalMenus.value = response.data.total;
     } else {
-      console.error('加载菜单列表失败:', response.message);
-      showNotification('加载菜单列表失败: ' + response.message, 'error');
+      ElMessage.error('加载菜单列表失败: ' + response.message);
     }
   } catch (error) {
     console.error('加载菜单列表出错:', error);
-    showNotification('加载菜单列表出错', 'error');
+    ElMessage.error('加载菜单列表出错');
   } finally {
     loading.value = false;
   }
@@ -127,8 +107,6 @@ const loadAllMenus = async () => {
     const response = await menuService.getMenus({ limit: 999 });
     if (response.code === 200) {
       parentMenus.value = response.data.items;
-    } else {
-      console.error('加载所有菜单失败:', response.message);
     }
   } catch (error) {
     console.error('加载所有菜单出错:', error);
@@ -149,9 +127,8 @@ const resetSearch = () => {
 
 // 打开创建菜单模态框
 const openCreateModal = () => {
-  // 使用当前用户ID或默认值
   const userId = userStore.userInfo?.id.toString() || '-1';
-  
+
   menuForm.menu_name = '';
   menuForm.menu_code = '';
   menuForm.menu_path = '';
@@ -161,14 +138,14 @@ const openCreateModal = () => {
   menuForm.created_by = userId;
   menuForm.last_updated_by = userId;
   menuForm.last_update_login = userId;
-  
+
   showCreateModal.value = true;
 };
 
 // 创建菜单
 const createMenu = async () => {
   if (menuPathError.value) {
-    showNotification(menuPathError.value, 'warning');
+    ElMessage.warning(menuPathError.value);
     return;
   }
   try {
@@ -176,24 +153,23 @@ const createMenu = async () => {
     if (response.code === 200) {
       showCreateModal.value = false;
       loadMenus();
-      showNotification('菜单创建成功', 'success');
+      loadAllMenus();
+      ElMessage.success('菜单创建成功');
     } else {
-      console.error('创建菜单失败:', response.message);
-      showNotification('创建菜单失败: ' + response.message, 'error');
+      ElMessage.error('创建菜单失败: ' + response.message);
     }
   } catch (error) {
     console.error('创建菜单出错:', error);
-    showNotification('创建菜单出错', 'error');
+    ElMessage.error('创建菜单出错');
   }
 };
 
 // 打开编辑菜单模态框
 const openEditModal = (menu: Menu) => {
   currentMenu.value = menu;
-  
-  // 使用当前用户ID或默认值
+
   const userId = userStore.userInfo?.id.toString() || '-1';
-  
+
   menuForm.menu_name = menu.menu_name;
   menuForm.menu_code = menu.menu_code;
   menuForm.menu_path = menu.menu_path;
@@ -202,7 +178,7 @@ const openEditModal = (menu: Menu) => {
   menuForm.sort_order = menu.sort_order;
   menuForm.last_updated_by = userId;
   menuForm.last_update_login = userId;
-  
+
   showEditModal.value = true;
 };
 
@@ -210,42 +186,51 @@ const openEditModal = (menu: Menu) => {
 const updateMenu = async () => {
   if (!currentMenu.value) return;
   if (menuPathError.value) {
-    showNotification(menuPathError.value, 'warning');
+    ElMessage.warning(menuPathError.value);
     return;
   }
-  
+
   try {
     const response = await menuService.updateMenu(currentMenu.value.id, normalizeMenuPayload());
     if (response.code === 200) {
       showEditModal.value = false;
       loadMenus();
-      showNotification('菜单更新成功', 'success');
+      loadAllMenus();
+      ElMessage.success('菜单更新成功');
     } else {
-      console.error('更新菜单失败:', response.message);
-      showNotification('更新菜单失败: ' + response.message, 'error');
+      ElMessage.error('更新菜单失败: ' + response.message);
     }
   } catch (error) {
     console.error('更新菜单出错:', error);
-    showNotification('更新菜单出错', 'error');
+    ElMessage.error('更新菜单出错');
   }
 };
 
 // 删除菜单
 const deleteMenu = async (menu: Menu) => {
-  if (!confirm(`确定要删除菜单"${menu.menu_name}"吗？这将同时删除其所有子菜单！`)) return;
-  
+  try {
+    await ElMessageBox.confirm(`确定要删除菜单"${menu.menu_name}"吗？这将同时删除其所有子菜单！`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+      confirmButtonClass: 'el-button--danger'
+    });
+  } catch {
+    return;
+  }
+
   try {
     const response = await menuService.deleteMenu(menu.id);
     if (response.code === 200) {
       loadMenus();
-      showNotification('菜单删除成功', 'success');
+      loadAllMenus();
+      ElMessage.success('菜单删除成功');
     } else {
-      console.error('删除菜单失败:', response.message);
-      showNotification('删除菜单失败: ' + response.message, 'error');
+      ElMessage.error('删除菜单失败: ' + response.message);
     }
   } catch (error) {
     console.error('删除菜单出错:', error);
-    showNotification('删除菜单出错', 'error');
+    ElMessage.error('删除菜单出错');
   }
 };
 
@@ -256,7 +241,7 @@ const getParentMenuName = (parentId?: number) => {
   return parent ? parent.menu_name : `未知(ID:${parentId})`;
 };
 
-// 页面变化处理
+// 分页处理
 const handlePageChange = (page: number) => {
   currentPage.value = page;
   loadMenus();
@@ -270,399 +255,193 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <h1 class="text-2xl font-semibold text-gray-900 mb-6">菜单管理</h1>
-    
-    <!-- 消息通知 -->
-    <transition name="fade">
-      <div 
-        v-if="notification.show" 
-        :class="[
-          'fixed top-4 right-4 z-50 py-2 px-4 rounded shadow-lg transition-opacity',
-          notification.type === 'success' ? 'bg-green-500 text-white' : 
-          notification.type === 'error' ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'
-        ]"
-      >
-        {{ notification.message }}
-      </div>
-    </transition>
-    
+  <div class="menu-management">
+    <div class="page-heading">
+      <h1 class="page-heading__title">
+        <span class="page-heading__icon"><el-icon><Menu /></el-icon></span>
+        菜单管理
+      </h1>
+      <el-button type="primary" :icon="'Plus'" @click="openCreateModal">创建菜单</el-button>
+    </div>
+
     <!-- 搜索表单 -->
-    <div class="bg-white p-4 rounded shadow mb-4">
-      <div class="flex flex-wrap gap-4 items-end">
-        <div class="w-full md:w-auto">
-          <label class="block text-sm font-medium text-gray-700 mb-1">菜单名称</label>
-          <input 
-            v-model="searchForm.menu_name"
-            type="text" 
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="请输入菜单名称"
-          />
-        </div>
-        <div class="flex gap-2">
-          <button 
-            @click="searchMenus"
-            class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150"
-          >
-            搜索
-          </button>
-          <button 
-            @click="resetSearch"
-            class="bg-gray-100 text-gray-700 py-2 px-4 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-150"
-          >
-            重置
-          </button>
-          <button 
-            @click="openCreateModal"
-            class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150"
-          >
-            创建菜单
-          </button>
-        </div>
+    <div class="page-card search-card">
+      <div class="page-card__body">
+        <el-form inline @submit.prevent="searchMenus">
+          <el-form-item label="菜单名称">
+            <el-input v-model="searchForm.menu_name" placeholder="请输入菜单名称" clearable style="width: 220px" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" :icon="'Search'" @click="searchMenus">搜索</el-button>
+            <el-button :icon="'Refresh'" @click="resetSearch">重置</el-button>
+          </el-form-item>
+        </el-form>
       </div>
     </div>
-    
+
     <!-- 菜单列表 -->
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">菜单名称</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">菜单代码</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">菜单路径</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">组件Key</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">父菜单</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">排序</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-if="loading" class="text-center">
-              <td colspan="9" class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500 text-center w-full">加载中...</div>
-              </td>
-            </tr>
-            <tr v-else-if="menus.length === 0" class="text-center">
-              <td colspan="9" class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500 text-center w-full">暂无菜单数据</div>
-              </td>
-            </tr>
-            <tr v-for="menu in menus" :key="menu.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ menu.id }}</td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">{{ menu.menu_name }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500">{{ menu.menu_code }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500">{{ menu.menu_path }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500">{{ menu.component_key || '自动匹配' }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500">{{ getParentMenuName(menu.parent_id) }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500">{{ menu.sort_order }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ new Date(menu.creation_date).toLocaleString() }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div class="flex gap-2">
-                  <button 
-                    @click="openEditModal(menu)" 
-                    class="text-indigo-600 hover:text-indigo-900 transition duration-150"
-                  >
-                    编辑
-                  </button>
-                  <button 
-                    @click="deleteMenu(menu)" 
-                    class="text-red-600 hover:text-red-900 transition duration-150"
-                  >
-                    删除
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      
-      <!-- 分页 -->
-      <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-          <div>
-            <p class="text-sm text-gray-700">
-              显示 
-              <span class="font-medium">{{ (currentPage - 1) * pageSize + 1 }}</span>
-              至
-              <span class="font-medium">{{ Math.min(currentPage * pageSize, totalMenus) }}</span>
-              条，共
-              <span class="font-medium">{{ totalMenus }}</span>
-              条记录
-            </p>
-          </div>
-          <div>
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button
-                @click="handlePageChange(currentPage - 1)"
-                :disabled="currentPage === 1"
-                :class="[
-                  'relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium',
-                  currentPage === 1 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-500 hover:bg-gray-50 cursor-pointer'
-                ]"
-              >
-                上一页
-              </button>
-              <button
-                @click="handlePageChange(currentPage + 1)"
-                :disabled="currentPage * pageSize >= totalMenus"
-                :class="[
-                  'relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium',
-                  currentPage * pageSize >= totalMenus 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-500 hover:bg-gray-50 cursor-pointer'
-                ]"
-              >
-                下一页
-              </button>
-            </nav>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 创建菜单模态框 -->
-    <div v-if="showCreateModal" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- 背景遮罩 -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showCreateModal = false"></div>
-        
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-              创建菜单
-            </h3>
-            <div class="mt-2">
-              <div class="mb-4">
-                <label for="menu_name" class="block text-sm font-medium text-gray-700 mb-1">菜单名称</label>
-                <input 
-                  id="menu_name"
-                  v-model="menuForm.menu_name"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入菜单名称"
-                  required
-                />
-              </div>
-              <div class="mb-4">
-                <label for="menu_code" class="block text-sm font-medium text-gray-700 mb-1">菜单代码</label>
-                <input 
-                  id="menu_code"
-                  v-model="menuForm.menu_code"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入菜单代码"
-                  required
-                />
-              </div>
-              <div class="mb-4">
-                <label for="menu_path" class="block text-sm font-medium text-gray-700 mb-1">菜单路径</label>
-                <input 
-                  id="menu_path"
-                  v-model="menuForm.menu_path"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入菜单路径"
-                  required
-                />
-                <p v-if="menuPathError" class="mt-1 text-xs text-red-500">{{ menuPathError }}</p>
-                <p v-else class="mt-1 text-xs text-gray-500">用于浏览器地址和旧版动态路由回退</p>
-              </div>
-              <div class="mb-4">
-                <label for="component_key" class="block text-sm font-medium text-gray-700 mb-1">组件Key</label>
-                <select
-                  id="component_key"
-                  v-model="menuForm.component_key"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option v-for="option in componentOptions" :key="option.key" :value="option.key">
-                    {{ option.label }}
-                  </option>
-                </select>
-                <p class="mt-1 text-xs text-gray-500">优先用组件Key绑定页面；留空时按菜单代码和路径自动匹配</p>
-              </div>
-              <div class="mb-4">
-                <label for="parent_id" class="block text-sm font-medium text-gray-700 mb-1">父菜单</label>
-                <select 
-                  id="parent_id"
-                  v-model="menuForm.parent_id"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option :value="undefined">无 (作为顶级菜单)</option>
-                  <option v-for="menu in parentMenus" :key="menu.id" :value="menu.id">
-                    {{ menu.menu_name }} ({{ menu.menu_code }})
-                  </option>
-                </select>
-                <p class="mt-1 text-xs text-gray-500">父子预览：{{ parentChildPreview }}</p>
-              </div>
-              <div class="mb-4">
-                <label for="sort_order" class="block text-sm font-medium text-gray-700 mb-1">排序号</label>
-                <input 
-                  id="sort_order"
-                  v-model="menuForm.sort_order"
-                  type="number" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入排序号"
-                  min="0"
-                />
-              </div>
+    <div class="page-card">
+      <el-table v-loading="loading" :data="menus" stripe style="width: 100%">
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column label="菜单名称" min-width="140">
+          <template #default="{ row }">
+            <span class="menu-name">{{ row.menu_name }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="menu_code" label="菜单代码" min-width="130">
+          <template #default="{ row }">
+            <el-tag effect="plain" size="small">{{ row.menu_code }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="menu_path" label="菜单路径" min-width="160" show-overflow-tooltip />
+        <el-table-column label="组件Key" min-width="120">
+          <template #default="{ row }">{{ row.component_key || '自动匹配' }}</template>
+        </el-table-column>
+        <el-table-column label="父菜单" min-width="120">
+          <template #default="{ row }">{{ getParentMenuName(row.parent_id) }}</template>
+        </el-table-column>
+        <el-table-column prop="sort_order" label="排序" width="80" align="center" />
+        <el-table-column label="创建时间" min-width="170">
+          <template #default="{ row }">{{ new Date(row.creation_date).toLocaleString() }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <div class="table-actions">
+              <el-button size="small" :icon="'Edit'" @click="openEditModal(row)">编辑</el-button>
+              <el-button size="small" type="danger" plain :icon="'Delete'" @click="deleteMenu(row)">删除</el-button>
             </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              @click="createMenu"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              创建
-            </button>
-            <button 
-              @click="showCreateModal = false"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              取消
-            </button>
-          </div>
-        </div>
+          </template>
+        </el-table-column>
+        <template #empty>
+          <el-empty description="暂无菜单数据" />
+        </template>
+      </el-table>
+
+      <div class="table-footer">
+        <span class="table-total">
+          显示 {{ menus.length === 0 ? 0 : (currentPage - 1) * pageSize + 1 }} 至
+          {{ Math.min(currentPage * pageSize, totalMenus) }} 条，共 {{ totalMenus }} 条记录
+        </span>
+        <el-pagination
+          v-model:current-page="currentPage"
+          :page-size="pageSize"
+          :total="totalMenus"
+          background
+          layout="prev, pager, next"
+          @current-change="handlePageChange"
+        />
       </div>
     </div>
-    
-    <!-- 编辑菜单模态框 -->
-    <div v-if="showEditModal" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- 背景遮罩 -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showEditModal = false"></div>
-        
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-              编辑菜单
-            </h3>
-            <div class="mt-2">
-              <div class="mb-4">
-                <label for="edit_menu_name" class="block text-sm font-medium text-gray-700 mb-1">菜单名称</label>
-                <input 
-                  id="edit_menu_name"
-                  v-model="menuForm.menu_name"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入菜单名称"
-                  required
-                />
-              </div>
-              <div class="mb-4">
-                <label for="edit_menu_code" class="block text-sm font-medium text-gray-700 mb-1">菜单代码</label>
-                <input 
-                  id="edit_menu_code"
-                  v-model="menuForm.menu_code"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入菜单代码"
-                  disabled
-                />
-                <p class="mt-1 text-xs text-gray-500">菜单代码不可修改</p>
-              </div>
-              <div class="mb-4">
-                <label for="edit_menu_path" class="block text-sm font-medium text-gray-700 mb-1">菜单路径</label>
-                <input 
-                  id="edit_menu_path"
-                  v-model="menuForm.menu_path"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入菜单路径"
-                  required
-                />
-                <p v-if="menuPathError" class="mt-1 text-xs text-red-500">{{ menuPathError }}</p>
-                <p v-else class="mt-1 text-xs text-gray-500">用于浏览器地址和旧版动态路由回退</p>
-              </div>
-              <div class="mb-4">
-                <label for="edit_component_key" class="block text-sm font-medium text-gray-700 mb-1">组件Key</label>
-                <select
-                  id="edit_component_key"
-                  v-model="menuForm.component_key"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option v-for="option in componentOptions" :key="option.key" :value="option.key">
-                    {{ option.label }}
-                  </option>
-                </select>
-                <p class="mt-1 text-xs text-gray-500">优先用组件Key绑定页面；留空时按菜单代码和路径自动匹配</p>
-              </div>
-              <div class="mb-4">
-                <label for="edit_parent_id" class="block text-sm font-medium text-gray-700 mb-1">父菜单</label>
-                <select 
-                  id="edit_parent_id"
-                  v-model="menuForm.parent_id"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option :value="undefined">无 (作为顶级菜单)</option>
-                  <option 
-                    v-for="menu in parentMenus.filter(m => m.id !== currentMenu?.id)" 
-                    :key="menu.id" 
-                    :value="menu.id"
-                  >
-                    {{ menu.menu_name }} ({{ menu.menu_code }})
-                  </option>
-                </select>
-                <p class="mt-1 text-xs text-gray-500">父子预览：{{ parentChildPreview }}；菜单不能选择自己作为父菜单</p>
-              </div>
-              <div class="mb-4">
-                <label for="edit_sort_order" class="block text-sm font-medium text-gray-700 mb-1">排序号</label>
-                <input 
-                  id="edit_sort_order"
-                  v-model="menuForm.sort_order"
-                  type="number" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入排序号"
-                  min="0"
-                />
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              @click="updateMenu"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              更新
-            </button>
-            <button 
-              @click="showEditModal = false"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+
+    <!-- 创建菜单弹窗 -->
+    <el-dialog v-model="showCreateModal" title="创建菜单" width="560px" destroy-on-close>
+      <el-form :model="menuForm" label-width="90px">
+        <el-form-item label="菜单名称" required>
+          <el-input v-model="menuForm.menu_name" placeholder="请输入菜单名称" />
+        </el-form-item>
+        <el-form-item label="菜单代码" required>
+          <el-input v-model="menuForm.menu_code" placeholder="请输入菜单代码" />
+        </el-form-item>
+        <el-form-item label="菜单路径" required :error="menuPathError || undefined">
+          <el-input v-model="menuForm.menu_path" placeholder="如 /dashboard/profile" />
+          <div class="form-tip">用于浏览器地址和旧版动态路由回退</div>
+        </el-form-item>
+        <el-form-item label="组件Key">
+          <el-select v-model="menuForm.component_key" style="width: 100%">
+            <el-option v-for="option in componentOptions" :key="option.key" :label="option.label" :value="option.key" />
+          </el-select>
+          <div class="form-tip">优先用组件Key绑定页面；留空时按菜单代码和路径自动匹配</div>
+        </el-form-item>
+        <el-form-item label="父菜单">
+          <el-select v-model="menuForm.parent_id" placeholder="无（作为顶级菜单）" clearable style="width: 100%">
+            <el-option v-for="menu in parentMenus" :key="menu.id" :label="`${menu.menu_name} (${menu.menu_code})`" :value="menu.id" />
+          </el-select>
+          <div class="form-tip">父子预览：{{ parentChildPreview }}</div>
+        </el-form-item>
+        <el-form-item label="排序号">
+          <el-input-number v-model="menuForm.sort_order" :min="0" style="width: 100%" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCreateModal = false">取消</el-button>
+        <el-button type="primary" @click="createMenu">确认创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑菜单弹窗 -->
+    <el-dialog v-model="showEditModal" title="编辑菜单" width="560px" destroy-on-close>
+      <el-form :model="menuForm" label-width="90px">
+        <el-form-item label="菜单名称" required>
+          <el-input v-model="menuForm.menu_name" placeholder="请输入菜单名称" />
+        </el-form-item>
+        <el-form-item label="菜单代码">
+          <el-input v-model="menuForm.menu_code" disabled />
+          <div class="form-tip">菜单代码不可修改</div>
+        </el-form-item>
+        <el-form-item label="菜单路径" required :error="menuPathError || undefined">
+          <el-input v-model="menuForm.menu_path" placeholder="如 /dashboard/profile" />
+          <div class="form-tip">用于浏览器地址和旧版动态路由回退</div>
+        </el-form-item>
+        <el-form-item label="组件Key">
+          <el-select v-model="menuForm.component_key" style="width: 100%">
+            <el-option v-for="option in componentOptions" :key="option.key" :label="option.label" :value="option.key" />
+          </el-select>
+          <div class="form-tip">优先用组件Key绑定页面；留空时按菜单代码和路径自动匹配</div>
+        </el-form-item>
+        <el-form-item label="父菜单">
+          <el-select v-model="menuForm.parent_id" placeholder="无（作为顶级菜单）" clearable style="width: 100%">
+            <el-option
+              v-for="menu in parentMenus.filter(m => m.id !== currentMenu?.id)"
+              :key="menu.id"
+              :label="`${menu.menu_name} (${menu.menu_code})`"
+              :value="menu.id"
+            />
+          </el-select>
+          <div class="form-tip">父子预览：{{ parentChildPreview }}；菜单不能选择自己作为父菜单</div>
+        </el-form-item>
+        <el-form-item label="排序号">
+          <el-input-number v-model="menuForm.sort_order" :min="0" style="width: 100%" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditModal = false">取消</el-button>
+        <el-button type="primary" @click="updateMenu">保存修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
-/* 动画效果 */
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s;
+.search-card :deep(.el-form--inline .el-form-item) {
+  margin-right: 16px;
+  margin-bottom: 0;
 }
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
+
+.menu-name {
+  font-weight: 500;
+  color: var(--el-text-color-primary);
 }
-</style> 
+
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--app-border);
+  flex-wrap: wrap;
+}
+
+.table-total {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.form-tip {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
+}
+</style>

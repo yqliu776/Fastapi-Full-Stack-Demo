@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { userService } from '@/services/userService';
 import type { User, UserCreate, UserUpdate } from '@/services/userService';
 import UserRoleSelector from '@/components/UserRoleSelector.vue';
@@ -7,7 +8,6 @@ import { useUserStore } from '@/stores/user';
 import { roleService } from '@/services/roleService';
 import type { Role } from '@/services/roleService';
 
-// 获取用户信息
 const userStore = useUserStore();
 
 // 状态
@@ -29,13 +29,6 @@ const showPasswordModal = ref(false);
 const showRoleModal = ref(false);
 const currentUser = ref<User | null>(null);
 
-// 消息通知状态
-const notification = reactive({
-  show: false,
-  message: '',
-  type: 'success' // success, error, warning
-});
-
 // 表单数据
 const userForm = reactive<UserCreate & UserUpdate>({
   user_name: '',
@@ -46,7 +39,7 @@ const userForm = reactive<UserCreate & UserUpdate>({
   created_by: '-1',
   last_updated_by: '-1',
   last_update_login: '-1',
-  role_codes: ['ROLE_USER'] // 默认添加普通用户角色
+  role_codes: ['ROLE_USER']
 });
 
 // 密码表单
@@ -74,39 +67,18 @@ const loadAllRoles = async () => {
     if (response.code === 200) {
       allRoles.value = response.data.items;
     } else {
-      console.error('加载角色列表失败:', response.message);
-      showNotification('加载角色列表失败: ' + response.message, 'error');
+      ElMessage.error('加载角色列表失败: ' + response.message);
     }
   } catch (error) {
     console.error('加载角色列表出错:', error);
-    showNotification('加载角色列表出错', 'error');
+    ElMessage.error('加载角色列表出错');
   }
 };
 
 // 处理角色选择变更
-const handleRoleChange = (event: Event, roleCode: string) => {
-  const target = event.target as HTMLInputElement;
-  if (target.checked) {
-    if (!selectedRoleCodes.value.includes(roleCode)) {
-      selectedRoleCodes.value.push(roleCode);
-    }
-  } else {
-    selectedRoleCodes.value = selectedRoleCodes.value.filter(code => code !== roleCode);
-  }
-  // 更新userForm的role_codes
-  userForm.role_codes = [...selectedRoleCodes.value];
-};
-
-// 显示通知
-const showNotification = (message: string, type: 'success' | 'error' | 'warning') => {
-  notification.message = message;
-  notification.type = type;
-  notification.show = true;
-  
-  // 3秒后自动关闭
-  setTimeout(() => {
-    notification.show = false;
-  }, 3000);
+const handleRoleChange = (codes: string[]) => {
+  selectedRoleCodes.value = codes;
+  userForm.role_codes = [...codes];
 };
 
 // 加载用户列表
@@ -124,12 +96,11 @@ const loadUsers = async () => {
       users.value = response.data.items;
       totalUsers.value = response.data.total;
     } else {
-      console.error('加载用户列表失败:', response.message);
-      showNotification('加载用户列表失败: ' + response.message, 'error');
+      ElMessage.error('加载用户列表失败: ' + response.message);
     }
   } catch (error) {
     console.error('加载用户列表出错:', error);
-    showNotification('加载用户列表出错', 'error');
+    ElMessage.error('加载用户列表出错');
   } finally {
     loading.value = false;
   }
@@ -151,9 +122,8 @@ const resetSearch = () => {
 
 // 打开创建用户模态框
 const openCreateModal = () => {
-  // 使用当前用户ID或默认值
   const userId = userStore.userInfo?.id.toString() || '-1';
-  
+
   userForm.user_name = '';
   userForm.email = '';
   userForm.phone_number = '';
@@ -162,70 +132,65 @@ const openCreateModal = () => {
   userForm.created_by = userId;
   userForm.last_updated_by = userId;
   userForm.last_update_login = userId;
-  userForm.role_codes = ['ROLE_USER']; // 重置为默认角色
-  
+  userForm.role_codes = ['ROLE_USER'];
+  selectedRoleCodes.value = ['ROLE_USER'];
+
   showCreateModal.value = true;
 };
 
 // 创建用户
 const createUser = async () => {
   if (!userForm.password) {
-    showNotification('请输入密码', 'error');
+    ElMessage.warning('请输入密码');
     return;
   }
 
-  // 确保至少有一个角色
   if (userForm.role_codes.length === 0) {
-    userForm.role_codes = ['ROLE_USER']; // 默认添加用户角色
+    userForm.role_codes = ['ROLE_USER'];
   }
-  
+
   try {
     const response = await userService.createUser(userForm);
     if (response.code === 200) {
       showCreateModal.value = false;
       loadUsers();
-      showNotification('用户创建成功', 'success');
+      ElMessage.success('用户创建成功');
     } else {
-      console.error('创建用户失败:', response.message);
-      showNotification('创建用户失败: ' + response.message, 'error');
+      ElMessage.error('创建用户失败: ' + response.message);
     }
   } catch (error: unknown) {
     console.error('创建用户出错:', error);
-    // 尝试提取API返回的详细错误信息
     let errorMsg = '创建用户出错';
     if (
-      error && 
-      typeof error === 'object' && 
-      'response' in error && 
-      error.response && 
-      typeof error.response === 'object' && 
-      'data' in error.response && 
-      error.response.data && 
-      typeof error.response.data === 'object' && 
+      error &&
+      typeof error === 'object' &&
+      'response' in error &&
+      error.response &&
+      typeof error.response === 'object' &&
+      'data' in error.response &&
+      error.response.data &&
+      typeof error.response.data === 'object' &&
       'detail' in error.response.data
     ) {
       try {
         const detail = error.response.data.detail;
-        // 尝试格式化错误信息
         if (Array.isArray(detail)) {
-          errorMsg += ': ' + detail.map((item: {msg: string}) => item.msg).join(', ');
+          errorMsg += ': ' + detail.map((item: { msg: string }) => item.msg).join(', ');
         } else if (typeof detail === 'string') {
           errorMsg += ': ' + detail;
         }
       } catch {
-        // 如果格式化失败，使用原始错误消息
         errorMsg = '创建用户出错';
       }
     }
-    showNotification(errorMsg, 'error');
+    ElMessage.error(errorMsg);
   }
 };
 
 // 打开编辑用户模态框
 const openEditModal = (user: User) => {
-  // 使用当前用户ID或默认值
   const userId = userStore.userInfo?.id.toString() || '-1';
-  
+
   currentUser.value = user;
   userForm.user_name = user.user_name;
   userForm.email = user.email;
@@ -233,53 +198,56 @@ const openEditModal = (user: User) => {
   userForm.delete_flag = user.delete_flag;
   userForm.last_updated_by = userId;
   userForm.last_update_login = userId;
-  
+
   showEditModal.value = true;
 };
 
 // 更新用户
 const updateUser = async () => {
   if (!currentUser.value) return;
-  
+
   try {
     const response = await userService.updateUser(currentUser.value.id, userForm);
     if (response.code === 200) {
       showEditModal.value = false;
       loadUsers();
-      showNotification('用户更新成功', 'success');
+      ElMessage.success('用户更新成功');
     } else {
-      console.error('更新用户失败:', response.message);
-      showNotification('更新用户失败: ' + response.message, 'error');
+      ElMessage.error('更新用户失败: ' + response.message);
     }
   } catch (error: unknown) {
     console.error('更新用户出错:', error);
-    showNotification('更新用户出错', 'error');
+    ElMessage.error('更新用户出错');
   }
 };
 
 // 打开修改密码模态框
 const openPasswordModal = (user: User) => {
-  // 使用当前用户ID或默认值
   const userId = userStore.userInfo?.id.toString() || '-1';
-  
+
   currentUser.value = user;
   passwordForm.password = '';
   passwordForm.confirmPassword = '';
   passwordForm.last_updated_by = userId;
   passwordForm.last_update_login = userId;
-  
+
   showPasswordModal.value = true;
 };
 
 // 修改密码
 const updatePassword = async () => {
   if (!currentUser.value) return;
-  
-  if (passwordForm.password !== passwordForm.confirmPassword) {
-    showNotification('两次输入的密码不一致', 'error');
+
+  if (!passwordForm.password) {
+    ElMessage.warning('请输入新密码');
     return;
   }
-  
+
+  if (passwordForm.password !== passwordForm.confirmPassword) {
+    ElMessage.warning('两次输入的密码不一致');
+    return;
+  }
+
   try {
     const response = await userService.updateUserPassword(currentUser.value.id, {
       password: passwordForm.password,
@@ -288,33 +256,40 @@ const updatePassword = async () => {
     });
     if (response.code === 200) {
       showPasswordModal.value = false;
-      showNotification('密码修改成功', 'success');
+      ElMessage.success('密码修改成功');
     } else {
-      console.error('修改密码失败:', response.message);
-      showNotification('修改密码失败: ' + response.message, 'error');
+      ElMessage.error('修改密码失败: ' + response.message);
     }
   } catch (error) {
     console.error('修改密码出错:', error);
-    showNotification('修改密码出错', 'error');
+    ElMessage.error('修改密码出错');
   }
 };
 
 // 删除用户
 const deleteUser = async (user: User) => {
-  if (!confirm(`确定要删除用户"${user.user_name}"吗？`)) return;
-  
+  try {
+    await ElMessageBox.confirm(`确定要删除用户"${user.user_name}"吗？`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+      confirmButtonClass: 'el-button--danger'
+    });
+  } catch {
+    return;
+  }
+
   try {
     const response = await userService.deleteUser(user.id);
     if (response.code === 200) {
       loadUsers();
-      showNotification('用户删除成功', 'success');
+      ElMessage.success('用户删除成功');
     } else {
-      console.error('删除用户失败:', response.message);
-      showNotification('删除用户失败: ' + response.message, 'error');
+      ElMessage.error('删除用户失败: ' + response.message);
     }
   } catch (error) {
     console.error('删除用户出错:', error);
-    showNotification('删除用户出错', 'error');
+    ElMessage.error('删除用户出错');
   }
 };
 
@@ -327,10 +302,10 @@ const openRoleModal = (user: User) => {
 // 角色更新后刷新用户列表
 const handleUserUpdate = () => {
   loadUsers();
-  showNotification('更新成功', 'success');
+  ElMessage.success('更新成功');
 };
 
-// 页面变化处理
+// 分页处理
 const handlePageChange = (page: number) => {
   currentPage.value = page;
   loadUsers();
@@ -342,15 +317,15 @@ const getUserStatusText = (deleteFlag: string) => {
   return option ? option.label : deleteFlag;
 };
 
-// 获取用户状态CSS类
-const getUserStatusClass = (deleteFlag: string) => {
+// 获取用户状态标签类型
+const getStatusType = (deleteFlag: string): 'success' | 'danger' | 'info' => {
   switch (deleteFlag) {
     case 'N':
-      return 'bg-green-100 text-green-800';
+      return 'success';
     case 'Y':
-      return 'bg-red-100 text-red-800';
+      return 'danger';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'info';
   }
 };
 
@@ -363,442 +338,287 @@ onMounted(() => {
 
 <template>
   <div class="user-management">
-    <!-- 通知栏 -->
-    <div 
-      v-if="notification.show" 
-      class="fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-500 opacity-95 flex items-center max-w-md"
-      :class="{
-        'bg-green-600 text-white': notification.type === 'success',
-        'bg-red-600 text-white': notification.type === 'error',
-        'bg-yellow-500 text-white': notification.type === 'warning'
-      }"
-    >
-      <div class="mr-3" v-if="notification.type === 'success'">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-      <div class="mr-3" v-else-if="notification.type === 'error'">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </div>
-      <div class="mr-3" v-else-if="notification.type === 'warning'">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-      </div>
-      <span>{{ notification.message }}</span>
+    <div class="page-heading">
+      <h1 class="page-heading__title">
+        <span class="page-heading__icon"><el-icon><User /></el-icon></span>
+        用户管理
+      </h1>
+      <el-button type="primary" :icon="'Plus'" @click="openCreateModal">创建用户</el-button>
     </div>
-    
-    <h1 class="text-2xl font-bold mb-4">用户管理</h1>
-    
+
     <!-- 搜索表单 -->
-    <div class="bg-white p-4 rounded shadow mb-4">
-      <div class="flex flex-wrap gap-4 items-end">
-        <div class="w-full md:w-auto">
-          <label class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
-          <input 
-            v-model="searchForm.user_name"
-            type="text" 
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="请输入用户名"
-          />
-        </div>
-        <div class="w-full md:w-auto">
-          <label class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
-          <input 
-            v-model="searchForm.email"
-            type="text" 
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="请输入邮箱"
-          />
-        </div>
-        <div class="w-full md:w-auto">
-          <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
-          <select 
-            v-model="searchForm.delete_flag"
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          >
-            <option value="">全部</option>
-            <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </div>
-        <div class="flex gap-2">
-          <button 
-            @click="searchUsers"
-            class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150"
-          >
-            搜索
-          </button>
-          <button 
-            @click="resetSearch"
-            class="bg-gray-100 text-gray-700 py-2 px-4 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-150"
-          >
-            重置
-          </button>
-          <button 
-            @click="openCreateModal"
-            class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150"
-          >
-            创建用户
-          </button>
-        </div>
+    <div class="page-card search-card">
+      <div class="page-card__body">
+        <el-form inline @submit.prevent="searchUsers">
+          <el-form-item label="用户名">
+            <el-input
+              v-model="searchForm.user_name"
+              placeholder="请输入用户名"
+              clearable
+              style="width: 180px"
+            />
+          </el-form-item>
+          <el-form-item label="邮箱">
+            <el-input
+              v-model="searchForm.email"
+              placeholder="请输入邮箱"
+              clearable
+              style="width: 200px"
+            />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="searchForm.delete_flag" placeholder="全部" clearable style="width: 120px">
+              <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" :icon="'Search'" @click="searchUsers">搜索</el-button>
+            <el-button :icon="'Refresh'" @click="resetSearch">重置</el-button>
+          </el-form-item>
+        </el-form>
       </div>
     </div>
-    
+
     <!-- 用户列表 -->
-    <div class="bg-white rounded shadow overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">用户名</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">邮箱</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">电话</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-if="loading" class="text-center">
-            <td colspan="6" class="px-6 py-4 whitespace-nowrap text-gray-500">
-              <div class="flex justify-center items-center">
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                加载中...
-              </div>
-            </td>
-          </tr>
-          <tr v-else-if="users.length === 0" class="text-center">
-            <td colspan="6" class="px-6 py-4 whitespace-nowrap text-gray-500">
-              暂无数据
-            </td>
-          </tr>
-          <tr v-for="user in users" :key="user.id" class="hover:bg-gray-50 transition-colors">
-            <td class="px-6 py-4 whitespace-nowrap">{{ user.user_name }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">{{ user.email }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">{{ user.phone_number || '-' }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getUserStatusClass(user.delete_flag)">
-                {{ getUserStatusText(user.delete_flag) }}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">{{ new Date(user.creation_date).toLocaleString() }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button 
-                @click="openEditModal(user)"
-                class="text-indigo-600 hover:text-indigo-900 mr-2 hover:underline transition duration-150"
-              >
-                编辑
-              </button>
-              <button 
-                @click="openPasswordModal(user)"
-                class="text-blue-600 hover:text-blue-900 mr-2 hover:underline transition duration-150"
-              >
-                密码
-              </button>
-              <button 
-                @click="openRoleModal(user)"
-                class="text-green-600 hover:text-green-900 mr-2 hover:underline transition duration-150"
-              >
-                角色
-              </button>
-              <button 
-                @click="deleteUser(user)"
-                class="text-red-600 hover:text-red-900 hover:underline transition duration-150"
-              >
-                删除
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <!-- 分页 -->
-      <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-        <div class="flex justify-between items-center">
-          <div class="text-sm text-gray-700">
-            共 <span class="font-medium">{{ totalUsers }}</span> 条记录
-          </div>
-          <div class="flex justify-end">
-            <button 
-              :disabled="currentPage <= 1"
-              @click="handlePageChange(currentPage - 1)"
-              class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150"
-            >
-              上一页
-            </button>
-            <button 
-              :disabled="currentPage * pageSize >= totalUsers"
-              @click="handlePageChange(currentPage + 1)"
-              class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150"
-            >
-              下一页
-            </button>
-          </div>
-        </div>
+    <div class="page-card">
+      <el-table v-loading="loading" :data="users" stripe style="width: 100%">
+        <el-table-column prop="user_name" label="用户名" min-width="120">
+          <template #default="{ row }">
+            <div class="user-cell">
+              <el-avatar :size="28" class="user-cell-avatar">
+                {{ row.user_name.charAt(0).toUpperCase() }}
+              </el-avatar>
+              <span class="user-cell-name">{{ row.user_name }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="phone_number" label="电话" min-width="130">
+          <template #default="{ row }">{{ row.phone_number || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.delete_flag)" effect="light" round>
+              {{ getUserStatusText(row.delete_flag) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" min-width="170">
+          <template #default="{ row }">{{ new Date(row.creation_date).toLocaleString() }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="230" fixed="right">
+          <template #default="{ row }">
+            <div class="table-actions">
+              <el-button size="small" :icon="'Edit'" @click="openEditModal(row)">编辑</el-button>
+              <el-button size="small" type="warning" plain :icon="'Key'" @click="openPasswordModal(row)">密码</el-button>
+              <el-button size="small" type="success" plain :icon="'UserFilled'" @click="openRoleModal(row)">角色</el-button>
+              <el-button size="small" type="danger" plain :icon="'Delete'" @click="deleteUser(row)">删除</el-button>
+            </div>
+          </template>
+        </el-table-column>
+        <template #empty>
+          <el-empty description="暂无数据" />
+        </template>
+      </el-table>
+
+      <div class="table-footer">
+        <span class="table-total">共 {{ totalUsers }} 条记录</span>
+        <el-pagination
+          v-model:current-page="currentPage"
+          :page-size="pageSize"
+          :total="totalUsers"
+          background
+          layout="prev, pager, next"
+          @current-change="handlePageChange"
+        />
       </div>
     </div>
-    
-    <!-- 创建用户模态框 -->
-    <div v-if="showCreateModal" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- 背景遮罩 -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showCreateModal = false"></div>
-        
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">创建用户</h3>
-            <div class="mt-2">
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">用户名 <span class="text-red-500">*</span></label>
-                <input 
-                  v-model="userForm.user_name"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入用户名"
-                />
-              </div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">邮箱 <span class="text-red-500">*</span></label>
-                <input 
-                  v-model="userForm.email"
-                  type="email" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入邮箱"
-                />
-              </div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">电话</label>
-                <input 
-                  v-model="userForm.phone_number"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入电话"
-                />
-              </div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">密码 <span class="text-red-500">*</span></label>
-                <input 
-                  v-model="userForm.password"
-                  type="password" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入密码"
-                />
-              </div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">状态 <span class="text-red-500">*</span></label>
-                <select 
-                  v-model="userForm.delete_flag"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </option>
-                </select>
-              </div>
-              
-              <!-- 角色选择 -->
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">用户角色 <span class="text-red-500">*</span></label>
-                <div class="bg-gray-50 p-3 border rounded-md max-h-40 overflow-y-auto">
-                  <div class="grid grid-cols-2 gap-2">
-                    <div 
-                      v-for="role in allRoles" 
-                      :key="role.id" 
-                      class="flex items-center p-2 border rounded hover:bg-gray-100 cursor-pointer"
-                      :class="{ 'bg-blue-50 border-blue-300': selectedRoleCodes.includes(role.role_code) }"
-                      @click="handleRoleChange($event, role.role_code)"
-                    >
-                      <input 
-                        type="checkbox" 
-                        :checked="selectedRoleCodes.includes(role.role_code)" 
-                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        @click.stop
-                        @change="handleRoleChange($event, role.role_code)"
-                      />
-                      <label class="ml-2 block text-sm text-gray-900 cursor-pointer">
-                        <span class="font-medium">{{ role.role_name }}</span>
-                        <span class="text-xs text-gray-500 block">{{ role.role_code }}</span>
-                      </label>
-                    </div>
-                  </div>
-                  <div v-if="allRoles.length === 0" class="text-center text-gray-500 py-2">
-                    暂无可用角色
-                  </div>
+
+    <!-- 创建用户弹窗 -->
+    <el-dialog v-model="showCreateModal" title="创建用户" width="540px" destroy-on-close>
+      <el-form :model="userForm" label-width="80px">
+        <el-form-item label="用户名" required>
+          <el-input v-model="userForm.user_name" placeholder="请输入用户名" />
+        </el-form-item>
+        <el-form-item label="邮箱" required>
+          <el-input v-model="userForm.email" placeholder="请输入邮箱" />
+        </el-form-item>
+        <el-form-item label="电话">
+          <el-input v-model="userForm.phone_number" placeholder="请输入电话" />
+        </el-form-item>
+        <el-form-item label="密码" required>
+          <el-input v-model="userForm.password" type="password" show-password placeholder="请输入密码" />
+        </el-form-item>
+        <el-form-item label="状态" required>
+          <el-select v-model="userForm.delete_flag" style="width: 100%">
+            <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="用户角色">
+          <div class="role-checkbox-group">
+            <el-checkbox-group v-model="selectedRoleCodes" @change="handleRoleChange">
+              <el-checkbox v-for="role in allRoles" :key="role.id" :value="role.role_code" border>
+                <div class="role-checkbox-label">
+                  <span class="role-name">{{ role.role_name }}</span>
+                  <span class="role-code">{{ role.role_code }}</span>
                 </div>
-                <p class="mt-1 text-xs text-gray-500">至少需要选择一个角色，默认为普通用户(ROLE_USER)</p>
-              </div>
-            </div>
+              </el-checkbox>
+            </el-checkbox-group>
+            <el-empty v-if="allRoles.length === 0" description="暂无可用角色" :image-size="60" />
           </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              @click="createUser"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              确认
-            </button>
-            <button 
-              @click="showCreateModal = false"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 编辑用户模态框 -->
-    <div v-if="showEditModal" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- 背景遮罩 -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showEditModal = false"></div>
-        
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">编辑用户</h3>
-            <div class="mt-2">
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">用户名 <span class="text-red-500">*</span></label>
-                <input 
-                  v-model="userForm.user_name"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入用户名"
-                />
-              </div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">邮箱 <span class="text-red-500">*</span></label>
-                <input 
-                  v-model="userForm.email"
-                  type="email" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入邮箱"
-                />
-              </div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">电话</label>
-                <input 
-                  v-model="userForm.phone_number"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入电话"
-                />
-              </div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">状态 <span class="text-red-500">*</span></label>
-                <select 
-                  v-model="userForm.delete_flag"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </option>
-                </select>
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              @click="updateUser"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              确认
-            </button>
-            <button 
-              @click="showEditModal = false"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 修改密码模态框 -->
-    <div v-if="showPasswordModal" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- 背景遮罩 -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showPasswordModal = false"></div>
-        
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">修改密码 - {{ currentUser?.user_name }}</h3>
-            <div class="mt-2">
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">新密码 <span class="text-red-500">*</span></label>
-                <input 
-                  v-model="passwordForm.password"
-                  type="password" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入新密码"
-                />
-              </div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">确认密码 <span class="text-red-500">*</span></label>
-                <input 
-                  v-model="passwordForm.confirmPassword"
-                  type="password" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请再次输入新密码"
-                />
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              @click="updatePassword"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              确认
-            </button>
-            <button 
-              @click="showPasswordModal = false"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 角色分配模态框 -->
-    <div v-if="showRoleModal" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- 背景遮罩 -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showRoleModal = false"></div>
-        
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">角色分配 - {{ currentUser?.user_name }}</h3>
-            <div class="mt-2">
-              <UserRoleSelector 
-                v-if="currentUser"
-                :userId="currentUser.id"
-                :username="currentUser.user_name"
-                mode="edit"
-                @update="handleUserUpdate"
-              />
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              @click="showRoleModal = false"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm transition duration-150"
-            >
-              关闭
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+          <div class="form-tip">至少选择一个角色，默认为普通用户（ROLE_USER）</div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCreateModal = false">取消</el-button>
+        <el-button type="primary" @click="createUser">确认创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑用户弹窗 -->
+    <el-dialog v-model="showEditModal" title="编辑用户" width="540px" destroy-on-close>
+      <el-form :model="userForm" label-width="80px">
+        <el-form-item label="用户名" required>
+          <el-input v-model="userForm.user_name" placeholder="请输入用户名" />
+        </el-form-item>
+        <el-form-item label="邮箱" required>
+          <el-input v-model="userForm.email" placeholder="请输入邮箱" />
+        </el-form-item>
+        <el-form-item label="电话">
+          <el-input v-model="userForm.phone_number" placeholder="请输入电话" />
+        </el-form-item>
+        <el-form-item label="状态" required>
+          <el-select v-model="userForm.delete_flag" style="width: 100%">
+            <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditModal = false">取消</el-button>
+        <el-button type="primary" @click="updateUser">保存修改</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 修改密码弹窗 -->
+    <el-dialog v-model="showPasswordModal" :title="`修改密码 - ${currentUser?.user_name || ''}`" width="480px" destroy-on-close>
+      <el-form :model="passwordForm" label-width="90px">
+        <el-form-item label="新密码" required>
+          <el-input v-model="passwordForm.password" type="password" show-password placeholder="请输入新密码" />
+        </el-form-item>
+        <el-form-item label="确认密码" required>
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showPasswordModal = false">取消</el-button>
+        <el-button type="primary" @click="updatePassword">确认修改</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 角色分配弹窗 -->
+    <el-dialog
+      v-model="showRoleModal"
+      :title="`角色分配 - ${currentUser?.user_name || ''}`"
+      width="760px"
+      destroy-on-close
+    >
+      <UserRoleSelector
+        v-if="currentUser"
+        :user-id="currentUser.id"
+        :username="currentUser.user_name"
+        mode="edit"
+        @update="handleUserUpdate"
+      />
+      <template #footer>
+        <el-button type="primary" @click="showRoleModal = false">完成</el-button>
+      </template>
+    </el-dialog>
   </div>
-</template> 
+</template>
+
+<style scoped>
+.search-card :deep(.el-form--inline .el-form-item) {
+  margin-right: 16px;
+  margin-bottom: 0;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-cell-avatar {
+  background: var(--brand-gradient);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.user-cell-name {
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--app-border);
+  flex-wrap: wrap;
+}
+
+.table-total {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.role-checkbox-group {
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--app-fill-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.role-checkbox-group :deep(.el-checkbox) {
+  display: flex;
+  height: auto;
+  margin-right: 0;
+  white-space: normal;
+}
+
+.role-checkbox-group :deep(.el-checkbox__label) {
+  flex: 1;
+}
+
+.role-checkbox-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.role-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+
+.role-code {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.form-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+</style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useUserStore } from '@/stores/user';
-import { onMounted } from 'vue';
+import { onMounted, computed } from 'vue';
 
 const userStore = useUserStore();
 
@@ -9,90 +9,173 @@ onMounted(async () => {
     await userStore.fetchUserInfo();
   }
 });
+
+const profileItems = computed(() => {
+  const info = userStore.userInfo;
+  if (!info) return [];
+
+  return [
+    { label: '用户名', value: info.user_name, icon: 'User' },
+    { label: '用户ID', value: String(info.id), icon: 'Postcard' },
+    { label: '电子邮箱', value: info.email, icon: 'Message' },
+    { label: '电话号码', value: info.phone_number || '-', icon: 'Iphone' },
+    {
+      label: '创建时间',
+      value: new Date(info.creation_date).toLocaleString(),
+      icon: 'Calendar'
+    },
+    {
+      label: '最后更新时间',
+      value: new Date(info.last_update_date).toLocaleString(),
+      icon: 'Refresh'
+    }
+  ];
+});
 </script>
 
 <template>
-  <div>
-    <h1 class="text-2xl font-semibold text-gray-900">个人信息</h1>
-    
-    <div class="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
-      <div v-if="userStore.loading" class="p-6 text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
-        <p class="mt-4 text-gray-600">加载中...</p>
-      </div>
-      
-      <div v-else-if="userStore.userInfo" class="border-t border-gray-200">
-        <dl>
-          <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">用户名</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ userStore.userInfo.user_name }}</dd>
-          </div>
-          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">用户ID</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ userStore.userInfo.id }}</dd>
-          </div>
-          <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">电子邮箱</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ userStore.userInfo.email }}</dd>
-          </div>
-          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">电话号码</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ userStore.userInfo.phone_number }}</dd>
-          </div>
-          <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">创建时间</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ new Date(userStore.userInfo.creation_date).toLocaleString() }}</dd>
-          </div>
-          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">最后更新时间</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ new Date(userStore.userInfo.last_update_date).toLocaleString() }}</dd>
-          </div>
-          <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">角色</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-              <ul v-if="userStore.userInfo.roles && userStore.userInfo.roles.length" class="border border-gray-200 rounded-md divide-y divide-gray-200">
-                <li 
-                  v-for="(role, index) in userStore.userInfo.roles" 
-                  :key="index"
-                  class="pl-3 pr-4 py-3 flex items-center justify-between text-sm"
-                >
-                  <div class="w-0 flex-1 flex items-center">
-                    <svg class="flex-shrink-0 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                    </svg>
-                    <span class="ml-2 flex-1 w-0 truncate">{{ role.role_name }} ({{ role.role_code }})</span>
-                  </div>
-                </li>
-              </ul>
-              <p v-else class="text-gray-500 italic">无角色信息</p>
-            </dd>
-          </div>
-        </dl>
-      </div>
-      
-      <div v-else-if="userStore.error" class="p-6">
-        <div class="rounded-md bg-red-50 p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-red-800">
-                加载用户信息失败
-              </h3>
-              <div class="mt-2 text-sm text-red-700">
-                <p>{{ userStore.error }}</p>
-              </div>
-            </div>
+  <div class="profile-page">
+    <div class="page-heading">
+      <h1 class="page-heading__title">
+        <span class="page-heading__icon"><el-icon><User /></el-icon></span>
+        个人信息
+      </h1>
+    </div>
+
+    <div v-if="userStore.loading" class="page-card loading-card">
+      <el-skeleton :rows="6" animated />
+    </div>
+
+    <div v-else-if="userStore.userInfo" class="profile-grid">
+      <!-- 用户卡片 -->
+      <div class="page-card user-card">
+        <div class="user-card__top">
+          <el-avatar :size="72" :src="userStore.userInfo.avatar || ''">
+            {{ userStore.userInfo.user_name.charAt(0).toUpperCase() }}
+          </el-avatar>
+          <h2>{{ userStore.userInfo.user_name }}</h2>
+          <p>{{ userStore.userInfo.email }}</p>
+        </div>
+        <div class="user-card__roles">
+          <span class="role-label">我的角色</span>
+          <div class="role-tags">
+            <el-tag
+              v-for="(role, index) in userStore.userInfo.roles || []"
+              :key="index"
+              effect="light"
+              round
+            >
+              {{ role.role_name }}（{{ role.role_code }}）
+            </el-tag>
+            <el-tag v-if="!userStore.userInfo.roles || userStore.userInfo.roles.length === 0" type="info" round>
+              暂无角色
+            </el-tag>
           </div>
         </div>
+      </div>
+
+      <!-- 资料详情 -->
+      <div class="page-card">
+        <div class="page-card__header">
+          <el-icon><Tickets /></el-icon>
+          账号资料
+        </div>
+        <div class="page-card__body profile-detail">
+          <el-descriptions :column="1" border>
+            <el-descriptions-item v-for="item in profileItems" :key="item.label" :label="item.label">
+              <div class="detail-value">
+                <el-icon><component :is="item.icon" /></el-icon>
+                <span>{{ item.value }}</span>
+              </div>
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+      </div>
+    </div>
+
+    <div v-else-if="userStore.error" class="page-card">
+      <div class="page-card__body">
+        <el-result icon="error" title="加载用户信息失败" :sub-title="userStore.error">
+          <template #extra>
+            <el-button type="primary" @click="userStore.fetchUserInfo()">重新加载</el-button>
+          </template>
+        </el-result>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* 个人信息页面样式 */
-</style> 
+.profile-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.loading-card {
+  padding: 20px;
+}
+
+.user-card__top {
+  padding: 28px 20px 20px;
+  text-align: center;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.user-card__top :deep(.el-avatar) {
+  background: var(--brand-gradient);
+  font-size: 28px;
+  font-weight: 700;
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.3);
+  margin-bottom: 12px;
+}
+
+.user-card__top h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.user-card__top p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.user-card__roles {
+  padding: 18px 20px;
+}
+
+.role-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+  margin-bottom: 10px;
+}
+
+.role-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--el-text-color-primary);
+}
+
+.detail-value .el-icon {
+  color: var(--brand-primary);
+}
+</style>

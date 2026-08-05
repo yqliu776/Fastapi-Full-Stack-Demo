@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Document, Refresh, FullScreen } from '@element-plus/icons-vue';
 
@@ -8,15 +8,8 @@ const loading = ref(false);
 const swaggerUrl = ref('');
 const iframeLoadError = ref(false);
 
-// 计算iframe高度 - 使用CSS变量来适应父容器
-const iframeHeight = computed(() => {
-  // 让iframe填满可用空间，通过CSS来处理具体高度
-  return '100%';
-});
-
 // 获取Swagger UI URL
 const loadSwaggerUrl = () => {
-  // 使用后端提供的Swagger UI地址
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8090';
   swaggerUrl.value = `${baseUrl}/api/docs`;
   iframeLoadError.value = false;
@@ -80,95 +73,68 @@ onMounted(() => {
 <template>
   <div class="swagger-ui-page">
     <!-- 页面头部 -->
-    <div class="page-header">
+    <div class="page-card swagger-header">
       <div class="header-content">
         <div class="title-section">
-          <el-icon size="24"><Document /></el-icon>
-          <h1 class="page-title">API 文档</h1>
+          <span class="title-icon"><el-icon :size="20"><Document /></el-icon></span>
+          <div>
+            <h1 class="page-title">API 文档</h1>
+            <p class="page-sub">Swagger UI - 自动生成的接口文档</p>
+          </div>
         </div>
         <div class="header-actions">
-          <el-button
-            type="primary"
-            :icon="Document"
-            @click="openInNewTab"
-            :disabled="!swaggerUrl || iframeLoadError"
-          >
+          <el-button type="primary" :icon="Document" @click="openInNewTab" :disabled="!swaggerUrl || iframeLoadError">
             新窗口打开
           </el-button>
-          <el-button
-            type="info"
-            @click="refreshSwagger"
-            :loading="loading"
-            :icon="Refresh"
-          >
-            刷新
-          </el-button>
-          <el-button
-            type="warning"
-            @click="goFullscreen"
-            :icon="FullScreen"
-            :disabled="!swaggerUrl || iframeLoadError"
-          >
-            全屏
-          </el-button>
+          <el-button :icon="Refresh" :loading="loading" @click="refreshSwagger">刷新</el-button>
+          <el-button :icon="FullScreen" @click="goFullscreen" :disabled="!swaggerUrl || iframeLoadError">全屏</el-button>
         </div>
       </div>
     </div>
 
     <!-- Swagger UI 容器 -->
     <div class="swagger-container">
-      <el-card v-loading="loading" class="swagger-card">
-        <template #header>
-          <div class="card-header">
-            <span>Swagger UI - API 接口文档</span>
-            <el-tag type="info" size="small" v-if="swaggerUrl">
-              {{ swaggerUrl }}
-            </el-tag>
+      <div class="swagger-card">
+        <div v-if="swaggerUrl" v-loading="loading" class="iframe-wrapper">
+          <div class="url-bar">
+            <span class="url-dot"></span>
+            <code>{{ swaggerUrl }}</code>
           </div>
-        </template>
-
-        <!-- iframe 容器 -->
-        <div class="iframe-wrapper" v-if="swaggerUrl">
           <iframe
             :src="swaggerUrl"
             frameborder="0"
             width="100%"
             height="100%"
-            @load="handleIframeLoad"
-            @error="handleIframeError"
             class="swagger-iframe"
             allowfullscreen
+            @load="handleIframeLoad"
+            @error="handleIframeError"
           ></iframe>
         </div>
 
         <!-- 错误状态 -->
         <div v-else-if="iframeLoadError" class="error-state">
-          <el-empty description="API文档加载失败">
-            <template #description>
-              <p class="text-gray-600 mb-4">无法加载API文档，请检查后端服务是否正常运行</p>
+          <el-result icon="error" title="API文档加载失败" sub-title="无法加载API文档，请检查后端服务是否正常运行">
+            <template #extra>
+              <el-button type="primary" :icon="Refresh" @click="refreshSwagger">重新加载</el-button>
             </template>
-            <el-button type="primary" @click="refreshSwagger" :icon="Refresh">
-              重新加载
-            </el-button>
-          </el-empty>
+          </el-result>
         </div>
-      </el-card>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .swagger-ui-page {
-  height: 100%;
+  height: calc(100vh - 154px);
+  min-height: 480px;
   display: flex;
   flex-direction: column;
-  padding: 0;
+  gap: 16px;
 }
 
-.page-header {
-  background: #fff;
-  padding: 16px 20px;
-  border-bottom: 1px solid #e4e7ed;
+.swagger-header {
   flex-shrink: 0;
 }
 
@@ -176,6 +142,9 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
 }
 
 .title-section {
@@ -184,57 +153,90 @@ onMounted(() => {
   gap: 12px;
 }
 
+.title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--brand-primary-light);
+  color: var(--brand-primary);
+}
+
 .page-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #303133;
   margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.page-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .header-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .swagger-container {
   flex: 1;
-  overflow: hidden;
-  padding: 20px;
+  min-height: 0;
 }
 
 .swagger-card {
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-:deep(.el-card__body) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
   overflow: hidden;
-  padding: 0;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
 }
 
 .iframe-wrapper {
   flex: 1;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.url-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--app-fill-1);
+  border-bottom: 1px solid var(--app-border);
+  flex-shrink: 0;
+}
+
+.url-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--el-color-success);
+  flex-shrink: 0;
+}
+
+.url-bar code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
   overflow: hidden;
-  height: 100%;
-  background: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .swagger-iframe {
+  flex: 1;
   width: 100%;
-  height: 100%;
   border: none;
   background: #fff;
 }
@@ -247,48 +249,14 @@ onMounted(() => {
   min-height: 400px;
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
-    gap: 16px;
     align-items: flex-start;
   }
 
   .header-actions {
     width: 100%;
-    justify-content: flex-end;
-  }
-
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .swagger-container {
-    padding: 10px;
-  }
-}
-
-/* 加载动画 */
-:deep(.el-loading-spinner) {
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-/* 暗色主题适配 */
-@media (prefers-color-scheme: dark) {
-  .page-header {
-    background: #1f1f1f;
-    border-bottom-color: #303133;
-  }
-
-  .page-title {
-    color: #e8e8e8;
-  }
-
-  .iframe-wrapper {
-    border-color: #303133;
   }
 }
 </style>

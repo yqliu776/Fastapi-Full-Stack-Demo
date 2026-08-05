@@ -42,19 +42,17 @@ const menuById = computed(() => {
 const menuTree = computed(() => {
   if (!allMenus.value.length) return [];
 
-  // 如果有搜索关键字，以扁平结构返回所有包含关键字的菜单
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase();
     return allMenus.value.filter(
-      menu => menu.menu_name.toLowerCase().includes(keyword) || 
-              menu.menu_code.toLowerCase().includes(keyword)
+      menu =>
+        menu.menu_name.toLowerCase().includes(keyword) ||
+        menu.menu_code.toLowerCase().includes(keyword)
     );
   }
 
-  // 否则构建树形结构
   const rootMenus = allMenus.value.filter(menu => !menu.parent_id);
-  
-  // 递归添加子菜单
+
   const addChildren = (menu: Menu): Menu => {
     const children = allMenus.value.filter(m => m.parent_id === menu.id);
     return {
@@ -62,7 +60,7 @@ const menuTree = computed(() => {
       children: children.length ? children.map(addChildren) : []
     };
   };
-  
+
   return rootMenus.map(addChildren);
 });
 
@@ -129,7 +127,7 @@ const deselectAll = () => {
   selectedMenus.value = [];
 };
 
-// 添加一个计算属性显示菜单统计
+// 菜单统计
 const menuStats = computed(() => {
   return {
     total: allMenus.value.length,
@@ -140,13 +138,18 @@ const menuStats = computed(() => {
   };
 });
 
+// 计算菜单行状态 class
+const menuRowClass = (menuId: number) => {
+  if (hasRoleMenu(menuId) && isMenuSelected(menuId)) return 'is-assigned';
+  if (isMenuSelected(menuId) && !hasRoleMenu(menuId)) return 'is-selected-new';
+  if (hasRoleMenu(menuId) && !isMenuSelected(menuId)) return 'is-removing';
+  return '';
+};
+
 // 初始化方法
 const init = async () => {
   errorMsg.value = '';
-  await Promise.all([
-    loadAllMenus(),
-    loadRoleMenus()
-  ]);
+  await Promise.all([loadAllMenus(), loadRoleMenus()]);
 };
 
 // 加载所有菜单
@@ -157,7 +160,6 @@ const loadAllMenus = async () => {
     if (response.code === 200) {
       allMenus.value = response.data.items;
     } else {
-      console.error('加载菜单列表失败:', response.message);
       errorMsg.value = '加载菜单列表失败: ' + response.message;
     }
   } catch (error) {
@@ -171,23 +173,19 @@ const loadAllMenus = async () => {
 // 加载角色拥有的菜单
 const loadRoleMenus = async () => {
   if (!props.roleId) return;
-  
+
   loading.value.roleMenus = true;
   try {
-    // 获取角色详情，包含menus列表
     const roleResponse = await roleService.getRole(props.roleId);
     if (roleResponse.code === 200 && roleResponse.data.menus) {
-      // 使用更具体的类型转换方式
       roleMenus.value = roleResponse.data.menus as unknown as Menu[];
       selectedMenus.value = roleMenus.value.map(menu => menu.id);
     } else {
-      // 如果角色详情中没有menus或获取失败，尝试使用菜单服务获取
       const response = await menuService.getRoleMenus(props.roleId);
       if (response.code === 200) {
         roleMenus.value = response.data.items;
         selectedMenus.value = roleMenus.value.map(menu => menu.id);
       } else {
-        console.error('加载角色菜单失败:', response.message);
         errorMsg.value = '加载角色菜单失败: ' + response.message;
       }
     }
@@ -202,7 +200,7 @@ const loadRoleMenus = async () => {
 // 保存角色菜单完整集合
 const saveMenus = async () => {
   errorMsg.value = '';
-  
+
   loading.value.submit = true;
   try {
     const response = await roleService.replaceMenusForRole(props.roleId, {
@@ -212,7 +210,6 @@ const saveMenus = async () => {
       await loadRoleMenus();
       emit('update');
     } else {
-      console.error('保存菜单失败:', response.message);
       errorMsg.value = '保存菜单失败: ' + response.message;
     }
   } catch (error) {
@@ -224,21 +221,27 @@ const saveMenus = async () => {
 };
 
 // 监听visible变化
-watch(() => props.visible, (newValue) => {
-  if (newValue) {
-    init();
-  } else {
-    selectedMenus.value = [];
-    expandedMenus.value = [];
+watch(
+  () => props.visible,
+  newValue => {
+    if (newValue) {
+      init();
+    } else {
+      selectedMenus.value = [];
+      expandedMenus.value = [];
+    }
   }
-});
+);
 
 // 监听roleId变化
-watch(() => props.roleId, () => {
-  if (props.visible) {
-    loadRoleMenus();
+watch(
+  () => props.roleId,
+  () => {
+    if (props.visible) {
+      loadRoleMenus();
+    }
   }
-});
+);
 
 // 生命周期钩子
 onMounted(() => {
@@ -251,237 +254,161 @@ onMounted(() => {
 <template>
   <div class="role-menu-selector">
     <!-- 顶部操作栏 -->
-    <div class="mb-4 flex items-center justify-between">
-      <div class="w-64">
-        <input
-          v-model="searchKeyword"
-          type="text"
-          class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          placeholder="搜索菜单名称或代码"
-        />
-      </div>
-      <div class="flex space-x-2">
-        <button
-          @click="selectAll"
-          class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-300 transition-colors"
-        >
-          全选
-        </button>
-        <button
-          @click="deselectAll"
-          class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-300 transition-colors"
-        >
-          全不选
-        </button>
+    <div class="selector-toolbar">
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索菜单名称或代码"
+        clearable
+        :prefix-icon="'Search'"
+        style="width: 260px"
+      />
+      <div class="toolbar-actions">
+        <el-button size="small" @click="selectAll">全选</el-button>
+        <el-button size="small" @click="deselectAll">全不选</el-button>
       </div>
     </div>
 
     <!-- 错误消息 -->
-    <div v-if="errorMsg" class="mb-3 p-2 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
-      {{ errorMsg }}
-    </div>
+    <el-alert v-if="errorMsg" :title="errorMsg" type="error" show-icon :closable="false" />
 
     <!-- 菜单信息统计 -->
-    <div class="mb-3 p-2 bg-gray-50 rounded border border-gray-200 text-xs">
-      <div class="flex flex-wrap gap-3">
-        <div>总菜单数: <span class="font-semibold">{{ menuStats.total }}</span></div>
-        <div>已分配: <span class="font-semibold text-green-600">{{ menuStats.assigned }}</span></div>
-        <div>已选择: <span class="font-semibold text-blue-600">{{ menuStats.selected }}</span></div>
-        <div v-if="menuStats.toAssign > 0">待分配: <span class="font-semibold text-indigo-600">{{ menuStats.toAssign }}</span></div>
-        <div v-if="menuStats.toRemove > 0">保存后移除: <span class="font-semibold text-red-600">{{ menuStats.toRemove }}</span></div>
+    <div class="stats-bar">
+      <div class="stat-chip">
+        <span class="stat-dot dot-total"></span>
+        总菜单数 <strong>{{ menuStats.total }}</strong>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-dot dot-assigned"></span>
+        已分配 <strong>{{ menuStats.assigned }}</strong>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-dot dot-selected"></span>
+        已选择 <strong>{{ menuStats.selected }}</strong>
+      </div>
+      <div v-if="menuStats.toAssign > 0" class="stat-chip">
+        <span class="stat-dot dot-new"></span>
+        待分配 <strong>{{ menuStats.toAssign }}</strong>
+      </div>
+      <div v-if="menuStats.toRemove > 0" class="stat-chip">
+        <span class="stat-dot dot-remove"></span>
+        保存后移除 <strong>{{ menuStats.toRemove }}</strong>
       </div>
     </div>
-    
+
     <!-- 菜单标签图例 -->
-    <div class="mb-3 flex items-center gap-3 text-xs">
-      <div class="flex items-center">
-        <div class="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
-        <span>已分配菜单</span>
-      </div>
-      <div class="flex items-center">
-        <div class="w-3 h-3 rounded-full bg-blue-500 mr-1"></div>
-        <span>已选择待操作</span>
-      </div>
-      <div class="flex items-center">
-        <div class="w-3 h-3 rounded border border-gray-300 mr-1 flex items-center justify-center text-xs leading-none">
-          <span>+</span>
-        </div>
-        <span>展开子菜单</span>
-      </div>
+    <div class="legend-bar">
+      <span class="legend-item"><span class="legend-dot dot-assigned"></span>已分配菜单</span>
+      <span class="legend-item"><span class="legend-dot dot-new"></span>已选择待操作</span>
+      <span class="legend-item">
+        <el-icon :size="12"><CaretRight /></el-icon>
+        展开子菜单
+      </span>
     </div>
-    
+
     <!-- 菜单列表 -->
-    <div class="max-h-60 overflow-y-auto border rounded-md p-2 mb-4">
-      <div v-if="loading.allMenus || loading.roleMenus" class="text-center py-4">
-        <div class="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 mr-2"></div>
-        加载中...
+    <div class="menu-list">
+      <div v-if="loading.allMenus || loading.roleMenus" class="list-loading">
+        <el-icon class="is-loading" :size="26"><Loading /></el-icon>
+        <span>加载菜单中...</span>
       </div>
-      <div v-else-if="menuTree.length === 0" class="text-center py-4 text-gray-500">
-        暂无数据
-      </div>
+      <el-empty v-else-if="menuTree.length === 0" description="暂无数据" :image-size="80" />
       <div v-else>
         <!-- 扁平结构显示搜索结果 -->
         <div v-if="searchKeyword" class="space-y-1">
           <div
             v-for="menu in menuTree"
             :key="menu.id"
-            class="flex items-center p-2 rounded cursor-pointer transition-colors"
-            :class="{
-              'bg-blue-50 border border-blue-200': isMenuSelected(menu.id) && !hasRoleMenu(menu.id),
-              'bg-green-50 border border-green-200': hasRoleMenu(menu.id) && !isMenuSelected(menu.id),
-              'bg-gradient-to-r from-green-50 to-blue-50 border border-blue-200': hasRoleMenu(menu.id) && isMenuSelected(menu.id),
-              'hover:bg-gray-100 border border-transparent': !isMenuSelected(menu.id) && !hasRoleMenu(menu.id)
-            }"
+            class="menu-row"
+            :class="menuRowClass(menu.id)"
             @click="toggleSelectMenu(menu.id)"
           >
-            <input
-              type="checkbox"
-              :checked="isMenuSelected(menu.id)"
-              class="mr-2 h-4 w-4 text-indigo-600 rounded"
+            <el-checkbox
+              :model-value="isMenuSelected(menu.id)"
               @click.stop
               @change="toggleSelectMenu(menu.id)"
             />
-            <div class="flex-1 min-w-0">
-              <div class="text-sm font-medium truncate">{{ menu.menu_name }}</div>
-              <div class="text-xs text-gray-500 truncate">{{ menu.menu_code }}</div>
+            <div class="menu-info">
+              <span class="menu-name">{{ menu.menu_name }}</span>
+              <span class="menu-code">{{ menu.menu_code }}</span>
             </div>
-            <div
-              v-if="hasRoleMenu(menu.id)"
-              class="flex-shrink-0 bg-green-100 text-green-800 text-xs py-0.5 px-2 rounded-full font-medium flex items-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-              已分配
-            </div>
+            <el-tag v-if="hasRoleMenu(menu.id)" type="success" effect="light" size="small" round>已分配</el-tag>
           </div>
         </div>
-        
+
         <!-- 树结构显示所有菜单 -->
         <div v-else class="space-y-1">
           <template v-for="menu in menuTree" :key="menu.id">
             <div class="menu-item">
-              <div 
-                class="flex items-center p-2 rounded cursor-pointer transition-colors"
-                :class="{
-                  'bg-blue-50 border border-blue-200': isMenuSelected(menu.id) && !hasRoleMenu(menu.id),
-                  'bg-green-50 border border-green-200': hasRoleMenu(menu.id) && !isMenuSelected(menu.id),
-                  'bg-gradient-to-r from-green-50 to-blue-50 border border-blue-200': hasRoleMenu(menu.id) && isMenuSelected(menu.id),
-                  'hover:bg-gray-100 border border-transparent': !isMenuSelected(menu.id) && !hasRoleMenu(menu.id)
-                }"
-                @click="toggleSelectMenu(menu.id)"
-              >
-                <button 
+              <div class="menu-row" :class="menuRowClass(menu.id)" @click="toggleSelectMenu(menu.id)">
+                <button
                   v-if="menu.children && menu.children.length > 0"
-                  class="mr-1 w-5 h-5 flex items-center justify-center text-gray-500 border border-gray-300 rounded hover:bg-gray-200"
+                  class="expand-btn"
+                  :class="{ 'is-expanded': isMenuExpanded(menu.id) }"
                   @click.stop="toggleExpandMenu(menu.id)"
                 >
-                  {{ isMenuExpanded(menu.id) ? '-' : '+' }}
+                  <el-icon :size="12"><CaretRight /></el-icon>
                 </button>
-                <span v-else class="mr-1 w-5 h-5"></span>
-                
-                <input
-                  type="checkbox"
-                  :checked="isMenuSelected(menu.id)"
-                  class="mr-2 h-4 w-4 text-indigo-600 rounded"
+                <span v-else class="expand-placeholder"></span>
+
+                <el-checkbox
+                  :model-value="isMenuSelected(menu.id)"
                   @click.stop
                   @change="toggleSelectMenu(menu.id)"
                 />
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium truncate">{{ menu.menu_name }}</div>
-                  <div class="text-xs text-gray-500 truncate">{{ menu.menu_code }}</div>
+                <div class="menu-info">
+                  <span class="menu-name">{{ menu.menu_name }}</span>
+                  <span class="menu-code">{{ menu.menu_code }}</span>
                 </div>
-                <div
-                  v-if="hasRoleMenu(menu.id)"
-                  class="flex-shrink-0 bg-green-100 text-green-800 text-xs py-0.5 px-2 rounded-full font-medium flex items-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  已分配
-                </div>
+                <el-tag v-if="hasRoleMenu(menu.id)" type="success" effect="light" size="small" round>已分配</el-tag>
               </div>
-              
+
               <!-- 子菜单递归显示 -->
-              <div v-if="menu.children && menu.children.length > 0 && isMenuExpanded(menu.id)" class="pl-6 mt-1 border-l-2 border-gray-200">
+              <div v-if="menu.children && menu.children.length > 0 && isMenuExpanded(menu.id)" class="children">
                 <template v-for="child in menu.children" :key="child.id">
                   <div class="menu-item">
-                    <div 
-                      class="flex items-center p-2 rounded cursor-pointer transition-colors"
-                      :class="{
-                        'bg-blue-50 border border-blue-200': isMenuSelected(child.id) && !hasRoleMenu(child.id),
-                        'bg-green-50 border border-green-200': hasRoleMenu(child.id) && !isMenuSelected(child.id),
-                        'bg-gradient-to-r from-green-50 to-blue-50 border border-blue-200': hasRoleMenu(child.id) && isMenuSelected(child.id),
-                        'hover:bg-gray-100 border border-transparent': !isMenuSelected(child.id) && !hasRoleMenu(child.id)
-                      }"
-                      @click="toggleSelectMenu(child.id)"
-                    >
-                      <button 
+                    <div class="menu-row" :class="menuRowClass(child.id)" @click="toggleSelectMenu(child.id)">
+                      <button
                         v-if="child.children && child.children.length > 0"
-                        class="mr-1 w-5 h-5 flex items-center justify-center text-gray-500 border border-gray-300 rounded hover:bg-gray-200"
+                        class="expand-btn"
+                        :class="{ 'is-expanded': isMenuExpanded(child.id) }"
                         @click.stop="toggleExpandMenu(child.id)"
                       >
-                        {{ isMenuExpanded(child.id) ? '-' : '+' }}
+                        <el-icon :size="12"><CaretRight /></el-icon>
                       </button>
-                      <span v-else class="mr-1 w-5 h-5"></span>
-                      
-                      <input
-                        type="checkbox"
-                        :checked="isMenuSelected(child.id)"
-                        class="mr-2 h-4 w-4 text-indigo-600 rounded"
+                      <span v-else class="expand-placeholder"></span>
+
+                      <el-checkbox
+                        :model-value="isMenuSelected(child.id)"
                         @click.stop
                         @change="toggleSelectMenu(child.id)"
                       />
-                      <div class="flex-1 min-w-0">
-                        <div class="text-sm font-medium truncate">{{ child.menu_name }}</div>
-                        <div class="text-xs text-gray-500 truncate">{{ child.menu_code }}</div>
+                      <div class="menu-info">
+                        <span class="menu-name">{{ child.menu_name }}</span>
+                        <span class="menu-code">{{ child.menu_code }}</span>
                       </div>
-                      <div
-                        v-if="hasRoleMenu(child.id)"
-                        class="flex-shrink-0 bg-green-100 text-green-800 text-xs py-0.5 px-2 rounded-full font-medium flex items-center"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                        已分配
-                      </div>
+                      <el-tag v-if="hasRoleMenu(child.id)" type="success" effect="light" size="small" round>已分配</el-tag>
                     </div>
-                    
-                    <!-- 三级菜单递归显示（可根据需求扩展更多层级） -->
-                    <div v-if="child.children && child.children.length > 0 && isMenuExpanded(child.id)" class="pl-6 mt-1 border-l-2 border-gray-200">
-                      <div 
-                        v-for="grandchild in child.children" 
+
+                    <!-- 三级菜单递归显示 -->
+                    <div v-if="child.children && child.children.length > 0 && isMenuExpanded(child.id)" class="children">
+                      <div
+                        v-for="grandchild in child.children"
                         :key="grandchild.id"
-                        class="flex items-center p-2 rounded cursor-pointer transition-colors"
-                        :class="{
-                          'bg-blue-50 border border-blue-200': isMenuSelected(grandchild.id) && !hasRoleMenu(grandchild.id),
-                          'bg-green-50 border border-green-200': hasRoleMenu(grandchild.id) && !isMenuSelected(grandchild.id),
-                          'bg-gradient-to-r from-green-50 to-blue-50 border border-blue-200': hasRoleMenu(grandchild.id) && isMenuSelected(grandchild.id),
-                          'hover:bg-gray-100 border border-transparent': !isMenuSelected(grandchild.id) && !hasRoleMenu(grandchild.id)
-                        }"
+                        class="menu-row"
+                        :class="menuRowClass(grandchild.id)"
                         @click="toggleSelectMenu(grandchild.id)"
                       >
-                        <span class="mr-1 w-5 h-5"></span>
-                        <input
-                          type="checkbox"
-                          :checked="isMenuSelected(grandchild.id)"
-                          class="mr-2 h-4 w-4 text-indigo-600 rounded"
+                        <span class="expand-placeholder"></span>
+                        <el-checkbox
+                          :model-value="isMenuSelected(grandchild.id)"
                           @click.stop
                           @change="toggleSelectMenu(grandchild.id)"
                         />
-                        <div class="flex-1 min-w-0">
-                          <div class="text-sm font-medium truncate">{{ grandchild.menu_name }}</div>
-                          <div class="text-xs text-gray-500 truncate">{{ grandchild.menu_code }}</div>
+                        <div class="menu-info">
+                          <span class="menu-name">{{ grandchild.menu_name }}</span>
+                          <span class="menu-code">{{ grandchild.menu_code }}</span>
                         </div>
-                        <div
-                          v-if="hasRoleMenu(grandchild.id)"
-                          class="flex-shrink-0 bg-green-100 text-green-800 text-xs py-0.5 px-2 rounded-full font-medium flex items-center"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                          </svg>
-                          已分配
-                        </div>
+                        <el-tag v-if="hasRoleMenu(grandchild.id)" type="success" effect="light" size="small" round>已分配</el-tag>
                       </div>
                     </div>
                   </div>
@@ -492,47 +419,218 @@ onMounted(() => {
         </div>
       </div>
     </div>
-    
+
     <!-- 底部按钮 -->
-    <div class="flex justify-between">
-      <div>
-        <span class="text-sm text-gray-500">保存后拥有 {{ selectedMenus.length }} 项菜单</span>
-      </div>
-      <div class="flex space-x-2">
-        <button
-          @click="saveMenus"
-          :disabled="loading.submit"
-          class="bg-indigo-600 text-white py-1 px-3 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <span v-if="loading.submit" class="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></span>
-          保存菜单
-        </button>
-      </div>
+    <div class="selector-footer">
+      <span class="selected-count">保存后拥有 {{ selectedMenus.length }} 项菜单</span>
+      <el-button type="primary" :loading="loading.submit" @click="saveMenus">保存菜单</el-button>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* 滚动条美化 */
-.max-h-60::-webkit-scrollbar {
-  width: 6px;
+.role-menu-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.max-h-60::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
+.selector-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.max-h-60::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
 }
 
-.max-h-60::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+.stats-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--app-fill-1);
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
 }
 
-.menu-item {
-  margin-bottom: 4px;
+.stat-chip,
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
-</style> 
+
+.stat-chip strong {
+  color: var(--el-text-color-primary);
+}
+
+.stat-dot,
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-total {
+  background: #94a3b8;
+}
+
+.dot-assigned {
+  background: var(--el-color-success);
+}
+
+.dot-selected {
+  background: var(--el-color-primary);
+}
+
+.dot-new {
+  background: #8b5cf6;
+}
+
+.dot-remove {
+  background: var(--el-color-danger);
+}
+
+.legend-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.legend-item .el-icon {
+  color: var(--el-text-color-secondary);
+}
+
+.menu-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--app-fill-2);
+}
+
+.list-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 0;
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+}
+
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-card-bg);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 6px;
+}
+
+.menu-row:hover {
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.menu-row.is-assigned {
+  border-color: var(--el-color-success-light-5);
+  background: var(--el-color-success-light-9);
+}
+
+.menu-row.is-selected-new {
+  border-color: var(--el-color-primary-light-5);
+  background: var(--el-color-primary-light-9);
+}
+
+.menu-row.is-removing {
+  border-color: var(--el-color-danger-light-5);
+  background: var(--el-color-danger-light-9);
+}
+
+.menu-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.menu-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-code {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-card-bg);
+  color: var(--el-text-color-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.expand-btn:hover {
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary);
+}
+
+.expand-btn.is-expanded .el-icon {
+  transform: rotate(90deg);
+}
+
+.expand-btn .el-icon {
+  transition: transform 0.2s;
+}
+
+.expand-placeholder {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.children {
+  margin-left: 26px;
+  padding-left: 12px;
+  border-left: 2px solid var(--el-border-color-lighter);
+}
+
+.selector-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.selected-count {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+</style>

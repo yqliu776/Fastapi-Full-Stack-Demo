@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { permissionService } from '@/services/permissionService';
 import type {
   ApiPermission,
@@ -11,10 +12,9 @@ import type {
 import { useUserStore } from '@/stores/user';
 import { handleComponentError } from '@/utils/errorHandlers';
 
-// 获取用户信息
 const userStore = useUserStore();
 
-// 状态
+// 权限列表状态
 const permissions = ref<Permission[]>([]);
 const permissionOptions = ref<Permission[]>([]);
 const totalPermissions = ref(0);
@@ -25,6 +25,8 @@ const searchForm = reactive({
   permission_name: '',
   permission_code: ''
 });
+
+// API权限绑定状态
 const apiPermissions = ref<ApiPermission[]>([]);
 const totalApiPermissions = ref(0);
 const apiLoading = ref(false);
@@ -45,13 +47,6 @@ const showEditApiModal = ref(false);
 const currentPermission = ref<Permission | null>(null);
 const currentApiPermission = ref<ApiPermission | null>(null);
 
-// 消息通知状态
-const notification = reactive({
-  show: false,
-  message: '',
-  type: 'success' // success, error, warning
-});
-
 // 表单数据
 const permissionForm = reactive<PermissionCreate & PermissionUpdate>({
   permission_name: '',
@@ -71,18 +66,6 @@ const apiPermissionForm = reactive<ApiPermissionCreate>({
   last_update_login: '-1'
 });
 
-// 显示通知
-const showNotification = (message: string, type: 'success' | 'error' | 'warning') => {
-  notification.message = message;
-  notification.type = type;
-  notification.show = true;
-  
-  // 3秒后自动关闭
-  setTimeout(() => {
-    notification.show = false;
-  }, 3000);
-};
-
 // 加载权限列表
 const loadPermissions = async () => {
   loading.value = true;
@@ -98,12 +81,10 @@ const loadPermissions = async () => {
       permissions.value = response.data.items;
       totalPermissions.value = response.data.total;
     } else {
-      console.error('加载权限列表失败:', response.message);
-      showNotification('加载权限列表失败: ' + response.message, 'error');
+      ElMessage.error('加载权限列表失败: ' + response.message);
     }
   } catch (error: any) {
-    const errorMessage = handleComponentError(error, '加载权限列表出错');
-    showNotification(errorMessage, 'error');
+    ElMessage.error(handleComponentError(error, '加载权限列表出错'));
   } finally {
     loading.value = false;
   }
@@ -134,11 +115,10 @@ const loadApiPermissions = async () => {
       apiPermissions.value = response.data.items;
       totalApiPermissions.value = response.data.total;
     } else {
-      showNotification('加载API权限绑定失败: ' + response.message, 'error');
+      ElMessage.error('加载API权限绑定失败: ' + response.message);
     }
   } catch (error: any) {
-    const errorMessage = handleComponentError(error, '加载API权限绑定出错');
-    showNotification(errorMessage, 'error');
+    ElMessage.error(handleComponentError(error, '加载API权限绑定出错'));
   } finally {
     apiLoading.value = false;
   }
@@ -150,7 +130,6 @@ const searchPermissions = () => {
   loadPermissions();
 };
 
-// 重置搜索
 const resetSearch = () => {
   searchForm.permission_name = '';
   searchForm.permission_code = '';
@@ -171,15 +150,14 @@ const resetApiSearch = () => {
 
 // 打开创建权限模态框
 const openCreateModal = () => {
-  // 使用当前用户ID或默认值
   const userId = userStore.userInfo?.id.toString() || '-1';
-  
+
   permissionForm.permission_name = '';
   permissionForm.permission_code = '';
   permissionForm.created_by = userId;
   permissionForm.last_updated_by = userId;
   permissionForm.last_update_login = userId;
-  
+
   showCreateModal.value = true;
 };
 
@@ -208,36 +186,34 @@ const createPermission = async () => {
     if (response.code === 200) {
       showCreateModal.value = false;
       loadPermissions();
-      showNotification('权限创建成功', 'success');
+      loadPermissionOptions();
+      ElMessage.success('权限创建成功');
     } else {
-      console.error('创建权限失败:', response.message);
-      showNotification('创建权限失败: ' + response.message, 'error');
+      ElMessage.error('创建权限失败: ' + response.message);
     }
   } catch (error: any) {
-    const errorMessage = handleComponentError(error, '创建权限出错');
-    showNotification(errorMessage, 'error');
+    ElMessage.error(handleComponentError(error, '创建权限出错'));
   }
 };
 
 // 打开编辑权限模态框
 const openEditModal = (permission: Permission) => {
   currentPermission.value = permission;
-  
-  // 使用当前用户ID或默认值
+
   const userId = userStore.userInfo?.id.toString() || '-1';
-  
+
   permissionForm.permission_name = permission.permission_name;
   permissionForm.permission_code = permission.permission_code;
   permissionForm.last_updated_by = userId;
   permissionForm.last_update_login = userId;
-  
+
   showEditModal.value = true;
 };
 
 // 更新权限
 const updatePermission = async () => {
   if (!currentPermission.value) return;
-  
+
   try {
     const response = await permissionService.updatePermission(currentPermission.value.id, {
       permission_name: permissionForm.permission_name,
@@ -247,33 +223,40 @@ const updatePermission = async () => {
     if (response.code === 200) {
       showEditModal.value = false;
       loadPermissions();
-      showNotification('权限更新成功', 'success');
+      loadPermissionOptions();
+      ElMessage.success('权限更新成功');
     } else {
-      console.error('更新权限失败:', response.message);
-      showNotification('更新权限失败: ' + response.message, 'error');
+      ElMessage.error('更新权限失败: ' + response.message);
     }
   } catch (error: any) {
-    const errorMessage = handleComponentError(error, '更新权限出错');
-    showNotification(errorMessage, 'error');
+    ElMessage.error(handleComponentError(error, '更新权限出错'));
   }
 };
 
 // 删除权限
 const deletePermission = async (permission: Permission) => {
-  if (!confirm(`确定要删除权限"${permission.permission_name}"吗？`)) return;
-  
+  try {
+    await ElMessageBox.confirm(`确定要删除权限"${permission.permission_name}"吗？`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+      confirmButtonClass: 'el-button--danger'
+    });
+  } catch {
+    return;
+  }
+
   try {
     const response = await permissionService.deletePermission(permission.id);
     if (response.code === 200) {
       loadPermissions();
-      showNotification('权限删除成功', 'success');
+      loadPermissionOptions();
+      ElMessage.success('权限删除成功');
     } else {
-      console.error('删除权限失败:', response.message);
-      showNotification('删除权限失败: ' + response.message, 'error');
+      ElMessage.error('删除权限失败: ' + response.message);
     }
   } catch (error: any) {
-    const errorMessage = handleComponentError(error, '删除权限出错');
-    showNotification(errorMessage, 'error');
+    ElMessage.error(handleComponentError(error, '删除权限出错'));
   }
 };
 
@@ -283,13 +266,12 @@ const createApiPermission = async () => {
     if (response.code === 200) {
       showCreateApiModal.value = false;
       loadApiPermissions();
-      showNotification('API权限绑定创建成功', 'success');
+      ElMessage.success('API权限绑定创建成功');
     } else {
-      showNotification('API权限绑定创建失败: ' + response.message, 'error');
+      ElMessage.error('API权限绑定创建失败: ' + response.message);
     }
   } catch (error: any) {
-    const errorMessage = handleComponentError(error, 'API权限绑定创建出错');
-    showNotification(errorMessage, 'error');
+    ElMessage.error(handleComponentError(error, 'API权限绑定创建出错'));
   }
 };
 
@@ -324,34 +306,45 @@ const updateApiPermission = async () => {
     if (response.code === 200) {
       showEditApiModal.value = false;
       loadApiPermissions();
-      showNotification('API权限绑定更新成功', 'success');
+      ElMessage.success('API权限绑定更新成功');
     } else {
-      showNotification('API权限绑定更新失败: ' + response.message, 'error');
+      ElMessage.error('API权限绑定更新失败: ' + response.message);
     }
   } catch (error: any) {
-    const errorMessage = handleComponentError(error, 'API权限绑定更新出错');
-    showNotification(errorMessage, 'error');
+    ElMessage.error(handleComponentError(error, 'API权限绑定更新出错'));
   }
 };
 
 const deleteApiPermission = async (apiPermission: ApiPermission) => {
-  if (!confirm(`确定要删除API权限绑定"${apiPermission.method} ${apiPermission.path_pattern}"吗？`)) return;
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除API权限绑定"${apiPermission.method} ${apiPermission.path_pattern}"吗？`,
+      '删除确认',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    );
+  } catch {
+    return;
+  }
 
   try {
     const response = await permissionService.deleteApiPermission(apiPermission.id);
     if (response.code === 200) {
       loadApiPermissions();
-      showNotification('API权限绑定删除成功', 'success');
+      ElMessage.success('API权限绑定删除成功');
     } else {
-      showNotification('API权限绑定删除失败: ' + response.message, 'error');
+      ElMessage.error('API权限绑定删除失败: ' + response.message);
     }
   } catch (error: any) {
-    const errorMessage = handleComponentError(error, 'API权限绑定删除出错');
-    showNotification(errorMessage, 'error');
+    ElMessage.error(handleComponentError(error, 'API权限绑定删除出错'));
   }
 };
 
-// 页面变化处理
+// 分页处理
 const handlePageChange = (page: number) => {
   currentPage.value = page;
   loadPermissions();
@@ -360,6 +353,23 @@ const handlePageChange = (page: number) => {
 const handleApiPageChange = (page: number) => {
   currentApiPage.value = page;
   loadApiPermissions();
+};
+
+// HTTP 方法标签类型
+const getMethodType = (method: string): 'primary' | 'success' | 'warning' | 'danger' | 'info' => {
+  switch (method) {
+    case 'GET':
+      return 'primary';
+    case 'POST':
+      return 'success';
+    case 'PUT':
+    case 'PATCH':
+      return 'warning';
+    case 'DELETE':
+      return 'danger';
+    default:
+      return 'info';
+  }
 };
 
 // 初始化
@@ -371,634 +381,331 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <h1 class="text-2xl font-semibold text-gray-900 mb-6">权限管理</h1>
-    
-    <!-- 消息通知 -->
-    <transition name="fade">
-      <div 
-        v-if="notification.show" 
-        :class="[
-          'fixed top-4 right-4 z-50 py-2 px-4 rounded shadow-lg transition-opacity',
-          notification.type === 'success' ? 'bg-green-500 text-white' : 
-          notification.type === 'error' ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'
-        ]"
-      >
-        {{ notification.message }}
-      </div>
-    </transition>
-    
-    <!-- 搜索表单 -->
-    <div class="bg-white p-4 rounded shadow mb-4">
-      <div class="flex flex-wrap gap-4 items-end">
-        <div class="w-full md:w-auto">
-          <label class="block text-sm font-medium text-gray-700 mb-1">权限名称</label>
-          <input 
-            v-model="searchForm.permission_name"
-            type="text" 
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="请输入权限名称"
-          />
-        </div>
-        <div class="w-full md:w-auto">
-          <label class="block text-sm font-medium text-gray-700 mb-1">权限代码</label>
-          <input 
-            v-model="searchForm.permission_code"
-            type="text" 
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="请输入权限代码"
-          />
-        </div>
-        <div class="flex gap-2">
-          <button 
-            @click="searchPermissions"
-            class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150"
-          >
-            搜索
-          </button>
-          <button 
-            @click="resetSearch"
-            class="bg-gray-100 text-gray-700 py-2 px-4 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-150"
-          >
-            重置
-          </button>
-          <button 
-            @click="openCreateModal"
-            class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150"
-          >
-            创建权限
-          </button>
-        </div>
-      </div>
+  <div class="permission-management">
+    <div class="page-heading">
+      <h1 class="page-heading__title">
+        <span class="page-heading__icon"><el-icon><Lock /></el-icon></span>
+        权限管理
+      </h1>
     </div>
-    
+
     <!-- 权限列表 -->
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">权限名称</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">权限代码</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最后更新</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-if="loading" class="text-center">
-              <td colspan="6" class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500 text-center w-full">加载中...</div>
-              </td>
-            </tr>
-            <tr v-else-if="permissions.length === 0" class="text-center">
-              <td colspan="6" class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500 text-center w-full">暂无权限数据</div>
-              </td>
-            </tr>
-            <tr v-for="permission in permissions" :key="permission.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ permission.id }}</td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">{{ permission.permission_name }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-500">{{ permission.permission_code }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ new Date(permission.creation_date).toLocaleString() }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ new Date(permission.last_update_date).toLocaleString() }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div class="flex gap-2">
-                  <button 
-                    @click="openEditModal(permission)" 
-                    class="text-indigo-600 hover:text-indigo-900 transition duration-150"
-                  >
-                    编辑
-                  </button>
-                  <button 
-                    @click="deletePermission(permission)" 
-                    class="text-red-600 hover:text-red-900 transition duration-150"
-                  >
-                    删除
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="page-card">
+      <div class="page-card__header">
+        <el-icon><Key /></el-icon>
+        权限列表
+        <div class="header-spacer"></div>
+        <el-button type="primary" size="small" :icon="'Plus'" @click="openCreateModal">创建权限</el-button>
       </div>
-      
-      <!-- 分页 -->
-      <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-          <div>
-            <p class="text-sm text-gray-700">
-              显示 
-              <span class="font-medium">{{ (currentPage - 1) * pageSize + 1 }}</span>
-              至
-              <span class="font-medium">{{ Math.min(currentPage * pageSize, totalPermissions) }}</span>
-              条，共
-              <span class="font-medium">{{ totalPermissions }}</span>
-              条记录
-            </p>
-          </div>
-          <div>
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button
-                @click="handlePageChange(currentPage - 1)"
-                :disabled="currentPage === 1"
-                :class="[
-                  'relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium',
-                  currentPage === 1 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-500 hover:bg-gray-50 cursor-pointer'
-                ]"
-              >
-                上一页
-              </button>
-              <button
-                @click="handlePageChange(currentPage + 1)"
-                :disabled="currentPage * pageSize >= totalPermissions"
-                :class="[
-                  'relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium',
-                  currentPage * pageSize >= totalPermissions 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-500 hover:bg-gray-50 cursor-pointer'
-                ]"
-              >
-                下一页
-              </button>
-            </nav>
-          </div>
-        </div>
+      <div class="page-card__body search-body">
+        <el-form inline @submit.prevent="searchPermissions">
+          <el-form-item label="权限名称">
+            <el-input v-model="searchForm.permission_name" placeholder="请输入权限名称" clearable style="width: 180px" />
+          </el-form-item>
+          <el-form-item label="权限代码">
+            <el-input v-model="searchForm.permission_code" placeholder="请输入权限代码" clearable style="width: 180px" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" :icon="'Search'" @click="searchPermissions">搜索</el-button>
+            <el-button :icon="'Refresh'" @click="resetSearch">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <el-table v-loading="loading" :data="permissions" stripe style="width: 100%">
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column label="权限名称" min-width="160">
+          <template #default="{ row }">
+            <span class="permission-name">{{ row.permission_name }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="权限代码" min-width="160">
+          <template #default="{ row }">
+            <el-tag effect="plain" type="primary">{{ row.permission_code }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" min-width="170">
+          <template #default="{ row }">{{ new Date(row.creation_date).toLocaleString() }}</template>
+        </el-table-column>
+        <el-table-column label="最后更新" min-width="170">
+          <template #default="{ row }">{{ new Date(row.last_update_date).toLocaleString() }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <div class="table-actions">
+              <el-button size="small" :icon="'Edit'" @click="openEditModal(row)">编辑</el-button>
+              <el-button size="small" type="danger" plain :icon="'Delete'" @click="deletePermission(row)">删除</el-button>
+            </div>
+          </template>
+        </el-table-column>
+        <template #empty>
+          <el-empty description="暂无权限数据" />
+        </template>
+      </el-table>
+
+      <div class="table-footer">
+        <span class="table-total">共 {{ totalPermissions }} 条记录</span>
+        <el-pagination
+          v-model:current-page="currentPage"
+          :page-size="pageSize"
+          :total="totalPermissions"
+          background
+          layout="prev, pager, next"
+          @current-change="handlePageChange"
+        />
       </div>
     </div>
 
-    <div class="mt-6">
-      <h2 class="text-xl font-semibold text-gray-900 mb-4">API权限绑定</h2>
-
-      <div class="bg-white p-4 rounded shadow mb-4">
-        <div class="flex flex-wrap gap-4 items-end">
-          <div class="w-full md:w-auto">
-            <label class="block text-sm font-medium text-gray-700 mb-1">HTTP方法</label>
-            <select
-              v-model="apiSearchForm.method"
-              class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            >
-              <option value="">全部</option>
-              <option v-for="method in methodOptions" :key="method" :value="method">{{ method }}</option>
-            </select>
-          </div>
-          <div class="w-full md:w-auto">
-            <label class="block text-sm font-medium text-gray-700 mb-1">API路径</label>
-            <input
-              v-model="apiSearchForm.path_pattern"
-              type="text"
-              class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              placeholder="/roles/{role_id}"
-            />
-          </div>
-          <div class="w-full md:w-auto">
-            <label class="block text-sm font-medium text-gray-700 mb-1">权限代码</label>
-            <input
-              v-model="apiSearchForm.permission_code"
-              type="text"
-              class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              placeholder="PERMISSION_MANAGE"
-            />
-          </div>
-          <div class="flex gap-2">
-            <button
-              @click="searchApiPermissions"
-              class="bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150"
-            >
-              搜索
-            </button>
-            <button
-              @click="resetApiSearch"
-              class="bg-gray-100 text-gray-700 py-2 px-4 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-150"
-            >
-              重置
-            </button>
-            <button
-              @click="openCreateApiModal"
-              class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150"
-            >
-              创建绑定
-            </button>
-          </div>
-        </div>
+    <!-- API权限绑定 -->
+    <div class="page-card">
+      <div class="page-card__header">
+        <el-icon><Connection /></el-icon>
+        API权限绑定
+        <div class="header-spacer"></div>
+        <el-button type="success" size="small" :icon="'Plus'" @click="openCreateApiModal">创建API绑定</el-button>
+      </div>
+      <div class="page-card__body search-body">
+        <el-form inline @submit.prevent="searchApiPermissions">
+          <el-form-item label="HTTP方法">
+            <el-select v-model="apiSearchForm.method" placeholder="全部" clearable style="width: 120px">
+              <el-option v-for="method in methodOptions" :key="method" :label="method" :value="method" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="API路径">
+            <el-input v-model="apiSearchForm.path_pattern" placeholder="请输入API路径" clearable style="width: 200px" />
+          </el-form-item>
+          <el-form-item label="权限代码">
+            <el-input v-model="apiSearchForm.permission_code" placeholder="请输入权限代码" clearable style="width: 180px" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" :icon="'Search'" @click="searchApiPermissions">搜索</el-button>
+            <el-button :icon="'Refresh'" @click="resetApiSearch">重置</el-button>
+          </el-form-item>
+        </el-form>
       </div>
 
-      <div class="bg-white shadow rounded-lg overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">方法</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API路径</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">权限代码</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">说明</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-if="apiLoading" class="text-center">
-                <td colspan="7" class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-500 text-center w-full">加载中...</div>
-                </td>
-              </tr>
-              <tr v-else-if="apiPermissions.length === 0" class="text-center">
-                <td colspan="7" class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-500 text-center w-full">暂无API权限绑定</div>
-                </td>
-              </tr>
-              <tr v-for="apiPermission in apiPermissions" :key="apiPermission.id" class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ apiPermission.id }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700">
-                    {{ apiPermission.method }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ apiPermission.path_pattern }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ apiPermission.permission_code }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span
-                    :class="[
-                      'inline-flex items-center rounded px-2 py-1 text-xs font-medium',
-                      apiPermission.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                    ]"
-                  >
-                    {{ apiPermission.enabled ? '启用' : '停用' }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ apiPermission.description || '-' }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div class="flex gap-2">
-                    <button
-                      @click="openEditApiModal(apiPermission)"
-                      class="text-indigo-600 hover:text-indigo-900 transition duration-150"
-                    >
-                      编辑
-                    </button>
-                    <button
-                      @click="deleteApiPermission(apiPermission)"
-                      class="text-red-600 hover:text-red-900 transition duration-150"
-                    >
-                      删除
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <el-table v-loading="apiLoading" :data="apiPermissions" stripe style="width: 100%">
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column label="HTTP方法" width="110">
+          <template #default="{ row }">
+            <el-tag :type="getMethodType(row.method)" effect="dark" size="small">{{ row.method }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="API路径" min-width="200">
+          <template #default="{ row }">
+            <code class="path-code">{{ row.path_pattern }}</code>
+          </template>
+        </el-table-column>
+        <el-table-column label="权限代码" min-width="150">
+          <template #default="{ row }">{{ row.permission_code }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.enabled ? 'success' : 'info'" effect="light" round>
+              {{ row.enabled ? '启用' : '停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="说明" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.description || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <div class="table-actions">
+              <el-button size="small" :icon="'Edit'" @click="openEditApiModal(row)">编辑</el-button>
+              <el-button size="small" type="danger" plain :icon="'Delete'" @click="deleteApiPermission(row)">删除</el-button>
+            </div>
+          </template>
+        </el-table-column>
+        <template #empty>
+          <el-empty description="暂无API权限绑定" />
+        </template>
+      </el-table>
 
-        <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p class="text-sm text-gray-700">
-                显示
-                <span class="font-medium">{{ totalApiPermissions === 0 ? 0 : (currentApiPage - 1) * apiPageSize + 1 }}</span>
-                至
-                <span class="font-medium">{{ Math.min(currentApiPage * apiPageSize, totalApiPermissions) }}</span>
-                条，共
-                <span class="font-medium">{{ totalApiPermissions }}</span>
-                条记录
-              </p>
-            </div>
-            <div>
-              <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button
-                  @click="handleApiPageChange(currentApiPage - 1)"
-                  :disabled="currentApiPage === 1"
-                  :class="[
-                    'relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium',
-                    currentApiPage === 1
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-500 hover:bg-gray-50 cursor-pointer'
-                  ]"
-                >
-                  上一页
-                </button>
-                <button
-                  @click="handleApiPageChange(currentApiPage + 1)"
-                  :disabled="currentApiPage * apiPageSize >= totalApiPermissions"
-                  :class="[
-                    'relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium',
-                    currentApiPage * apiPageSize >= totalApiPermissions
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-500 hover:bg-gray-50 cursor-pointer'
-                  ]"
-                >
-                  下一页
-                </button>
-              </nav>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 创建权限模态框 -->
-    <div v-if="showCreateModal" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- 背景遮罩 -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showCreateModal = false"></div>
-        
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-              创建权限
-            </h3>
-            <div class="mt-2">
-              <div class="mb-4">
-                <label for="permission_name" class="block text-sm font-medium text-gray-700 mb-1">权限名称</label>
-                <input 
-                  id="permission_name"
-                  v-model="permissionForm.permission_name"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入权限名称"
-                  required
-                />
-              </div>
-              <div class="mb-4">
-                <label for="permission_code" class="block text-sm font-medium text-gray-700 mb-1">权限代码</label>
-                <input 
-                  id="permission_code"
-                  v-model="permissionForm.permission_code"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入权限代码"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              @click="createPermission"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              创建
-            </button>
-            <button 
-              @click="showCreateModal = false"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 编辑权限模态框 -->
-    <div v-if="showEditModal" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- 背景遮罩 -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showEditModal = false"></div>
-        
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-              编辑权限
-            </h3>
-            <div class="mt-2">
-              <div class="mb-4">
-                <label for="edit_permission_name" class="block text-sm font-medium text-gray-700 mb-1">权限名称</label>
-                <input 
-                  id="edit_permission_name"
-                  v-model="permissionForm.permission_name"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入权限名称"
-                  required
-                />
-              </div>
-              <div class="mb-4">
-                <label for="edit_permission_code" class="block text-sm font-medium text-gray-700 mb-1">权限代码</label>
-                <input 
-                  id="edit_permission_code"
-                  v-model="permissionForm.permission_code"
-                  type="text" 
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入权限代码"
-                  required
-                  disabled
-                />
-                <p class="mt-1 text-xs text-gray-500">权限代码创建后不可修改，代码会用于 API 绑定和路由鉴权</p>
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              @click="updatePermission"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              更新
-            </button>
-            <button 
-              @click="showEditModal = false"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              取消
-            </button>
-          </div>
-        </div>
+      <div class="table-footer">
+        <span class="table-total">共 {{ totalApiPermissions }} 条记录</span>
+        <el-pagination
+          v-model:current-page="currentApiPage"
+          :page-size="apiPageSize"
+          :total="totalApiPermissions"
+          background
+          layout="prev, pager, next"
+          @current-change="handleApiPageChange"
+        />
       </div>
     </div>
 
-    <div v-if="showCreateApiModal" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showCreateApiModal = false"></div>
+    <!-- 创建权限弹窗 -->
+    <el-dialog v-model="showCreateModal" title="创建权限" width="480px" destroy-on-close>
+      <el-form :model="permissionForm" label-width="90px">
+        <el-form-item label="权限名称" required>
+          <el-input v-model="permissionForm.permission_name" placeholder="请输入权限名称" />
+        </el-form-item>
+        <el-form-item label="权限代码" required>
+          <el-input v-model="permissionForm.permission_code" placeholder="如 user:create" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCreateModal = false">取消</el-button>
+        <el-button type="primary" @click="createPermission">确认创建</el-button>
+      </template>
+    </el-dialog>
 
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-              创建API权限绑定
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label for="api_method" class="block text-sm font-medium text-gray-700 mb-1">HTTP方法</label>
-                <select
-                  id="api_method"
-                  v-model="apiPermissionForm.method"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                >
-                  <option v-for="method in methodOptions" :key="method" :value="method">{{ method }}</option>
-                </select>
-              </div>
-              <div>
-                <label for="api_permission_code" class="block text-sm font-medium text-gray-700 mb-1">权限代码</label>
-                <select
-                  id="api_permission_code"
-                  v-model="apiPermissionForm.permission_code"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                >
-                  <option value="" disabled>请选择权限代码</option>
-                  <option
-                    v-for="permission in permissionOptions"
-                    :key="permission.id"
-                    :value="permission.permission_code"
-                  >
-                    {{ permission.permission_code }} - {{ permission.permission_name }}
-                  </option>
-                </select>
-              </div>
-              <div class="md:col-span-2">
-                <label for="api_path_pattern" class="block text-sm font-medium text-gray-700 mb-1">API路径</label>
-                <input
-                  id="api_path_pattern"
-                  v-model="apiPermissionForm.path_pattern"
-                  type="text"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="/roles/{role_id}"
-                  required
-                />
-              </div>
-              <div class="md:col-span-2">
-                <label for="api_description" class="block text-sm font-medium text-gray-700 mb-1">说明</label>
-                <input
-                  id="api_description"
-                  v-model="apiPermissionForm.description"
-                  type="text"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入说明"
-                />
-              </div>
-              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  v-model="apiPermissionForm.enabled"
-                  type="checkbox"
-                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                启用
-              </label>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              @click="createApiPermission"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              创建
-            </button>
-            <button
-              @click="showCreateApiModal = false"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              取消
-            </button>
-          </div>
+    <!-- 编辑权限弹窗 -->
+    <el-dialog v-model="showEditModal" title="编辑权限" width="480px" destroy-on-close>
+      <el-form :model="permissionForm" label-width="90px">
+        <el-form-item label="权限名称" required>
+          <el-input v-model="permissionForm.permission_name" placeholder="请输入权限名称" />
+        </el-form-item>
+        <el-form-item label="权限代码">
+          <el-input v-model="permissionForm.permission_code" disabled />
+          <div class="form-tip">权限代码创建后不可修改，代码会用于 API 绑定和路由鉴权</div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditModal = false">取消</el-button>
+        <el-button type="primary" @click="updatePermission">保存修改</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 创建API权限绑定弹窗 -->
+    <el-dialog v-model="showCreateApiModal" title="创建API权限绑定" width="600px" destroy-on-close>
+      <el-form :model="apiPermissionForm" label-width="90px">
+        <div class="form-grid">
+          <el-form-item label="HTTP方法" required>
+            <el-select v-model="apiPermissionForm.method" style="width: 100%">
+              <el-option v-for="method in methodOptions" :key="method" :label="method" :value="method" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="权限代码" required>
+            <el-select v-model="apiPermissionForm.permission_code" placeholder="请选择权限代码" style="width: 100%">
+              <el-option
+                v-for="permission in permissionOptions"
+                :key="permission.id"
+                :label="`${permission.permission_code} - ${permission.permission_name}`"
+                :value="permission.permission_code"
+              />
+            </el-select>
+          </el-form-item>
         </div>
-      </div>
-    </div>
+        <el-form-item label="API路径" required>
+          <el-input v-model="apiPermissionForm.path_pattern" placeholder="/roles/{role_id}" />
+        </el-form-item>
+        <el-form-item label="说明">
+          <el-input v-model="apiPermissionForm.description" placeholder="请输入说明" />
+        </el-form-item>
+        <el-form-item label="启用">
+          <el-switch v-model="apiPermissionForm.enabled" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCreateApiModal = false">取消</el-button>
+        <el-button type="primary" @click="createApiPermission">确认创建</el-button>
+      </template>
+    </el-dialog>
 
-    <div v-if="showEditApiModal" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showEditApiModal = false"></div>
-
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-              编辑API权限绑定
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label for="edit_api_method" class="block text-sm font-medium text-gray-700 mb-1">HTTP方法</label>
-                <select
-                  id="edit_api_method"
-                  v-model="apiPermissionForm.method"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                >
-                  <option v-for="method in methodOptions" :key="method" :value="method">{{ method }}</option>
-                </select>
-              </div>
-              <div>
-                <label for="edit_api_permission_code" class="block text-sm font-medium text-gray-700 mb-1">权限代码</label>
-                <select
-                  id="edit_api_permission_code"
-                  v-model="apiPermissionForm.permission_code"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  required
-                >
-                  <option
-                    v-for="permission in permissionOptions"
-                    :key="permission.id"
-                    :value="permission.permission_code"
-                  >
-                    {{ permission.permission_code }} - {{ permission.permission_name }}
-                  </option>
-                </select>
-              </div>
-              <div class="md:col-span-2">
-                <label for="edit_api_path_pattern" class="block text-sm font-medium text-gray-700 mb-1">API路径</label>
-                <input
-                  id="edit_api_path_pattern"
-                  v-model="apiPermissionForm.path_pattern"
-                  type="text"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="/roles/{role_id}"
-                  required
-                />
-              </div>
-              <div class="md:col-span-2">
-                <label for="edit_api_description" class="block text-sm font-medium text-gray-700 mb-1">说明</label>
-                <input
-                  id="edit_api_description"
-                  v-model="apiPermissionForm.description"
-                  type="text"
-                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="请输入说明"
-                />
-              </div>
-              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  v-model="apiPermissionForm.enabled"
-                  type="checkbox"
-                  class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                启用
-              </label>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              @click="updateApiPermission"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              更新
-            </button>
-            <button
-              @click="showEditApiModal = false"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition duration-150"
-            >
-              取消
-            </button>
-          </div>
+    <!-- 编辑API权限绑定弹窗 -->
+    <el-dialog v-model="showEditApiModal" title="编辑API权限绑定" width="600px" destroy-on-close>
+      <el-form :model="apiPermissionForm" label-width="90px">
+        <div class="form-grid">
+          <el-form-item label="HTTP方法" required>
+            <el-select v-model="apiPermissionForm.method" style="width: 100%">
+              <el-option v-for="method in methodOptions" :key="method" :label="method" :value="method" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="权限代码" required>
+            <el-select v-model="apiPermissionForm.permission_code" style="width: 100%">
+              <el-option
+                v-for="permission in permissionOptions"
+                :key="permission.id"
+                :label="`${permission.permission_code} - ${permission.permission_name}`"
+                :value="permission.permission_code"
+              />
+            </el-select>
+          </el-form-item>
         </div>
-      </div>
-    </div>
+        <el-form-item label="API路径" required>
+          <el-input v-model="apiPermissionForm.path_pattern" placeholder="/roles/{role_id}" />
+        </el-form-item>
+        <el-form-item label="说明">
+          <el-input v-model="apiPermissionForm.description" placeholder="请输入说明" />
+        </el-form-item>
+        <el-form-item label="启用">
+          <el-switch v-model="apiPermissionForm.enabled" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditApiModal = false">取消</el-button>
+        <el-button type="primary" @click="updateApiPermission">保存修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
-/* 动画效果 */
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s;
+.permission-management {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
+
+.page-card__header .header-spacer {
+  flex: 1;
 }
-</style> 
+
+.search-body :deep(.el-form--inline .el-form-item) {
+  margin-right: 16px;
+  margin-bottom: 0;
+}
+
+.permission-name {
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+
+.path-code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+  background: var(--app-fill-3);
+  border: 1px solid var(--app-border);
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: var(--el-text-color-regular);
+}
+
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--app-border);
+  flex-wrap: wrap;
+}
+
+.table-total {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+.form-tip {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
+}
+</style>
