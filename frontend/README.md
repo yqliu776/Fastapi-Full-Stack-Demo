@@ -12,6 +12,16 @@
   基于 Vue 3 + TypeScript + Vite 的企业级管理后台前端框架
 </p>
 
+## 页面截图
+
+### 登录后控制台
+
+![后台控制台](../docs/image/img.png)
+
+### 权限管理页面
+
+![权限管理页面](../docs/image/img-quanxian.png)
+
 ## ✨ 项目特性
 
 - 🎯 **现代化技术栈** - Vue 3.5 + TypeScript 5.8 + Vite 6.2
@@ -21,7 +31,8 @@
 - ⚡ **高性能构建** - Vite构建，热更新秒级响应
 - 🛡️ **类型安全** - 全链路TypeScript支持，开发体验极佳
 - 🧪 **完整测试体系** - Vitest单元测试 + Cypress E2E测试
-- 🌍 **国际化支持** - 预留多语言扩展能力
+- 🧭 **后台路由前缀** - 默认使用 `/admin-console`，避免与前台页面冲突
+- 🚦 **限流管理页面** - 支持查看和维护 Redis 限流、白名单、黑名单
 
 ## 🏗️ 技术架构
 
@@ -117,6 +128,7 @@ cp .env.example .env.production   # 生产环境
 |--------|------|--------|
 | `VITE_API_BASE_URL` | API基础URL | `http://localhost:8090` |
 | `VITE_OAUTH_CLIENT_ID` | OAuth2公开客户端ID | `frontend` |
+| `VITE_ADMIN_ROUTE_PREFIX` | 后台路由前缀 | `/admin-console` |
 
 > `VITE_` 环境变量会被打包到前端产物中，不要在这里配置 OAuth client secret、数据库密码、JWT 密钥等敏感信息。
 
@@ -143,6 +155,8 @@ npm run dev
 
 启动后访问: http://localhost:5173
 
+后台登录页: http://localhost:5173/admin-console/login
+
 ### 📋 可用脚本
 
 | 命令 | 说明 | 输出位置 |
@@ -153,8 +167,8 @@ npm run dev
 | `npm run test:unit` | 运行单元测试 | 控制台输出 |
 | `npm run test:e2e` | 运行E2E测试 | 控制台输出 |
 | `npm run test:e2e:dev` | 开发环境E2E测试 | Cypress UI |
-| `npm run lint` | 代码检查 | 控制台输出 |
-| `npm run lint:fix` | 自动修复代码问题 | 控制台输出 |
+| `npm run lint` | 代码检查并自动修复 | 控制台输出 |
+| `npm run format` | 格式化 `src/` | 源码目录 |
 | `npm run type-check` | TypeScript类型检查 | 控制台输出 |
 
 ### 🏗️ 构建与部署
@@ -213,15 +227,22 @@ npx cypress open
 # 运行ESLint检查
 npm run lint
 
-# 自动修复ESLint问题
-npm run lint:fix
+# 格式化源码
+npm run format
 
 # TypeScript类型检查
 npm run type-check
 
-# 运行所有检查（推荐在提交前执行）
+# 运行主要检查（推荐在提交前执行）
 npm run lint && npm run type-check
 ```
+
+## 历史问题回归说明
+
+- Token 存储、刷新令牌请求体、403 权限错误处理和登出后的动态路由重置属于历史审查重点，修改认证链路时需同步检查。
+- 后台路径默认使用 `/admin-console`，新增后台页面时使用 `toAdminPath()` 生成链接，避免前台路由和后台路由互相污染。
+- 动态菜单通过 `component_key`、`menu_code` 和路径别名映射到页面组件，新增菜单时需要同步维护组件映射。
+- 前端默认 API 地址为 `http://localhost:8090`，与根 README、后端 README 和 `docs/DEVELOPMENT_GUIDE.md` 保持一致。
 
 ## 🔗 后端集成
 
@@ -264,9 +285,9 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 ### 认证流程
 
 1. **登录**: 用户登录获取JWT token
-2. **Token存储**: 存储在localStorage中
+2. **Token存储**: 开发环境由前端写入 Cookie，并根据协议追加 `Secure`
 3. **请求拦截**: 自动在请求头中添加Authorization
-4. **Token刷新**: 自动刷新过期token
+4. **Token刷新**: 使用请求体发送 refresh token，避免把刷新令牌暴露在 URL 中
 5. **登出**: 清除token并跳转登录页
 
 ## 🌟 核心功能
@@ -274,8 +295,9 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 ### 🔐 认证与权限
 - **JWT认证**: Token-based身份验证
 - **RBAC权限**: 基于角色的访问控制
-- **动态路由**: 根据权限动态生成路由
+- **动态路由**: 根据权限动态生成路由，登出后会重置动态路由加载标记
 - **菜单管理**: 支持多级菜单和权限过滤
+- **API文档入口**: 内嵌 Swagger UI 页面，默认指向后端 `/api/docs`
 
 ### 📊 状态管理
 - **Pinia状态库**: 现代化状态管理
@@ -578,6 +600,11 @@ npm run build
 ## 📝 许可证
 
 本项目基于 [MIT](LICENSE) 许可证开源 - 详见 [LICENSE](LICENSE) 文件。
+
+## 维护者
+
+- 项目维护者: Kevin·liu
+- 联系方式: yqliumail@gmail.com
 
 ## 🙏 致谢
 
