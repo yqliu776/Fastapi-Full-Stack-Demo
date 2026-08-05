@@ -28,6 +28,7 @@ class PermissionUpdate(BaseModel):
 class PermissionResponse(PermissionBase, BaseResponseModel):
     """权限响应模型"""
     id: int = Field(..., description="权限ID")
+    delete_flag: str = Field("N", description="删除标识，Y/N")
     creation_date: datetime = Field(..., description="创建时间")
     last_update_date: datetime = Field(..., description="最后更新时间")
     

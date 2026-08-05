@@ -55,6 +55,13 @@ async def get_current_user(
         user = await auth_service.user_repository.get_user_with_roles(user_id)
         if user is None:
             raise credentials_exception
+
+        # 账号被禁用后立即失效其访问凭证
+        if user.status == 'Y':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="账号已被禁用，请联系管理员",
+            )
             
         # 转换为UserDetail响应模型
         return UserDetail(

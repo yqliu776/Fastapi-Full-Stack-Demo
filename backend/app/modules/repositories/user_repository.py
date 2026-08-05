@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func, update
+from sqlalchemy import select, and_, func, update, delete
 from sqlalchemy.orm.attributes import set_committed_value
 from typing import Optional, List, Tuple
 import secrets
@@ -20,6 +20,20 @@ class UserRepository(BaseRepository[SysUser]):
         """初始化用户仓储"""
         super().__init__(db_session, SysUser)
     
+    async def get_any(self, id_: int) -> Optional[SysUser]:
+        """
+        通过ID获取用户（不过滤删除状态）
+        
+        Args:
+            id_: 用户ID
+            
+        Returns:
+            用户模型实例或None
+        """
+        query = select(SysUser).where(SysUser.id == id_)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_by_username(self, username: str) -> Optional[SysUser]:
         """
         通过用户名获取用户
@@ -135,7 +149,7 @@ class UserRepository(BaseRepository[SysUser]):
     
     async def check_username_exists(self, username: str) -> bool:
         """
-        检查用户名是否已存在
+        检查用户名是否已存在（仅限未删除用户）
         
         Args:
             username: 用户名
@@ -152,13 +166,29 @@ class UserRepository(BaseRepository[SysUser]):
         result = await self.db.execute(query)
         return result.scalar_one_or_none() is not None
     
+    async def check_username_exists_any(self, username: str) -> bool:
+        """
+        检查用户名是否已存在（包含软删除的用户，用于避免唯一键冲突）
+        
+        Args:
+            username: 用户名
+            
+        Returns:
+            如果存在返回True，否则返回False
+        """
+        query = select(SysUser.id).where(SysUser.user_name == username)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none() is not None
+    
     async def get_users_by_filter(
         self, 
         skip: int = 0, 
         limit: int = 100, 
         username: Optional[str] = None,
         email: Optional[str] = None,
-        phone: Optional[str] = None
+        phone: Optional[str] = None,
+        status: Optional[str] = None,
+        deleted: Optional[bool] = False
     ) -> List[SysUser]:
         """
         根据过滤条件获取用户列表
@@ -169,11 +199,13 @@ class UserRepository(BaseRepository[SysUser]):
             username: 用户名过滤条件
             email: 邮箱过滤条件
             phone: 手机号过滤条件
+            status: 用户状态过滤条件（N启用/Y禁用）
+            deleted: 删除状态过滤，False仅正常(N)，True仅已删除(Y)，None不过滤
             
         Returns:
             用户模型实例列表
         """
-        filters = [SysUser.delete_flag == 'N']
+        filters = []
         
         if username:
             filters.append(SysUser.user_name.like(f"%{username}%"))
@@ -184,13 +216,18 @@ class UserRepository(BaseRepository[SysUser]):
         if phone:
             filters.append(SysUser.phone_number.like(f"%{phone}%"))
             
-        return await self.get_multi(skip=skip, limit=limit, filters=filters)
+        if status:
+            filters.append(SysUser.status == status)
+            
+        return await self.get_multi(skip=skip, limit=limit, filters=filters, deleted=deleted)
     
     async def count_users_by_filter(
         self,
         username: Optional[str] = None,
         email: Optional[str] = None,
-        phone: Optional[str] = None
+        phone: Optional[str] = None,
+        status: Optional[str] = None,
+        deleted: Optional[bool] = False
     ) -> int:
         """
         根据过滤条件获取用户总数
@@ -199,11 +236,13 @@ class UserRepository(BaseRepository[SysUser]):
             username: 用户名过滤条件
             email: 邮箱过滤条件
             phone: 手机号过滤条件
+            status: 用户状态过滤条件（N启用/Y禁用）
+            deleted: 删除状态过滤，False仅正常(N)，True仅已删除(Y)，None不过滤
             
         Returns:
             符合条件的用户总数
         """
-        filters = [SysUser.delete_flag == 'N']
+        filters = []
         
         if username:
             filters.append(SysUser.user_name.like(f"%{username}%"))
@@ -213,10 +252,11 @@ class UserRepository(BaseRepository[SysUser]):
             
         if phone:
             filters.append(SysUser.phone_number.like(f"%{phone}%"))
+            
+        if status:
+            filters.append(SysUser.status == status)
         
-        query = select(func.count(SysUser.id)).where(and_(*filters))
-        result = await self.db.execute(query)
-        return result.scalar_one()
+        return await self.get_count(filters=filters, deleted=deleted)
     
     async def create_user_with_role(
         self,
@@ -252,6 +292,7 @@ class UserRepository(BaseRepository[SysUser]):
             password=hashed_password,
             email=user_data.email,
             phone_number=user_data.phone_number,
+            status=getattr(user_data, "status", "N"),
             created_by=created_by,
             last_updated_by=created_by,
             last_update_login=created_by
@@ -326,6 +367,7 @@ class UserRepository(BaseRepository[SysUser]):
             password=hashed_password,
             email=user_data.email,
             phone_number=user_data.phone_number,
+            status=getattr(user_data, "status", "N"),
             created_by=created_by,
             last_updated_by=created_by,
             last_update_login=created_by
@@ -550,6 +592,13 @@ class UserRepository(BaseRepository[SysUser]):
         
         await self.db.commit()
         return await self.get(user_id) 
+
+    async def purge(self, *, id_: int) -> Optional[SysUser]:
+        """彻底删除用户，同时清理其所有用户-角色关联记录。"""
+        await self.db.execute(
+            delete(SysUserRole).where(SysUserRole.user_id == id_)
+        )
+        return await super().purge(id_=id_)
 
     async def _ensure_super_admin_can_be_removed(self, user_id: int) -> None:
         """阻止误删默认管理员或系统最后一个超管角色。"""

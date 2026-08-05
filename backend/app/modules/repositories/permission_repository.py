@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, delete
 from sqlalchemy.orm.attributes import set_committed_value
 
 from app.modules.models import SysPermission, SysRole, SysRolePermission
@@ -96,7 +96,8 @@ class PermissionRepository(BaseRepository[SysPermission]):
         skip: int = 0, 
         limit: int = 100, 
         permission_name: Optional[str] = None,
-        permission_code: Optional[str] = None
+        permission_code: Optional[str] = None,
+        deleted: Optional[bool] = False
     ) -> List[SysPermission]:
         """
         根据过滤条件获取权限列表
@@ -106,6 +107,7 @@ class PermissionRepository(BaseRepository[SysPermission]):
             limit: 返回的记录数
             permission_name: 权限名称过滤条件
             permission_code: 权限代码过滤条件
+            deleted: 删除状态过滤，False仅正常(N)，True仅已删除(Y)，None不过滤
             
         Returns:
             权限模型实例列表
@@ -118,7 +120,14 @@ class PermissionRepository(BaseRepository[SysPermission]):
         if permission_code:
             filters.append(SysPermission.permission_code.like(f"%{permission_code}%"))
             
-        return await self.get_multi(skip=skip, limit=limit, filters=filters)
+        return await self.get_multi(skip=skip, limit=limit, filters=filters, deleted=deleted)
+
+    async def purge(self, *, id_: int) -> Optional[SysPermission]:
+        """彻底删除权限，同时清理所有角色-权限关联记录。"""
+        await self.db.execute(
+            delete(SysRolePermission).where(SysRolePermission.permission_id == id_)
+        )
+        return await super().purge(id_=id_)
         
     async def get_permissions_by_role_id(self, role_id: int) -> List[SysPermission]:
         """

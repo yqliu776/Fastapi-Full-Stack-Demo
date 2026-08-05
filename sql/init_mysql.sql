@@ -95,9 +95,9 @@ VALUES
 -- ========== 4. 创建超级管理员用户 ==========
 -- 密码为 Admin@123，使用bcrypt加密
 INSERT INTO sys_users
-(user_name, password, phone_number, email, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
+(user_name, password, phone_number, email, status, creation_date, created_by, last_update_date, last_updated_by, last_update_login, delete_flag, version_num)
 VALUES
-('admin', '$2b$12$F1nTxUIU9tsiA32SF3Pz1Okp9TBrLNa20zxXVI6KNja47M01M0Jea', '18888888888', 'admin@example.com', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
+('admin', '$2b$12$F1nTxUIU9tsiA32SF3Pz1Okp9TBrLNa20zxXVI6KNja47M01M0Jea', '18888888888', 'admin@example.com', 'N', @current_date, @admin_user, @current_date, @admin_user, @admin_user, 'N', 1);
 
 SET @admin_id = LAST_INSERT_ID();
 SET @role_id = (SELECT id FROM sys_roles WHERE role_code = 'ROLE_SUPER_ADMIN' LIMIT 1);

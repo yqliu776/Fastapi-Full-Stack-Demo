@@ -74,7 +74,8 @@ class BaseRepository(Generic[T]):
         *, 
         skip: int = 0, 
         limit: int = 100, 
-        filters: Optional[List[Union[SQLAColumnElement, BinaryExpression, BooleanClauseList]]] = None
+        filters: Optional[List[Union[SQLAColumnElement, BinaryExpression, BooleanClauseList]]] = None,
+        deleted: Optional[bool] = False
     ) -> List[T]:
         """
         获取多条记录
@@ -83,13 +84,16 @@ class BaseRepository(Generic[T]):
             skip: 跳过的记录数
             limit: 返回的记录数
             filters: 过滤条件列表
+            deleted: 删除状态过滤，False仅正常(N)，True仅已删除(Y)，None不过滤
         
         Returns:
             数据库模型实例列表
         """
-        query = select(self.model_class).where(
-            self.model_class.delete_flag == "N"
-        )
+        query = select(self.model_class)
+        if deleted is True:
+            query = query.where(self.model_class.delete_flag == "Y")
+        elif deleted is False:
+            query = query.where(self.model_class.delete_flag == "N")
         
         if filters:
             for filter_condition in filters:
@@ -100,19 +104,22 @@ class BaseRepository(Generic[T]):
         # 显式转换为List[T]类型
         return list(result.scalars().all())
     
-    async def get_count(self, filters: Optional[List[Union[SQLAColumnElement, BinaryExpression, BooleanClauseList]]] = None) -> int:
+    async def get_count(self, filters: Optional[List[Union[SQLAColumnElement, BinaryExpression, BooleanClauseList]]] = None, deleted: Optional[bool] = False) -> int:
         """
         获取符合条件的记录总数
         
         Args:
             filters: 过滤条件列表
+            deleted: 删除状态过滤，False仅正常(N)，True仅已删除(Y)，None不过滤
         
         Returns:
             记录总数
         """
-        query = select(func.count(self.model_class.id)).where(
-            self.model_class.delete_flag == "N"
-        )
+        query = select(func.count(self.model_class.id))
+        if deleted is True:
+            query = query.where(self.model_class.delete_flag == "Y")
+        elif deleted is False:
+            query = query.where(self.model_class.delete_flag == "N")
         
         if filters:
             for filter_condition in filters:
@@ -187,9 +194,36 @@ class BaseRepository(Generic[T]):
 
         return obj
     
-    async def hard_delete(self, *, id_: Any) -> Optional[T]:
+    async def restore(self, *, id_: Any) -> Optional[T]:
         """
-        硬删除记录（从数据库中删除）
+        恢复软删除记录（将delete_flag设置为N）
+        
+        Args:
+            id_: 记录ID
+            
+        Returns:
+            恢复后的数据库模型实例或None
+        """
+        query = update(self.model_class).where(
+            and_(
+                self.model_class.id == id_,
+                self.model_class.delete_flag == "Y"
+            )
+        ).values(delete_flag="N")
+        
+        result = await self.db.execute(query)
+        await self.db.commit()
+        
+        if result.rowcount == 0:
+            return None
+        
+        fetch = select(self.model_class).where(self.model_class.id == id_)
+        obj = (await self.db.execute(fetch)).scalar_one_or_none()
+        return obj
+
+    async def purge(self, *, id_: Any) -> Optional[T]:
+        """
+        彻底删除记录（从数据库中物理删除，包括软删除的记录）
         
         Args:
             id_: 记录ID
@@ -197,8 +231,10 @@ class BaseRepository(Generic[T]):
         Returns:
             删除的数据库模型实例或None
         """
-        # 先获取要删除的对象
-        obj = await self.get(id_)
+        fetch = select(self.model_class).where(
+            self.model_class.id == id_
+        )
+        obj = (await self.db.execute(fetch)).scalar_one_or_none()
         if not obj:
             return None
             

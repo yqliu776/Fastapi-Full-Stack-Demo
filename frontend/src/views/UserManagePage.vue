@@ -19,8 +19,16 @@ const pageSize = ref(10);
 const searchForm = reactive({
   user_name: '',
   email: '',
-  delete_flag: ''
+  status: '',
+  deleted: ''
 });
+
+// 删除状态筛选选项
+const deletedStatusOptions = [
+  { value: '', label: '全部' },
+  { value: 'false', label: '正常' },
+  { value: 'true', label: '已删除' }
+];
 
 // 模态框状态
 const showCreateModal = ref(false);
@@ -35,7 +43,7 @@ const userForm = reactive<UserCreate & UserUpdate>({
   email: '',
   phone_number: '',
   password: '',
-  delete_flag: 'N',
+  status: 'N',
   created_by: '-1',
   last_updated_by: '-1',
   last_update_login: '-1',
@@ -86,11 +94,12 @@ const loadUsers = async () => {
   loading.value = true;
   try {
     const skip = (currentPage.value - 1) * pageSize.value;
-    const params = {
-      skip,
-      limit: pageSize.value,
-      ...searchForm
-    };
+    const params: Record<string, unknown> = { skip, limit: pageSize.value };
+    Object.entries(searchForm).forEach(([key, value]) => {
+      if (value !== '' && value !== undefined && value !== null) {
+        params[key] = value;
+      }
+    });
     const response = await userService.getUsers(params);
     if (response.code === 200) {
       users.value = response.data.items;
@@ -116,7 +125,8 @@ const searchUsers = () => {
 const resetSearch = () => {
   searchForm.user_name = '';
   searchForm.email = '';
-  searchForm.delete_flag = '';
+  searchForm.status = '';
+  searchForm.deleted = '';
   searchUsers();
 };
 
@@ -128,7 +138,7 @@ const openCreateModal = () => {
   userForm.email = '';
   userForm.phone_number = '';
   userForm.password = '';
-  userForm.delete_flag = 'N';
+  userForm.status = 'N';
   userForm.created_by = userId;
   userForm.last_updated_by = userId;
   userForm.last_update_login = userId;
@@ -195,7 +205,7 @@ const openEditModal = (user: User) => {
   userForm.user_name = user.user_name;
   userForm.email = user.email;
   userForm.phone_number = user.phone_number || '';
-  userForm.delete_flag = user.delete_flag;
+  userForm.status = user.status;
   userForm.last_updated_by = userId;
   userForm.last_update_login = userId;
 
@@ -209,7 +219,7 @@ const updateUser = async () => {
   const updatePayload: UserUpdate = {
     email: userForm.email,
     phone_number: userForm.phone_number,
-    delete_flag: userForm.delete_flag,
+    status: userForm.status,
     last_updated_by: userForm.last_updated_by,
     last_update_login: userForm.last_update_login
   };
@@ -301,6 +311,53 @@ const deleteUser = async (user: User) => {
   }
 };
 
+// 恢复用户
+const restoreUser = async (user: User) => {
+  try {
+    const response = await userService.restoreUser(user.id);
+    if (response.code === 200) {
+      loadUsers();
+      ElMessage.success(`用户"${user.user_name}"已恢复`);
+    } else {
+      ElMessage.error('恢复用户失败: ' + response.message);
+    }
+  } catch (error) {
+    console.error('恢复用户出错:', error);
+    ElMessage.error('恢复用户出错');
+  }
+};
+
+// 彻底删除用户
+const purgeUser = async (user: User) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要彻底删除用户"${user.user_name}"吗？该操作将物理删除数据，不可恢复！`,
+      '彻底删除确认',
+      {
+        confirmButtonText: '彻底删除',
+        cancelButtonText: '取消',
+        type: 'error',
+        confirmButtonClass: 'el-button--danger'
+      }
+    );
+  } catch {
+    return;
+  }
+
+  try {
+    const response = await userService.purgeUser(user.id);
+    if (response.code === 200) {
+      loadUsers();
+      ElMessage.success('用户已彻底删除');
+    } else {
+      ElMessage.error('彻底删除用户失败: ' + response.message);
+    }
+  } catch (error) {
+    console.error('彻底删除用户出错:', error);
+    ElMessage.error('彻底删除用户出错');
+  }
+};
+
 // 打开角色分配模态框
 const openRoleModal = (user: User) => {
   currentUser.value = user;
@@ -320,14 +377,14 @@ const handlePageChange = (page: number) => {
 };
 
 // 获取用户状态显示文本
-const getUserStatusText = (deleteFlag: string) => {
-  const option = statusOptions.find(opt => opt.value === deleteFlag);
-  return option ? option.label : deleteFlag;
+const getUserStatusText = (status: string) => {
+  const option = statusOptions.find(opt => opt.value === status);
+  return option ? option.label : status;
 };
 
 // 获取用户状态标签类型
-const getStatusType = (deleteFlag: string): 'success' | 'danger' | 'info' => {
-  switch (deleteFlag) {
+const getStatusType = (status: string): 'success' | 'danger' | 'info' => {
+  switch (status) {
     case 'N':
       return 'success';
     case 'Y':
@@ -375,8 +432,13 @@ onMounted(() => {
             />
           </el-form-item>
           <el-form-item label="状态">
-            <el-select v-model="searchForm.delete_flag" placeholder="全部" clearable style="width: 120px">
+            <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 120px">
               <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="删除状态">
+            <el-select v-model="searchForm.deleted" style="width: 120px">
+              <el-option v-for="option in deletedStatusOptions" :key="option.value" :label="option.label" :value="option.value" />
             </el-select>
           </el-form-item>
           <el-form-item>
@@ -406,8 +468,8 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.delete_flag)" effect="light" round>
-              {{ getUserStatusText(row.delete_flag) }}
+            <el-tag :type="getStatusType(row.status)" effect="light" round>
+              {{ getUserStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -416,7 +478,11 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="230" fixed="right">
           <template #default="{ row }">
-            <div class="table-actions">
+            <div v-if="row.delete_flag === 'Y'" class="table-actions">
+              <el-button size="small" type="success" plain :icon="'RefreshLeft'" @click="restoreUser(row)">恢复</el-button>
+              <el-button size="small" type="danger" :icon="'DeleteFilled'" @click="purgeUser(row)">彻底删除</el-button>
+            </div>
+            <div v-else class="table-actions">
               <el-button size="small" :icon="'Edit'" @click="openEditModal(row)">编辑</el-button>
               <el-button size="small" type="warning" plain :icon="'Key'" @click="openPasswordModal(row)">密码</el-button>
               <el-button size="small" type="success" plain :icon="'UserFilled'" @click="openRoleModal(row)">角色</el-button>
@@ -458,7 +524,7 @@ onMounted(() => {
           <el-input v-model="userForm.password" type="password" show-password placeholder="请输入密码" />
         </el-form-item>
         <el-form-item label="状态" required>
-          <el-select v-model="userForm.delete_flag" style="width: 100%">
+          <el-select v-model="userForm.status" style="width: 100%">
             <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
           </el-select>
         </el-form-item>
@@ -496,7 +562,7 @@ onMounted(() => {
           <el-input v-model="userForm.phone_number" placeholder="请输入电话" />
         </el-form-item>
         <el-form-item label="状态" required>
-          <el-select v-model="userForm.delete_flag" style="width: 100%">
+          <el-select v-model="userForm.status" style="width: 100%">
             <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
           </el-select>
         </el-form-item>

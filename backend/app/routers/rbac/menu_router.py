@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query, Path, Body
-from typing import List
+from typing import List, Optional
 
 from app.modules.schemas import (
     MenuCreate, MenuUpdate, MenuResponse, MenuDetail, MenuBatchResponse, MenuTreeNode
@@ -49,6 +49,8 @@ async def create_menu(
 async def get_menus(
     skip: int = Query(0, description="跳过的记录数"),
     limit: int = Query(100, description="返回的记录数"),
+    menu_name: Optional[str] = Query(None, description="菜单名称"),
+    deleted: Optional[bool] = Query(None, description="删除状态过滤，false仅正常，true仅已删除"),
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
@@ -57,16 +59,74 @@ async def get_menus(
     Args:
         skip: 跳过的记录数
         limit: 返回的记录数
+        menu_name: 菜单名称过滤条件
+        deleted: 删除状态过滤条件
         rbac_service: RBAC服务实例
         
     Returns:
         菜单列表响应
     """
-    menus = await rbac_service.get_all_menus(skip, limit)
+    menus = await rbac_service.get_all_menus(skip, limit, menu_name, deleted)
     return ResponseModel(
         code=200,
         message="获取菜单列表成功",
         data=menus
+    )
+
+
+@router.post(
+    "/restore/{menu_id}",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["MENU_MANAGE"]))],
+    summary="恢复菜单"
+)
+async def restore_menu(
+    menu_id: int = Path(..., description="菜单ID"),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    恢复已软删除的菜单
+    
+    Args:
+        menu_id: 菜单ID
+        rbac_service: RBAC服务实例
+        
+    Returns:
+        恢复后的菜单响应
+    """
+    menu = await rbac_service.restore_menu(menu_id)
+    return ResponseModel(
+        code=200,
+        message="菜单恢复成功",
+        data=menu
+    )
+
+
+@router.delete(
+    "/purge/{menu_id}",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["MENU_MANAGE"]))],
+    summary="彻底删除菜单"
+)
+async def purge_menu(
+    menu_id: int = Path(..., description="菜单ID"),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    彻底删除菜单及其所有子孙菜单和关联数据（物理删除，不可恢复）
+    
+    Args:
+        menu_id: 菜单ID
+        rbac_service: RBAC服务实例
+        
+    Returns:
+        删除结果
+    """
+    await rbac_service.purge_menu(menu_id)
+    return ResponseModel(
+        code=200,
+        message="菜单已彻底删除",
+        data={"success": True}
     )
 
 

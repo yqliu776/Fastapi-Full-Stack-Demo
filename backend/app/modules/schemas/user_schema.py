@@ -52,6 +52,7 @@ class UserAdminCreate(UserCreate):
     """管理员创建用户模型（包含角色指定）"""
     
     role_codes: List[str] = Field(..., min_items=1, description="角色代码列表")
+    status: Optional[str] = Field("N", pattern="^[NY]$", description="用户状态，N启用/Y禁用")
 
 
 class UserUpdate(BaseModel):
@@ -60,7 +61,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone_number: Optional[str] = None
     password: Optional[str] = None
-    delete_flag: Optional[str] = Field(None, pattern="^[NY]$", description="删除标识，Y/N")
+    status: Optional[str] = Field(None, pattern="^[NY]$", description="用户状态，N启用/Y禁用")
     
     model_config = {
         "from_attributes": True
@@ -87,6 +88,7 @@ class UserResponse(UserBase, TimestampMixin):
     """用户基本信息响应模型"""
     
     id: int
+    status: str = "N"
     delete_flag: str = "N"
     
     model_config = {
@@ -108,6 +110,7 @@ class UserResponseWithRoles(UserResponse):
             "user_name": obj.user_name,
             "email": obj.email,
             "phone_number": obj.phone_number,
+            "status": obj.status,
             "delete_flag": obj.delete_flag,
             "creation_date": obj.creation_date,
             "last_update_date": obj.last_update_date,

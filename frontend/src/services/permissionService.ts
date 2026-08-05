@@ -5,6 +5,7 @@ export interface Permission {
   id: number;
   permission_name: string;
   permission_code: string;
+  delete_flag?: string; // 删除标识，N正常/Y已软删除
   creation_date: string;
   last_update_date: string;
 }
@@ -30,6 +31,7 @@ export interface ApiPermission {
   permission_code: string;
   description?: string | null;
   enabled: boolean;
+  delete_flag?: string; // 删除标识，N正常/Y已软删除
   creation_date: string;
   last_update_date: string;
 }
@@ -78,7 +80,7 @@ export interface OperationResponse {
 // 权限管理API
 export const permissionService = {
   // 获取权限列表
-  async getPermissions(params: { skip?: number; limit?: number; permission_name?: string; permission_code?: string } = {}) {
+  async getPermissions(params: { skip?: number; limit?: number; permission_name?: string; permission_code?: string; deleted?: boolean } = {}) {
     try {
       const response = await apiClient.get<ListResponse<Permission>>('/permissions', { params });
       return response.data;
@@ -137,8 +139,28 @@ export const permissionService = {
     }
   },
 
+  // 恢复权限
+  async restorePermission(permissionId: number) {
+    try {
+      const response = await apiClient.post<SingleResponse<Permission>>(`/permissions/restore/${permissionId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 彻底删除权限
+  async purgePermission(permissionId: number) {
+    try {
+      const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/permissions/purge/${permissionId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
   // 获取API权限绑定列表
-  async getApiPermissions(params: { skip?: number; limit?: number; method?: string; path_pattern?: string; permission_code?: string } = {}) {
+  async getApiPermissions(params: { skip?: number; limit?: number; method?: string; path_pattern?: string; permission_code?: string; deleted?: boolean } = {}) {
     try {
       const response = await apiClient.get<ListResponse<ApiPermission>>('/permissions/api-bindings', { params });
       return response.data;
@@ -171,6 +193,26 @@ export const permissionService = {
   async deleteApiPermission(apiPermissionId: number) {
     try {
       const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/permissions/api-bindings/${apiPermissionId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 恢复API权限绑定
+  async restoreApiPermission(apiPermissionId: number) {
+    try {
+      const response = await apiClient.post<SingleResponse<ApiPermission>>(`/permissions/api-bindings/restore/${apiPermissionId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 彻底删除API权限绑定
+  async purgeApiPermission(apiPermissionId: number) {
+    try {
+      const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/permissions/api-bindings/purge/${apiPermissionId}`);
       return response.data;
     } catch (error) {
       return Promise.reject(error);

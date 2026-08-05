@@ -39,7 +39,8 @@ class ApiPermissionRepository(BaseRepository[SysApiPermission]):
         limit: int = 100,
         method: Optional[str] = None,
         path_pattern: Optional[str] = None,
-        permission_code: Optional[str] = None
+        permission_code: Optional[str] = None,
+        deleted: Optional[bool] = False
     ) -> List[SysApiPermission]:
         filters = []
 
@@ -50,4 +51,4 @@ class ApiPermissionRepository(BaseRepository[SysApiPermission]):
         if permission_code:
             filters.append(SysApiPermission.permission_code.like(f"%{permission_code}%"))
 
-        return await self.get_multi(skip=skip, limit=limit, filters=filters)
+        return await self.get_multi(skip=skip, limit=limit, filters=filters, deleted=deleted)

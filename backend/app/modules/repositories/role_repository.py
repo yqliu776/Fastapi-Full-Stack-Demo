@@ -485,6 +485,20 @@ class RoleRepository(BaseRepository[SysRole]):
             await self.db.rollback()
             raise e
     
+    async def purge(self, *, id_: int) -> Optional[SysRole]:
+        """彻底删除角色，同时清理其所有关联记录（用户-角色、角色-权限、角色-菜单）。"""
+        await self.db.execute(
+            delete(SysUserRole).where(SysUserRole.role_id == id_)
+        )
+        await self.db.execute(
+            delete(SysRolePermission).where(SysRolePermission.role_id == id_)
+        )
+        await self.db.execute(
+            delete(SysRoleMenu).where(SysRoleMenu.role_id == id_)
+        )
+        await self.redis_util.delete(f"role_permissions:{id_}")
+        return await super().purge(id_=id_)
+
     async def delete_role(self, role_id: int) -> bool:
         """
         删除角色（软删除）

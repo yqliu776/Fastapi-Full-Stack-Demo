@@ -138,6 +138,7 @@ async def get_roles(
     limit: int = Query(100, description="返回的记录数"),
     role_name: Optional[str] = Query(None, description="角色名称"),
     role_code: Optional[str] = Query(None, description="角色代码"),
+    deleted: Optional[bool] = Query(None, description="删除状态过滤，false仅正常，true仅已删除"),
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
@@ -148,16 +149,73 @@ async def get_roles(
         limit: 返回的记录数
         role_name: 角色名称过滤条件
         role_code: 角色代码过滤条件
+        deleted: 删除状态过滤条件
         rbac_service: RBAC服务实例
         
     Returns:
         角色列表响应
     """
-    roles = await rbac_service.get_all_roles(skip, limit, role_name, role_code)
+    roles = await rbac_service.get_all_roles(skip, limit, role_name, role_code, deleted)
     return ResponseModel(
         code=200,
         message="获取角色列表成功",
         data=roles
+    )
+
+
+@router.post(
+    "/restore/{role_id}",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["ROLE_MANAGE"]))],
+    summary="恢复角色"
+)
+async def restore_role(
+    role_id: int = Path(..., description="角色ID"),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    恢复已软删除的角色
+    
+    Args:
+        role_id: 角色ID
+        rbac_service: RBAC服务实例
+        
+    Returns:
+        恢复后的角色响应
+    """
+    role = await rbac_service.restore_role(role_id)
+    return ResponseModel(
+        code=200,
+        message="角色恢复成功",
+        data=role
+    )
+
+
+@router.delete(
+    "/purge/{role_id}",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["ROLE_MANAGE"]))],
+    summary="彻底删除角色"
+)
+async def purge_role(
+    role_id: int = Path(..., description="角色ID"),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    彻底删除角色及其关联数据（物理删除，不可恢复）
+    
+    Args:
+        role_id: 角色ID
+        rbac_service: RBAC服务实例
+        
+    Returns:
+        删除结果
+    """
+    await rbac_service.purge_role(role_id)
+    return ResponseModel(
+        code=200,
+        message="角色已彻底删除",
+        data={"success": True}
     )
 
 

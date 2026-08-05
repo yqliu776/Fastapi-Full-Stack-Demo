@@ -9,6 +9,7 @@ export interface Menu {
   component_key?: string;
   parent_id?: number;
   sort_order: number;
+  delete_flag?: string; // 删除标识，N正常/Y已软删除
   creation_date: string;
   last_update_date: string;
   children?: Menu[];
@@ -59,7 +60,7 @@ export interface OperationResponse {
 // 菜单管理API
 export const menuService = {
   // 获取菜单列表
-  async getMenus(params: { skip?: number; limit?: number; menu_name?: string } = {}) {
+  async getMenus(params: { skip?: number; limit?: number; menu_name?: string; deleted?: boolean } = {}) {
     try {
       const response = await apiClient.get<ListResponse<Menu>>('/menus', { params });
       return response.data;
@@ -142,6 +143,26 @@ export const menuService = {
   async deleteMenu(menuId: number) {
     try {
       const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/menus/${menuId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 恢复菜单
+  async restoreMenu(menuId: number) {
+    try {
+      const response = await apiClient.post<SingleResponse<Menu>>(`/menus/restore/${menuId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 彻底删除菜单
+  async purgeMenu(menuId: number) {
+    try {
+      const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/menus/purge/${menuId}`);
       return response.data;
     } catch (error) {
       return Promise.reject(error);

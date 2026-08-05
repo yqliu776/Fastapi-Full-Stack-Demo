@@ -6,7 +6,8 @@ export interface User {
   user_name: string;
   email: string;
   phone_number: string;  // 从phone改为phone_number匹配后端返回字段
-  delete_flag: string; // 删除标识，Y/N，Y表示已删除/禁用，N表示正常/启用
+  status: string; // 用户状态，N启用/Y禁用
+  delete_flag?: string; // 删除标识，N正常/Y已软删除
   creation_date: string;
   last_update_date: string;
   roles: { id: number; role_name: string; role_code: string }[]; // 用户关联的角色列表
@@ -17,7 +18,7 @@ export interface UserCreate {
   email: string;
   phone_number: string;
   password: string;
-  delete_flag: string;
+  status: string;
   created_by: string;
   last_updated_by: string;
   last_update_login: string;
@@ -28,7 +29,7 @@ export interface UserUpdate {
   user_name?: string;
   email?: string;
   phone_number?: string;
-  delete_flag?: string;
+  status?: string;
   last_updated_by: string;
   last_update_login: string;
 }
@@ -84,7 +85,7 @@ export interface OperationResponse {
 // 用户管理API
 export const userService = {
   // 获取用户列表
-  async getUsers(params: { skip?: number; limit?: number; user_name?: string; email?: string; delete_flag?: string } = {}) {
+  async getUsers(params: { skip?: number; limit?: number; user_name?: string; email?: string; status?: string; deleted?: boolean } = {}) {
     try {
       const response = await apiClient.get<ListResponse<User>>('/users/list', { params });
       return response.data;
@@ -127,6 +128,26 @@ export const userService = {
   async deleteUser(userId: number) {
     try {
       const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/users/delete/${userId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 恢复用户
+  async restoreUser(userId: number) {
+    try {
+      const response = await apiClient.post<SingleResponse<User>>(`/users/restore/${userId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 彻底删除用户
+  async purgeUser(userId: number) {
+    try {
+      const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/users/purge/${userId}`);
       return response.data;
     } catch (error) {
       return Promise.reject(error);

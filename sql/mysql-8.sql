@@ -7,6 +7,7 @@ CREATE TABLE sys_users (
     password VARCHAR(100) NOT NULL COMMENT '密码',
     phone_number VARCHAR(20) DEFAULT NULL COMMENT '手机号',
     email VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
+    status CHAR(1) NOT NULL DEFAULT 'N' COMMENT '状态，N启用/Y禁用',
     
     creation_date DATETIME NOT NULL COMMENT '创建时间',
     created_by VARCHAR(50) NOT NULL COMMENT '创建人',

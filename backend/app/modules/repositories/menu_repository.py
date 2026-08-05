@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, delete
 from sqlalchemy.orm.attributes import set_committed_value
 from typing import Optional, List
 
@@ -122,10 +122,10 @@ class MenuRepository(BaseRepository[SysMenu]):
     async def check_menu_code_exists(self, menu_code: str) -> bool:
         """
         检查菜单代码是否已存在
-        
+         
         Args:
             menu_code: 菜单代码
-            
+             
         Returns:
             如果存在返回True，否则返回False
         """
@@ -137,6 +137,69 @@ class MenuRepository(BaseRepository[SysMenu]):
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none() is not None
+    
+    async def get_menus_by_filter(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        menu_name: Optional[str] = None,
+        deleted: Optional[bool] = False
+    ) -> List[SysMenu]:
+        """
+        根据过滤条件获取菜单列表
+        
+        Args:
+            skip: 跳过的记录数
+            limit: 返回的记录数
+            menu_name: 菜单名称过滤条件
+            deleted: 删除状态过滤，False仅正常(N)，True仅已删除(Y)，None不过滤
+            
+        Returns:
+            菜单模型实例列表
+        """
+        filters = []
+        
+        if menu_name:
+            filters.append(SysMenu.menu_name.like(f"%{menu_name}%"))
+            
+        return await self.get_multi(skip=skip, limit=limit, filters=filters, deleted=deleted)
+
+    async def _collect_descendant_ids(self, menu_id: int) -> List[int]:
+        """收集菜单自身及其所有子孙菜单ID，子孙在前（便于级联删除）。"""
+        order: List[int] = []
+
+        async def collect(mid: int) -> None:
+            children_result = await self.db.execute(
+                select(SysMenu.id).where(SysMenu.parent_id == mid)
+            )
+            for child_id in children_result.scalars().all():
+                await collect(child_id)
+            order.append(mid)
+
+        await collect(menu_id)
+        return order
+
+    async def purge(self, *, id_: int) -> Optional[SysMenu]:
+        """彻底删除菜单及其所有子孙菜单，同时清理角色-菜单关联记录。"""
+        ids = await self._collect_descendant_ids(id_)
+        if not ids:
+            return None
+
+        fetch = select(SysMenu).where(SysMenu.id == id_)
+        obj = (await self.db.execute(fetch)).scalar_one_or_none()
+        if not obj:
+            return None
+
+        await self.db.execute(
+            delete(SysRoleMenu).where(SysRoleMenu.menu_id.in_(ids))
+        )
+        # 子孙在前，逐条物理删除以满足自引用约束
+        for menu_id in ids:
+            await self.db.execute(
+                delete(SysMenu).where(SysMenu.id == menu_id)
+            )
+        await self.db.commit()
+        return obj
     
     async def get_menus_by_role_id(self, role_id: int) -> List[SysMenu]:
         """

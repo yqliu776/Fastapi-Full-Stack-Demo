@@ -51,6 +51,7 @@ async def get_permissions(
     limit: int = Query(100, description="返回的记录数"),
     permission_name: Optional[str] = Query(None, description="权限名称"),
     permission_code: Optional[str] = Query(None, description="权限代码"),
+    deleted: Optional[bool] = Query(None, description="删除状态过滤，false仅正常，true仅已删除"),
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
@@ -61,12 +62,13 @@ async def get_permissions(
         limit: 返回的记录数
         permission_name: 权限名称过滤条件
         permission_code: 权限代码过滤条件
+        deleted: 删除状态过滤条件
         rbac_service: RBAC服务实例
         
     Returns:
         权限列表响应
     """
-    permissions = await rbac_service.get_all_permissions(skip, limit, permission_name, permission_code)
+    permissions = await rbac_service.get_all_permissions(skip, limit, permission_name, permission_code, deleted)
     return ResponseModel(
         code=200,
         message="获取权限列表成功",
@@ -86,6 +88,7 @@ async def get_api_permission_bindings(
     method: Optional[str] = Query(None, description="HTTP方法"),
     path_pattern: Optional[str] = Query(None, description="API路径模式"),
     permission_code: Optional[str] = Query(None, description="权限代码"),
+    deleted: Optional[bool] = Query(None, description="删除状态过滤，false仅正常，true仅已删除"),
     rbac_service: RbacService = Depends()
 ) -> ResponseModel:
     """
@@ -99,6 +102,7 @@ async def get_api_permission_bindings(
         method: 可选 HTTP 方法过滤条件。
         path_pattern: 可选 API 路径模式过滤条件。
         permission_code: 可选权限代码过滤条件。
+        deleted: 删除状态过滤条件。
         rbac_service: RBAC服务实例。
 
     Returns:
@@ -109,7 +113,8 @@ async def get_api_permission_bindings(
         limit=limit,
         method=method,
         path_pattern=path_pattern,
-        permission_code=permission_code
+        permission_code=permission_code,
+        deleted=deleted
     )
     return ResponseModel(
         code=200,
@@ -321,4 +326,102 @@ async def delete_permission(
         code=200 if result else 400,
         message="权限删除成功" if result else "权限删除失败",
         data={"success": result}
+    )
+
+
+@router.post(
+    "/restore/{permission_id}",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["PERMISSION_MANAGE"]))],
+    summary="恢复权限"
+)
+async def restore_permission(
+    permission_id: int = Path(..., description="权限ID"),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    恢复已软删除的权限
+    
+    Args:
+        permission_id: 权限ID
+        rbac_service: RBAC服务实例
+        
+    Returns:
+        恢复后的权限响应
+    """
+    permission = await rbac_service.restore_permission(permission_id)
+    return ResponseModel(
+        code=200,
+        message="权限恢复成功",
+        data=permission
+    )
+
+
+@router.delete(
+    "/purge/{permission_id}",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["PERMISSION_MANAGE"]))],
+    summary="彻底删除权限"
+)
+async def purge_permission(
+    permission_id: int = Path(..., description="权限ID"),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    彻底删除权限及其关联数据（物理删除，不可恢复）
+    
+    Args:
+        permission_id: 权限ID
+        rbac_service: RBAC服务实例
+        
+    Returns:
+        删除结果
+    """
+    await rbac_service.purge_permission(permission_id)
+    return ResponseModel(
+        code=200,
+        message="权限已彻底删除",
+        data={"success": True}
+    )
+
+
+@router.post(
+    "/api-bindings/restore/{api_permission_id}",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["PERMISSION_MANAGE"]))],
+    summary="恢复API权限绑定"
+)
+async def restore_api_permission_binding(
+    api_permission_id: int = Path(..., description="API权限绑定ID"),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    恢复已软删除的API权限绑定。
+    """
+    binding = await rbac_service.restore_api_permission(api_permission_id)
+    return ResponseModel(
+        code=200,
+        message="API权限绑定恢复成功",
+        data=binding
+    )
+
+
+@router.delete(
+    "/api-bindings/purge/{api_permission_id}",
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["PERMISSION_MANAGE"]))],
+    summary="彻底删除API权限绑定"
+)
+async def purge_api_permission_binding(
+    api_permission_id: int = Path(..., description="API权限绑定ID"),
+    rbac_service: RbacService = Depends()
+) -> ResponseModel:
+    """
+    彻底删除API权限绑定（物理删除，不可恢复）。
+    """
+    await rbac_service.purge_api_permission(api_permission_id)
+    return ResponseModel(
+        code=200,
+        message="API权限绑定已彻底删除",
+        data={"success": True}
     ) 

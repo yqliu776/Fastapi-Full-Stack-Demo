@@ -36,6 +36,7 @@ class MenuUpdate(BaseModel):
 class MenuResponse(MenuBase, BaseResponseModel):
     """菜单响应模型"""
     id: int = Field(..., description="菜单ID")
+    delete_flag: str = Field("N", description="删除标识，Y/N")
     creation_date: datetime = Field(..., description="创建时间")
     last_update_date: datetime = Field(..., description="最后更新时间")
     

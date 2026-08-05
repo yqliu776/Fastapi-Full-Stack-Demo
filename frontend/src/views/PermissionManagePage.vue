@@ -23,8 +23,16 @@ const currentPage = ref(1);
 const pageSize = ref(10);
 const searchForm = reactive({
   permission_name: '',
-  permission_code: ''
+  permission_code: '',
+  deleted: ''
 });
+
+// 删除状态筛选选项
+const deletedStatusOptions = [
+  { value: '', label: '全部' },
+  { value: 'false', label: '正常' },
+  { value: 'true', label: '已删除' }
+];
 
 // API权限绑定状态
 const apiPermissions = ref<ApiPermission[]>([]);
@@ -35,7 +43,8 @@ const apiPageSize = ref(10);
 const apiSearchForm = reactive({
   method: '',
   path_pattern: '',
-  permission_code: ''
+  permission_code: '',
+  deleted: ''
 });
 const methodOptions = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
@@ -71,11 +80,12 @@ const loadPermissions = async () => {
   loading.value = true;
   try {
     const skip = (currentPage.value - 1) * pageSize.value;
-    const params = {
-      skip,
-      limit: pageSize.value,
-      ...searchForm
-    };
+    const params: Record<string, unknown> = { skip, limit: pageSize.value };
+    Object.entries(searchForm).forEach(([key, value]) => {
+      if (value !== '' && value !== undefined && value !== null) {
+        params[key] = value;
+      }
+    });
     const response = await permissionService.getPermissions(params);
     if (response.code === 200) {
       permissions.value = response.data.items;
@@ -105,11 +115,12 @@ const loadApiPermissions = async () => {
   apiLoading.value = true;
   try {
     const skip = (currentApiPage.value - 1) * apiPageSize.value;
-    const params = {
-      skip,
-      limit: apiPageSize.value,
-      ...apiSearchForm
-    };
+    const params: Record<string, unknown> = { skip, limit: apiPageSize.value };
+    Object.entries(apiSearchForm).forEach(([key, value]) => {
+      if (value !== '' && value !== undefined && value !== null) {
+        params[key] = value;
+      }
+    });
     const response = await permissionService.getApiPermissions(params);
     if (response.code === 200) {
       apiPermissions.value = response.data.items;
@@ -133,6 +144,7 @@ const searchPermissions = () => {
 const resetSearch = () => {
   searchForm.permission_name = '';
   searchForm.permission_code = '';
+  searchForm.deleted = '';
   searchPermissions();
 };
 
@@ -145,6 +157,7 @@ const resetApiSearch = () => {
   apiSearchForm.method = '';
   apiSearchForm.path_pattern = '';
   apiSearchForm.permission_code = '';
+  apiSearchForm.deleted = '';
   searchApiPermissions();
 };
 
@@ -260,6 +273,53 @@ const deletePermission = async (permission: Permission) => {
   }
 };
 
+// 恢复权限
+const restorePermission = async (permission: Permission) => {
+  try {
+    const response = await permissionService.restorePermission(permission.id);
+    if (response.code === 200) {
+      loadPermissions();
+      loadPermissionOptions();
+      ElMessage.success(`权限"${permission.permission_name}"已恢复`);
+    } else {
+      ElMessage.error('恢复权限失败: ' + response.message);
+    }
+  } catch (error: any) {
+    ElMessage.error(handleComponentError(error, '恢复权限出错'));
+  }
+};
+
+// 彻底删除权限
+const purgePermission = async (permission: Permission) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要彻底删除权限"${permission.permission_name}"吗？该操作将物理删除数据及其关联关系，不可恢复！`,
+      '彻底删除确认',
+      {
+        confirmButtonText: '彻底删除',
+        cancelButtonText: '取消',
+        type: 'error',
+        confirmButtonClass: 'el-button--danger'
+      }
+    );
+  } catch {
+    return;
+  }
+
+  try {
+    const response = await permissionService.purgePermission(permission.id);
+    if (response.code === 200) {
+      loadPermissions();
+      loadPermissionOptions();
+      ElMessage.success('权限已彻底删除');
+    } else {
+      ElMessage.error('彻底删除权限失败: ' + response.message);
+    }
+  } catch (error: any) {
+    ElMessage.error(handleComponentError(error, '彻底删除权限出错'));
+  }
+};
+
 const createApiPermission = async () => {
   try {
     const response = await permissionService.createApiPermission(apiPermissionForm);
@@ -344,6 +404,51 @@ const deleteApiPermission = async (apiPermission: ApiPermission) => {
   }
 };
 
+// 恢复API权限绑定
+const restoreApiPermission = async (apiPermission: ApiPermission) => {
+  try {
+    const response = await permissionService.restoreApiPermission(apiPermission.id);
+    if (response.code === 200) {
+      loadApiPermissions();
+      ElMessage.success(`API权限绑定"${apiPermission.method} ${apiPermission.path_pattern}"已恢复`);
+    } else {
+      ElMessage.error('恢复API权限绑定失败: ' + response.message);
+    }
+  } catch (error: any) {
+    ElMessage.error(handleComponentError(error, '恢复API权限绑定出错'));
+  }
+};
+
+// 彻底删除API权限绑定
+const purgeApiPermission = async (apiPermission: ApiPermission) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要彻底删除API权限绑定"${apiPermission.method} ${apiPermission.path_pattern}"吗？该操作不可恢复！`,
+      '彻底删除确认',
+      {
+        confirmButtonText: '彻底删除',
+        cancelButtonText: '取消',
+        type: 'error',
+        confirmButtonClass: 'el-button--danger'
+      }
+    );
+  } catch {
+    return;
+  }
+
+  try {
+    const response = await permissionService.purgeApiPermission(apiPermission.id);
+    if (response.code === 200) {
+      loadApiPermissions();
+      ElMessage.success('API权限绑定已彻底删除');
+    } else {
+      ElMessage.error('彻底删除API权限绑定失败: ' + response.message);
+    }
+  } catch (error: any) {
+    ElMessage.error(handleComponentError(error, '彻底删除API权限绑定出错'));
+  }
+};
+
 // 分页处理
 const handlePageChange = (page: number) => {
   currentPage.value = page;
@@ -405,6 +510,11 @@ onMounted(() => {
           <el-form-item label="权限代码">
             <el-input v-model="searchForm.permission_code" placeholder="请输入权限代码" clearable style="width: 180px" />
           </el-form-item>
+          <el-form-item label="删除状态">
+            <el-select v-model="searchForm.deleted" style="width: 120px">
+              <el-option v-for="option in deletedStatusOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" :icon="'Search'" @click="searchPermissions">搜索</el-button>
             <el-button :icon="'Refresh'" @click="resetSearch">重置</el-button>
@@ -432,7 +542,11 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <div class="table-actions">
+            <div v-if="row.delete_flag === 'Y'" class="table-actions">
+              <el-button size="small" type="success" plain :icon="'RefreshLeft'" @click="restorePermission(row)">恢复</el-button>
+              <el-button size="small" type="danger" :icon="'DeleteFilled'" @click="purgePermission(row)">彻底删除</el-button>
+            </div>
+            <div v-else class="table-actions">
               <el-button size="small" :icon="'Edit'" @click="openEditModal(row)">编辑</el-button>
               <el-button size="small" type="danger" plain :icon="'Delete'" @click="deletePermission(row)">删除</el-button>
             </div>
@@ -477,6 +591,11 @@ onMounted(() => {
           <el-form-item label="权限代码">
             <el-input v-model="apiSearchForm.permission_code" placeholder="请输入权限代码" clearable style="width: 180px" />
           </el-form-item>
+          <el-form-item label="删除状态">
+            <el-select v-model="apiSearchForm.deleted" style="width: 120px">
+              <el-option v-for="option in deletedStatusOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" :icon="'Search'" @click="searchApiPermissions">搜索</el-button>
             <el-button :icon="'Refresh'" @click="resetApiSearch">重置</el-button>
@@ -511,7 +630,11 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <div class="table-actions">
+            <div v-if="row.delete_flag === 'Y'" class="table-actions">
+              <el-button size="small" type="success" plain :icon="'RefreshLeft'" @click="restoreApiPermission(row)">恢复</el-button>
+              <el-button size="small" type="danger" :icon="'DeleteFilled'" @click="purgeApiPermission(row)">彻底删除</el-button>
+            </div>
+            <div v-else class="table-actions">
               <el-button size="small" :icon="'Edit'" @click="openEditApiModal(row)">编辑</el-button>
               <el-button size="small" type="danger" plain :icon="'Delete'" @click="deleteApiPermission(row)">删除</el-button>
             </div>

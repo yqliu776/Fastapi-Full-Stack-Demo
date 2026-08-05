@@ -18,8 +18,16 @@ const currentPage = ref(1);
 const pageSize = ref(10);
 const searchForm = reactive({
   role_name: '',
-  role_code: ''
+  role_code: '',
+  deleted: ''
 });
+
+// 删除状态筛选选项
+const deletedStatusOptions = [
+  { value: '', label: '全部' },
+  { value: 'false', label: '正常' },
+  { value: 'true', label: '已删除' }
+];
 
 // 模态框状态
 const showCreateModal = ref(false);
@@ -42,11 +50,12 @@ const loadRoles = async () => {
   loading.value = true;
   try {
     const skip = (currentPage.value - 1) * pageSize.value;
-    const params = {
-      skip,
-      limit: pageSize.value,
-      ...searchForm
-    };
+    const params: Record<string, unknown> = { skip, limit: pageSize.value };
+    Object.entries(searchForm).forEach(([key, value]) => {
+      if (value !== '' && value !== undefined && value !== null) {
+        params[key] = value;
+      }
+    });
     const response = await roleService.getRoles(params);
     if (response.code === 200) {
       roles.value = response.data.items;
@@ -71,6 +80,7 @@ const searchRoles = () => {
 const resetSearch = () => {
   searchForm.role_name = '';
   searchForm.role_code = '';
+  searchForm.deleted = '';
   searchRoles();
 };
 
@@ -166,6 +176,51 @@ const deleteRole = async (role: Role) => {
   }
 };
 
+// 恢复角色
+const restoreRole = async (role: Role) => {
+  try {
+    const response = await roleService.restoreRole(role.id);
+    if (response.code === 200) {
+      loadRoles();
+      ElMessage.success(`角色"${role.role_name}"已恢复`);
+    } else {
+      ElMessage.error('恢复角色失败: ' + response.message);
+    }
+  } catch (error: any) {
+    ElMessage.error(handleComponentError(error, '恢复角色出错'));
+  }
+};
+
+// 彻底删除角色
+const purgeRole = async (role: Role) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要彻底删除角色"${role.role_name}"吗？该操作将物理删除数据及其关联关系，不可恢复！`,
+      '彻底删除确认',
+      {
+        confirmButtonText: '彻底删除',
+        cancelButtonText: '取消',
+        type: 'error',
+        confirmButtonClass: 'el-button--danger'
+      }
+    );
+  } catch {
+    return;
+  }
+
+  try {
+    const response = await roleService.purgeRole(role.id);
+    if (response.code === 200) {
+      loadRoles();
+      ElMessage.success('角色已彻底删除');
+    } else {
+      ElMessage.error('彻底删除角色失败: ' + response.message);
+    }
+  } catch (error: any) {
+    ElMessage.error(handleComponentError(error, '彻底删除角色出错'));
+  }
+};
+
 // 打开权限分配模态框
 const openPermissionModal = (role: Role) => {
   currentRole.value = role;
@@ -216,6 +271,11 @@ onMounted(() => {
           <el-form-item label="角色代码">
             <el-input v-model="searchForm.role_code" placeholder="请输入角色代码" clearable style="width: 180px" />
           </el-form-item>
+          <el-form-item label="删除状态">
+            <el-select v-model="searchForm.deleted" style="width: 120px">
+              <el-option v-for="option in deletedStatusOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" :icon="'Search'" @click="searchRoles">搜索</el-button>
             <el-button :icon="'Refresh'" @click="resetSearch">重置</el-button>
@@ -253,7 +313,11 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
-            <div class="table-actions">
+            <div v-if="row.delete_flag === 'Y'" class="table-actions">
+              <el-button size="small" type="success" plain :icon="'RefreshLeft'" @click="restoreRole(row)">恢复</el-button>
+              <el-button size="small" type="danger" :icon="'DeleteFilled'" @click="purgeRole(row)">彻底删除</el-button>
+            </div>
+            <div v-else class="table-actions">
               <el-button size="small" :icon="'Edit'" @click="openEditModal(row)">编辑</el-button>
               <el-button size="small" type="success" plain :icon="'Lock'" @click="openPermissionModal(row)">权限</el-button>
               <el-button size="small" type="primary" plain :icon="'Menu'" @click="openMenuModal(row)">菜单</el-button>

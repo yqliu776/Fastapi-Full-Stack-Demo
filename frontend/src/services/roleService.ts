@@ -27,6 +27,7 @@ export interface Role {
   id: number;
   role_name: string;
   role_code: string;
+  delete_flag?: string; // 删除标识，N正常/Y已软删除
   creation_date: string;
   last_update_date: string;
   permissions: Permission[]; // 角色拥有的权限列表
@@ -93,7 +94,7 @@ export interface OperationResponse {
 // 角色管理API
 export const roleService = {
   // 获取角色列表
-  async getRoles(params: { skip?: number; limit?: number; role_name?: string; role_code?: string } = {}) {
+  async getRoles(params: { skip?: number; limit?: number; role_name?: string; role_code?: string; deleted?: boolean } = {}) {
     try {
       const response = await apiClient.get<ListResponse<Role>>('/roles', { params });
       return response.data;
@@ -136,6 +137,26 @@ export const roleService = {
   async deleteRole(roleId: number) {
     try {
       const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/roles/${roleId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 恢复角色
+  async restoreRole(roleId: number) {
+    try {
+      const response = await apiClient.post<SingleResponse<Role>>(`/roles/restore/${roleId}`);
+      return response.data;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  // 彻底删除角色
+  async purgeRole(roleId: number) {
+    try {
+      const response = await apiClient.delete<SingleResponse<OperationResponse>>(`/roles/purge/${roleId}`);
       return response.data;
     } catch (error) {
       return Promise.reject(error);

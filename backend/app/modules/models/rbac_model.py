@@ -16,6 +16,7 @@ class SysUser(BaseModel):
     password = Column(String(100), nullable=False, comment="密码")
     phone_number = Column(String(20), nullable=True, comment="手机号")
     email = Column(String(100), nullable=True, comment="邮箱")
+    status = Column(String(1), nullable=False, default="N", comment="状态，N启用/Y禁用")
     
     # 关联关系
     roles = relationship("SysRole", secondary="sys_user_roles", back_populates="users")

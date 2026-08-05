@@ -31,9 +31,6 @@ const isCollapse = ref(false);
 const device = ref<'desktop' | 'mobile'>('desktop');
 const mobileMenuOpen = ref(false);
 
-// 父菜单展开状态
-const expandedMenus = ref<Set<number>>(new Set());
-
 // 切换侧边栏折叠状态（桌面） / 打开抽屉（移动）
 const toggleSideBar = () => {
   if (device.value === 'mobile') {
@@ -46,15 +43,6 @@ const toggleSideBar = () => {
 // 关闭移动端抽屉
 const closeMobileMenu = () => {
   mobileMenuOpen.value = false;
-};
-
-// 切换菜单展开状态
-const toggleMenuExpand = (menuId: number) => {
-  if (expandedMenus.value.has(menuId)) {
-    expandedMenus.value.delete(menuId);
-  } else {
-    expandedMenus.value.add(menuId);
-  }
 };
 
 // 判断当前路由是否活跃
@@ -114,6 +102,11 @@ const navItems = computed<MenuItem[]>(() => {
   return dynamicMenus;
 });
 
+// 默认展开所有父级菜单（仅含子菜单的顶级菜单）
+const defaultOpenMenus = computed(() =>
+  navItems.value.filter(item => item.children && item.children.length > 0).map(item => item.path)
+);
+
 // 根据菜单代码获取对应图标
 function getIconByMenuCode(menuCode: string): string {
   const iconMap: Record<string, string> = {
@@ -172,13 +165,6 @@ onMounted(async () => {
     await menuStore.fetchMenuTree();
     await menuStore.fetchMenus();
     menuStore.addRoutes();
-
-    // 自动展开包含当前路由的父菜单
-    menuStore.menuTree.forEach(menu => {
-      if (menu.id && menu.children?.some(child => toAdminPath(child.menu_path) === route.path)) {
-        expandedMenus.value.add(menu.id);
-      }
-    });
   }
 
   // 添加窗口大小变化监听
@@ -229,7 +215,9 @@ watch(
 
       <el-scrollbar class="sidebar-scrollbar">
         <el-menu
+          v-if="menuStore.hasMenus"
           :default-active="route.path"
+          :default-openeds="defaultOpenMenus"
           :collapse="isCollapse && device === 'desktop'"
           :unique-opened="true"
           class="sidebar-menu"

@@ -6,6 +6,7 @@ CREATE TABLE sys_users (
     password VARCHAR(100) NOT NULL,
     phone_number VARCHAR(20),
     email VARCHAR(100),
+    status CHAR(1) NOT NULL DEFAULT 'N',
 
     creation_date TIMESTAMP NOT NULL,
     created_by VARCHAR(50) NOT NULL,

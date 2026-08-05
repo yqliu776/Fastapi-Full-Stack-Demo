@@ -35,6 +35,12 @@ async def register_user(
             detail="用户名已存在"
         )
 
+    if await auth_service.user_repository.check_username_exists_any(user_data.user_name):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="该用户名已被使用（对应记录已被软删除），请先在用户管理列表中筛选\"已删除\"记录进行恢复或彻底删除"
+        )
+
     user = await auth_service.user_repository.create_user_with_role(
         user_data=user_data,
         role_code="ROLE_USER",
@@ -67,6 +73,8 @@ async def get_users(
     username: Optional[str] = Query(None, description="用户名过滤"),
     email: Optional[str] = Query(None, description="邮箱过滤"),
     phone: Optional[str] = Query(None, description="手机号过滤"),
+    status: Optional[str] = Query(None, description="用户状态过滤，N启用/Y禁用"),
+    deleted: Optional[bool] = Query(None, description="删除状态过滤，false仅正常，true仅已删除"),
     current_user = Depends(get_current_user),
     auth_service: AuthService = Depends()
 ) -> ResponseModel:
@@ -78,6 +86,8 @@ async def get_users(
         username: 用户名过滤条件
         email: 邮箱过滤条件
         phone: 手机号过滤条件
+        status: 用户状态过滤条件
+        deleted: 删除状态过滤条件
         current_user: 当前登录用户
         auth_service: 认证服务实例
     
@@ -90,6 +100,8 @@ async def get_users(
         username=username,
         email=email,
         phone=phone,
+        status=status,
+        deleted=deleted,
         current_user=current_user,
         auth_service=auth_service
     )
@@ -126,6 +138,12 @@ async def admin_create_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="用户名已存在"
+        )
+    
+    if await auth_service.user_repository.check_username_exists_any(user_data.user_name):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="该用户名已被使用（对应记录已被软删除），请先在用户管理列表中筛选\"已删除\"记录进行恢复或彻底删除"
         )
     
     # 检查所有角色是否存在
@@ -165,6 +183,8 @@ async def get_user_list(
     username: Optional[str] = Query(None, description="用户名过滤"),
     email: Optional[str] = Query(None, description="邮箱过滤"),
     phone: Optional[str] = Query(None, description="手机号过滤"),
+    status: Optional[str] = Query(None, description="用户状态过滤，N启用/Y禁用"),
+    deleted: Optional[bool] = Query(None, description="删除状态过滤，false仅正常，true仅已删除"),
     current_user = Depends(get_current_user),
     auth_service: AuthService = Depends()
 ) -> ResponseModel:
@@ -176,6 +196,8 @@ async def get_user_list(
         username: 用户名过滤条件
         email: 邮箱过滤条件
         phone: 手机号过滤条件
+        status: 用户状态过滤条件
+        deleted: 删除状态过滤条件
         current_user: 当前登录用户
         auth_service: 认证服务实例
     
@@ -190,14 +212,18 @@ async def get_user_list(
         limit=pagination.limit,
         username=username,
         email=email,
-        phone=phone
+        phone=phone,
+        status=status,
+        deleted=deleted
     )
     
     # 获取总数
     total = await auth_service.user_repository.count_users_by_filter(
         username=username,
         email=email,
-        phone=phone
+        phone=phone,
+        status=status,
+        deleted=deleted
     )
     
     # 转换为响应模型
@@ -357,6 +383,91 @@ async def delete_user(
     return ResponseModel.success(
         data=None,
         message="用户删除成功",
+        process_time=process_time
+    )
+
+# 恢复用户接口
+@user_router.post(
+    "/restore/{user_id}", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="恢复用户"
+)
+async def restore_user(
+    user_id: int,
+    current_user = Depends(get_current_user),
+    auth_service: AuthService = Depends()
+) -> ResponseModel:
+    """
+    恢复已软删除的用户
+    
+    Args:
+        user_id: 用户ID
+        current_user: 当前登录用户
+        auth_service: 认证服务实例
+    
+    Returns:
+        ResponseModel: 恢复结果响应
+    """
+    start_time = time.time()
+    
+    user = await auth_service.user_repository.restore(id_=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在或未被删除"
+        )
+    
+    process_time = time.time() - start_time
+    return ResponseModel.success(
+        data=UserResponse.from_orm(user),
+        message="用户恢复成功",
+        process_time=process_time
+    )
+
+# 彻底删除用户接口
+@user_router.delete(
+    "/purge/{user_id}", 
+    response_model=ResponseModel,
+    dependencies=[Depends(has_permission(["USER_MANAGE"]))],
+    summary="彻底删除用户"
+)
+async def purge_user(
+    user_id: int,
+    current_user = Depends(get_current_user),
+    auth_service: AuthService = Depends()
+) -> ResponseModel:
+    """
+    彻底删除用户及其关联数据（物理删除，不可恢复）
+    
+    Args:
+        user_id: 用户ID
+        current_user: 当前登录用户
+        auth_service: 认证服务实例
+    
+    Returns:
+        ResponseModel: 彻底删除结果响应
+    """
+    start_time = time.time()
+    
+    user = await auth_service.user_repository.get_any(user_id)
+    if user and user.user_name == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="默认管理员 admin 不能被彻底删除"
+        )
+    
+    user = await auth_service.user_repository.purge(id_=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    process_time = time.time() - start_time
+    return ResponseModel.success(
+        data=None,
+        message="用户已彻底删除",
         process_time=process_time
     )
 

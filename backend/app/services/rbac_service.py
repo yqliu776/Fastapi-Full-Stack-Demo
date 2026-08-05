@@ -180,7 +180,8 @@ class RbacService:
         skip: int = 0,
         limit: int = 100,
         role_name: Optional[str] = None,
-        role_code: Optional[str] = None
+        role_code: Optional[str] = None,
+        deleted: Optional[bool] = False
     ) -> RoleBatchResponse:
         """
         获取角色列表
@@ -190,6 +191,7 @@ class RbacService:
             limit: 返回的记录数
             role_name: 角色名称过滤条件
             role_code: 角色代码过滤条件
+            deleted: 删除状态过滤，False仅正常(N)，True仅已删除(Y)，None不过滤
             
         Returns:
             角色列表响应
@@ -207,11 +209,12 @@ class RbacService:
         roles = await self.role_repository.get_multi(
             skip=skip,
             limit=limit,
-            filters=filters
+            filters=filters,
+            deleted=deleted
         )
         
         # 获取总记录数
-        total = await self.role_repository.get_count(filters=filters)
+        total = await self.role_repository.get_count(filters=filters, deleted=deleted)
         
         # 转换为响应模型
         return RoleBatchResponse(
@@ -221,6 +224,31 @@ class RbacService:
             message="获取角色列表成功"
         )
     
+    async def restore_role(self, role_id: int) -> RoleResponse:
+        """恢复已删除的角色。"""
+        role = await self.role_repository.restore(id_=role_id)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"角色ID '{role_id}' 不存在或未被删除"
+            )
+        return RoleResponse.model_validate(role)
+    
+    async def purge_role(self, role_id: int) -> bool:
+        """彻底删除角色及其所有关联数据。"""
+        role = await self.role_repository.get(role_id)
+        if role and role.role_code == "ROLE_SUPER_ADMIN":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="ROLE_SUPER_ADMIN 角色不能被彻底删除"
+            )
+        role = await self.role_repository.purge(id_=role_id)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"角色ID '{role_id}' 不存在"
+            )
+        return True    
     async def add_permissions_to_role(
         self, 
         role_id: int, 
@@ -597,7 +625,8 @@ class RbacService:
         skip: int = 0,
         limit: int = 100,
         permission_name: Optional[str] = None,
-        permission_code: Optional[str] = None
+        permission_code: Optional[str] = None,
+        deleted: Optional[bool] = False
     ) -> PermissionBatchResponse:
         """
         获取权限列表
@@ -607,6 +636,7 @@ class RbacService:
             limit: 返回的记录数
             permission_name: 权限名称过滤条件
             permission_code: 权限代码过滤条件
+            deleted: 删除状态过滤，False仅正常(N)，True仅已删除(Y)，None不过滤
             
         Returns:
             权限列表响应
@@ -616,7 +646,8 @@ class RbacService:
             skip=skip,
             limit=limit,
             permission_name=permission_name,
-            permission_code=permission_code
+            permission_code=permission_code,
+            deleted=deleted
         )
         
         # 构建过滤条件
@@ -629,7 +660,7 @@ class RbacService:
             filters.append(SysPermission.permission_code.like(f"%{permission_code}%"))
         
         # 获取总记录数
-        total = await self.permission_repository.get_count(filters=filters)
+        total = await self.permission_repository.get_count(filters=filters, deleted=deleted)
         
         # 转换为响应模型
         return PermissionBatchResponse(
@@ -638,6 +669,26 @@ class RbacService:
             success=True,
             message="获取权限列表成功"
         )
+
+    async def restore_permission(self, permission_id: int) -> PermissionResponse:
+        """恢复已删除的权限。"""
+        permission = await self.permission_repository.restore(id_=permission_id)
+        if not permission:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"权限ID '{permission_id}' 不存在或未被删除"
+            )
+        return PermissionResponse.model_validate(permission)
+
+    async def purge_permission(self, permission_id: int) -> bool:
+        """彻底删除权限及其关联数据。"""
+        permission = await self.permission_repository.purge(id_=permission_id)
+        if not permission:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"权限ID '{permission_id}' 不存在"
+            )
+        return True
 
     async def create_api_permission(self, api_permission_data: ApiPermissionCreate) -> ApiPermissionResponse:
         permission = await self.permission_repository.get_by_permission_code(
@@ -722,20 +773,42 @@ class RbacService:
         result = await self.api_permission_repository.delete(id_=api_permission_id)
         return result is not None
 
+    async def restore_api_permission(self, api_permission_id: int) -> ApiPermissionResponse:
+        """恢复已删除的API权限绑定。"""
+        api_permission = await self.api_permission_repository.restore(id_=api_permission_id)
+        if not api_permission:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"API权限绑定ID '{api_permission_id}' 不存在或未被删除"
+            )
+        return ApiPermissionResponse.model_validate(api_permission)
+
+    async def purge_api_permission(self, api_permission_id: int) -> bool:
+        """彻底删除API权限绑定。"""
+        api_permission = await self.api_permission_repository.purge(id_=api_permission_id)
+        if not api_permission:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"API权限绑定ID '{api_permission_id}' 不存在"
+            )
+        return True
+
     async def get_all_api_permissions(
         self,
         skip: int = 0,
         limit: int = 100,
         method: Optional[str] = None,
         path_pattern: Optional[str] = None,
-        permission_code: Optional[str] = None
+        permission_code: Optional[str] = None,
+        deleted: Optional[bool] = False
     ) -> ApiPermissionBatchResponse:
         api_permissions = await self.api_permission_repository.get_api_permissions_by_filter(
             skip=skip,
             limit=limit,
             method=method,
             path_pattern=path_pattern,
-            permission_code=permission_code
+            permission_code=permission_code,
+            deleted=deleted
         )
 
         filters = []
@@ -746,7 +819,7 @@ class RbacService:
         if permission_code:
             filters.append(SysApiPermission.permission_code.like(f"%{permission_code}%"))
 
-        total = await self.api_permission_repository.get_count(filters=filters)
+        total = await self.api_permission_repository.get_count(filters=filters, deleted=deleted)
 
         return ApiPermissionBatchResponse(
             items=[ApiPermissionResponse.model_validate(item) for item in api_permissions],
@@ -1018,7 +1091,9 @@ class RbacService:
     async def get_all_menus(
         self,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
+        menu_name: Optional[str] = None,
+        deleted: Optional[bool] = False
     ) -> MenuBatchResponse:
         """
         获取菜单列表
@@ -1026,18 +1101,25 @@ class RbacService:
         Args:
             skip: 跳过的记录数
             limit: 返回的记录数
+            menu_name: 菜单名称过滤条件
+            deleted: 删除状态过滤，False仅正常(N)，True仅已删除(Y)，None不过滤
             
         Returns:
             菜单列表响应
         """
         # 获取菜单列表
-        menus = await self.menu_repository.get_multi(
+        menus = await self.menu_repository.get_menus_by_filter(
             skip=skip,
-            limit=limit
+            limit=limit,
+            menu_name=menu_name,
+            deleted=deleted
         )
         
         # 获取总记录数
-        total = await self.menu_repository.get_count()
+        filters = []
+        if menu_name:
+            filters.append(SysMenu.menu_name.like(f"%{menu_name}%"))
+        total = await self.menu_repository.get_count(filters=filters, deleted=deleted)
         
         # 转换为响应模型
         return MenuBatchResponse(
@@ -1046,6 +1128,26 @@ class RbacService:
             success=True,
             message="获取菜单列表成功"
         )
+
+    async def restore_menu(self, menu_id: int) -> MenuResponse:
+        """恢复已删除的菜单。"""
+        menu = await self.menu_repository.restore(id_=menu_id)
+        if not menu:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"菜单ID '{menu_id}' 不存在或未被删除"
+            )
+        return MenuResponse.model_validate(menu)
+
+    async def purge_menu(self, menu_id: int) -> bool:
+        """彻底删除菜单及其所有子孙菜单和关联数据。"""
+        menu = await self.menu_repository.purge(id_=menu_id)
+        if not menu:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"菜单ID '{menu_id}' 不存在"
+            )
+        return True
     
     async def get_menu_tree(self) -> List[MenuTreeNode]:
         """

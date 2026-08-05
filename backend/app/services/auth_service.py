@@ -84,6 +84,13 @@ class AuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
+        # 校验账号状态，禁用账号禁止登录
+        if user.status == 'Y':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="账号已被禁用，请联系管理员",
+            )
+        
         await self.redis_util.delete(fail_key)
         
         # 获取用户权限

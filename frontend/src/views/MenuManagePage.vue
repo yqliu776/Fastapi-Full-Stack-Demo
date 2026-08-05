@@ -14,8 +14,16 @@ const loading = ref(false);
 const currentPage = ref(1);
 const pageSize = ref(10);
 const searchForm = reactive({
-  menu_name: ''
+  menu_name: '',
+  deleted: ''
 });
+
+// 删除状态筛选选项
+const deletedStatusOptions = [
+  { value: '', label: '全部' },
+  { value: 'false', label: '正常' },
+  { value: 'true', label: '已删除' }
+];
 const componentOptions = [
   { key: '', label: '自动匹配' },
   { key: 'dashboard', label: 'dashboard - 仪表盘/系统父级' },
@@ -91,11 +99,12 @@ const loadMenus = async () => {
   loading.value = true;
   try {
     const skip = (currentPage.value - 1) * pageSize.value;
-    const params = {
-      skip,
-      limit: pageSize.value,
-      ...searchForm
-    };
+    const params: Record<string, unknown> = { skip, limit: pageSize.value };
+    Object.entries(searchForm).forEach(([key, value]) => {
+      if (value !== '' && value !== undefined && value !== null) {
+        params[key] = value;
+      }
+    });
     const response = await menuService.getMenus(params);
     if (response.code === 200) {
       menus.value = response.data.items;
@@ -132,6 +141,7 @@ const searchMenus = () => {
 // 重置搜索
 const resetSearch = () => {
   searchForm.menu_name = '';
+  searchForm.deleted = '';
   searchMenus();
 };
 
@@ -244,6 +254,55 @@ const deleteMenu = async (menu: Menu) => {
   }
 };
 
+// 恢复菜单
+const restoreMenu = async (menu: Menu) => {
+  try {
+    const response = await menuService.restoreMenu(menu.id);
+    if (response.code === 200) {
+      loadMenus();
+      loadAllMenus();
+      ElMessage.success(`菜单"${menu.menu_name}"已恢复`);
+    } else {
+      ElMessage.error('恢复菜单失败: ' + response.message);
+    }
+  } catch (error) {
+    console.error('恢复菜单出错:', error);
+    ElMessage.error('恢复菜单出错');
+  }
+};
+
+// 彻底删除菜单
+const purgeMenu = async (menu: Menu) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要彻底删除菜单"${menu.menu_name}"及其所有子菜单吗？该操作将物理删除数据，不可恢复！`,
+      '彻底删除确认',
+      {
+        confirmButtonText: '彻底删除',
+        cancelButtonText: '取消',
+        type: 'error',
+        confirmButtonClass: 'el-button--danger'
+      }
+    );
+  } catch {
+    return;
+  }
+
+  try {
+    const response = await menuService.purgeMenu(menu.id);
+    if (response.code === 200) {
+      loadMenus();
+      loadAllMenus();
+      ElMessage.success('菜单已彻底删除');
+    } else {
+      ElMessage.error('彻底删除菜单失败: ' + response.message);
+    }
+  } catch (error) {
+    console.error('彻底删除菜单出错:', error);
+    ElMessage.error('彻底删除菜单出错');
+  }
+};
+
 // 获取父菜单名称
 const getParentMenuName = (parentId?: number) => {
   if (!parentId) return '无';
@@ -281,6 +340,11 @@ onMounted(() => {
           <el-form-item label="菜单名称">
             <el-input v-model="searchForm.menu_name" placeholder="请输入菜单名称" clearable style="width: 220px" />
           </el-form-item>
+          <el-form-item label="删除状态">
+            <el-select v-model="searchForm.deleted" style="width: 120px">
+              <el-option v-for="option in deletedStatusOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
           <el-form-item>
             <el-button type="primary" :icon="'Search'" @click="searchMenus">搜索</el-button>
             <el-button :icon="'Refresh'" @click="resetSearch">重置</el-button>
@@ -316,7 +380,11 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <div class="table-actions">
+            <div v-if="row.delete_flag === 'Y'" class="table-actions">
+              <el-button size="small" type="success" plain :icon="'RefreshLeft'" @click="restoreMenu(row)">恢复</el-button>
+              <el-button size="small" type="danger" :icon="'DeleteFilled'" @click="purgeMenu(row)">彻底删除</el-button>
+            </div>
+            <div v-else class="table-actions">
               <el-button size="small" :icon="'Edit'" @click="openEditModal(row)">编辑</el-button>
               <el-button size="small" type="danger" plain :icon="'Delete'" @click="deleteMenu(row)">删除</el-button>
             </div>
