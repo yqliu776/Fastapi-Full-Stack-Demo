@@ -383,9 +383,15 @@
 
 /* 操作列按钮 */
 .table-actions {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
+  width: 100%;
+}
+
+.table-actions .el-button + .el-button {
+  margin-left: 0;
 }
 
 /* 搜索表单区 */
