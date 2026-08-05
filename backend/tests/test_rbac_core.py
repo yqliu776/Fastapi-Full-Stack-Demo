@@ -30,7 +30,8 @@ from app.modules.models import (
     SysUser,
     SysUserRole,
 )
-from app.modules.repositories import MenuRepository, PermissionRepository, RoleRepository
+from app.modules.repositories import MenuRepository, PermissionRepository, RoleRepository, UserRepository
+from app.modules.schemas import UserUpdate
 from app.routers.auth import get_current_user
 from app.routers.rbac.menu_router import router as menu_router
 
@@ -247,3 +248,166 @@ async def test_current_menus_only_returns_authenticated_user_menus(session: Asyn
     payload = response.json()
     assert payload["code"] == 200
     assert {menu["menu_code"] for menu in payload["data"]["items"]} == {"FIRST_MENU"}
+
+
+@pytest.mark.asyncio
+async def test_user_with_multiple_roles_gets_union_of_active_role_menus(session: AsyncSession):
+    first_role = await _create_role(session, "ROLE_FIRST")
+    second_role = await _create_role(session, "ROLE_SECOND")
+    first_menu = await _create_menu(session, "FIRST_MENU", "/system/first")
+    second_menu = await _create_menu(session, "SECOND_MENU", "/system/second")
+    user = SysUser(user_name="multi_role_user", password="not-used", **_audit())
+    session.add(user)
+    await session.flush()
+    session.add_all(
+        [
+            SysUserRole(user_id=user.id, role_id=first_role.id, **_audit()),
+            SysUserRole(user_id=user.id, role_id=second_role.id, **_audit()),
+            SysRoleMenu(role_id=first_role.id, menu_id=first_menu.id, **_audit()),
+            SysRoleMenu(role_id=second_role.id, menu_id=second_menu.id, **_audit()),
+        ]
+    )
+    await session.commit()
+
+    menu_repository = MenuRepository(session)
+    menus = await menu_repository.get_menus_by_user_id(user.id)
+
+    assert {menu.menu_code for menu in menus} == {"FIRST_MENU", "SECOND_MENU"}
+
+
+@pytest.mark.asyncio
+async def test_super_admin_gets_all_menus_without_role_menu_rows(session: AsyncSession):
+    super_role = await _create_role(session, "ROLE_SUPER_ADMIN")
+    regular_role = await _create_role(session, "ROLE_USER")
+    root_menu = await _create_menu(session, "ROOT_MENU", "/system")
+    child_menu = await _create_menu(session, "CHILD_MENU", "/system/child", root_menu.id)
+    user = SysUser(user_name="super_user", password="not-used", **_audit())
+    session.add(user)
+    await session.flush()
+    session.add_all(
+        [
+            SysUserRole(user_id=user.id, role_id=super_role.id, **_audit()),
+            SysUserRole(user_id=user.id, role_id=regular_role.id, **_audit()),
+        ]
+    )
+    await session.commit()
+
+    menu_repository = MenuRepository(session)
+    menus = await menu_repository.get_menus_by_user_id(user.id)
+
+    assert {menu.menu_code for menu in menus} == {"ROOT_MENU", "CHILD_MENU"}
+
+
+@pytest.mark.asyncio
+async def test_get_user_with_roles_excludes_soft_deleted_user_roles(session: AsyncSession):
+    active_role = await _create_role(session, "ROLE_ACTIVE")
+    deleted_role = await _create_role(session, "ROLE_DELETED")
+    user = SysUser(user_name="role_filter_user", password="not-used", **_audit())
+    session.add(user)
+    await session.flush()
+    session.add_all(
+        [
+            SysUserRole(user_id=user.id, role_id=active_role.id, delete_flag="N", **_audit()),
+            SysUserRole(user_id=user.id, role_id=deleted_role.id, delete_flag="Y", **_audit()),
+        ]
+    )
+    await session.commit()
+
+    user_repository = UserRepository(session)
+    user_with_roles = await user_repository.get_user_with_roles(user.id)
+
+    assert user_with_roles is not None
+    assert [role.role_code for role in user_with_roles.roles] == ["ROLE_ACTIVE"]
+
+
+@pytest.mark.asyncio
+async def test_update_user_base_fields_does_not_replace_roles(session: AsyncSession):
+    super_role = await _create_role(session, "ROLE_SUPER_ADMIN")
+    user_role = await _create_role(session, "ROLE_USER")
+    user = SysUser(user_name="admin", password="not-used", email="old@example.com", **_audit())
+    session.add(user)
+    await session.flush()
+    session.add_all(
+        [
+            SysUserRole(user_id=user.id, role_id=super_role.id, delete_flag="N", **_audit()),
+            SysUserRole(user_id=user.id, role_id=user_role.id, delete_flag="N", **_audit()),
+        ]
+    )
+    await session.commit()
+
+    user_repository = UserRepository(session)
+    updated = await user_repository.update_user_with_roles(
+        user_id=user.id,
+        user_data=UserUpdate(email="new@example.com", phone_number="13800000000", delete_flag="N"),
+        updated_by="pytest-update",
+    )
+
+    assert updated.email == "new@example.com"
+    assert set(await user_repository.get_active_role_codes(user.id)) == {"ROLE_SUPER_ADMIN", "ROLE_USER"}
+
+
+@pytest.mark.asyncio
+async def test_default_admin_super_admin_role_cannot_be_replaced_or_removed(session: AsyncSession):
+    super_role = await _create_role(session, "ROLE_SUPER_ADMIN")
+    user_role = await _create_role(session, "ROLE_USER")
+    admin = SysUser(user_name="admin", password="not-used", **_audit())
+    session.add(admin)
+    await session.flush()
+    session.add_all(
+        [
+            SysUserRole(user_id=admin.id, role_id=super_role.id, delete_flag="N", **_audit()),
+            SysUserRole(user_id=admin.id, role_id=user_role.id, delete_flag="N", **_audit()),
+        ]
+    )
+    await session.commit()
+
+    user_repository = UserRepository(session)
+
+    with pytest.raises(ValueError, match="默认管理员 admin 必须保留 ROLE_SUPER_ADMIN"):
+        await user_repository.replace_user_roles(admin.id, ["ROLE_USER"], "pytest-replace")
+
+    with pytest.raises(ValueError, match="默认管理员 admin 必须保留 ROLE_SUPER_ADMIN"):
+        await user_repository.remove_user_roles(admin.id, ["ROLE_SUPER_ADMIN"], "pytest-remove")
+
+    assert set(await user_repository.get_active_role_codes(admin.id)) == {"ROLE_SUPER_ADMIN", "ROLE_USER"}
+
+
+@pytest.mark.asyncio
+async def test_relation_detail_helpers_exclude_soft_deleted_relations(session: AsyncSession):
+    role = await _create_role(session, "ROLE_ACTIVE")
+    removed_role = await _create_role(session, "ROLE_REMOVED")
+    active_permission = await _create_permission(session, "ACTIVE_PERMISSION")
+    removed_permission = await _create_permission(session, "REMOVED_PERMISSION")
+    active_menu = await _create_menu(session, "ACTIVE_MENU", "/system/active")
+    removed_menu = await _create_menu(session, "REMOVED_MENU", "/system/removed")
+    active_user = SysUser(user_name="active_user", password="not-used", **_audit())
+    removed_user = SysUser(user_name="removed_user", password="not-used", **_audit())
+    session.add_all([active_user, removed_user])
+    await session.flush()
+    session.add_all(
+        [
+            SysRolePermission(role_id=role.id, permission_id=active_permission.id, delete_flag="N", **_audit()),
+            SysRolePermission(role_id=role.id, permission_id=removed_permission.id, delete_flag="Y", **_audit()),
+            SysRoleMenu(role_id=role.id, menu_id=active_menu.id, delete_flag="N", **_audit()),
+            SysRoleMenu(role_id=role.id, menu_id=removed_menu.id, delete_flag="Y", **_audit()),
+            SysUserRole(user_id=active_user.id, role_id=role.id, delete_flag="N", **_audit()),
+            SysUserRole(user_id=removed_user.id, role_id=role.id, delete_flag="Y", **_audit()),
+            SysRolePermission(role_id=removed_role.id, permission_id=active_permission.id, delete_flag="Y", **_audit()),
+            SysRoleMenu(role_id=removed_role.id, menu_id=active_menu.id, delete_flag="Y", **_audit()),
+        ]
+    )
+    await session.commit()
+
+    role_repository = RoleRepository(session)
+    permission_repository = PermissionRepository(session)
+    menu_repository = MenuRepository(session)
+
+    role_detail = await role_repository.get_role_with_all_relations(role.id)
+    permission_detail = await permission_repository.get_permission_with_roles(active_permission.id)
+    menu_detail = await menu_repository.get_menu_with_roles(active_menu.id)
+
+    assert [permission.permission_code for permission in role_detail.permissions] == ["ACTIVE_PERMISSION"]
+    assert [menu.menu_code for menu in role_detail.menus] == ["ACTIVE_MENU"]
+    assert [user.user_name for user in role_detail.users] == ["active_user"]
+    assert [role.role_code for role in permission_detail.roles] == ["ROLE_ACTIVE"]
+    assert [role.role_code for role in menu_detail.roles] == ["ROLE_ACTIVE"]

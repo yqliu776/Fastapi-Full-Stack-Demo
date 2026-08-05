@@ -1,8 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
 from sqlalchemy import select, and_
+from sqlalchemy.orm.attributes import set_committed_value
 
-from app.modules.models import SysPermission
+from app.modules.models import SysPermission, SysRole, SysRolePermission
 from .base_repository import BaseRepository
 
 
@@ -54,8 +55,20 @@ class PermissionRepository(BaseRepository[SysPermission]):
         permission = result.scalar_one_or_none()
         
         if permission:
-            # 加载角色关系
-            await self.db.refresh(permission, ["roles"])
+            roles_query = (
+                select(SysRole)
+                .join(SysRolePermission, SysRolePermission.role_id == SysRole.id)
+                .where(
+                    and_(
+                        SysRolePermission.permission_id == permission_id,
+                        SysRolePermission.delete_flag == 'N',
+                        SysRole.delete_flag == 'N'
+                    )
+                )
+                .order_by(SysRole.id)
+            )
+            roles_result = await self.db.execute(roles_query)
+            set_committed_value(permission, "roles", list(roles_result.scalars().all()))
             
         return permission
     

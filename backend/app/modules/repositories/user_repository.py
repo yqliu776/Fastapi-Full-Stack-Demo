@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, update
+from sqlalchemy.orm.attributes import set_committed_value
 from typing import Optional, List, Tuple
 import secrets
 import string
@@ -58,10 +59,38 @@ class UserRepository(BaseRepository[SysUser]):
         user = result.scalar_one_or_none()
         
         if user:
-            # 加载角色关系
-            await self.db.refresh(user, ["roles"])
+            roles_query = (
+                select(SysRole)
+                .join(SysUserRole, SysUserRole.role_id == SysRole.id)
+                .where(
+                    and_(
+                        SysUserRole.user_id == user_id,
+                        SysUserRole.delete_flag == 'N',
+                        SysRole.delete_flag == 'N'
+                    )
+                )
+                .order_by(SysRole.id)
+            )
+            roles_result = await self.db.execute(roles_query)
+            set_committed_value(user, "roles", list(roles_result.scalars().all()))
             
         return user
+
+    async def get_active_role_codes(self, user_id: int) -> List[str]:
+        """获取用户当前有效角色代码。"""
+        query = (
+            select(SysRole.role_code)
+            .join(SysUserRole, SysUserRole.role_id == SysRole.id)
+            .where(
+                and_(
+                    SysUserRole.user_id == user_id,
+                    SysUserRole.delete_flag == 'N',
+                    SysRole.delete_flag == 'N'
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
     
     async def get_users_by_role(self, role_code: str, skip: int = 0, limit: int = 100) -> List[SysUser]:
         """
@@ -346,7 +375,7 @@ class UserRepository(BaseRepository[SysUser]):
         updated_by: str
     ) -> SysUser:
         """
-        更新用户信息和角色
+        更新用户基本信息。
         
         Args:
             user_id: 用户ID
@@ -361,8 +390,7 @@ class UserRepository(BaseRepository[SysUser]):
         if not user:
             return None
         
-        # 更新用户基本信息
-        update_data = user_data.model_dump(exclude_unset=True, exclude={"role_codes", "password"})
+        update_data = user_data.model_dump(exclude_unset=True, exclude={"password"})
         if update_data:
             update_data["last_updated_by"] = updated_by
             update_data["last_update_login"] = updated_by
@@ -372,56 +400,67 @@ class UserRepository(BaseRepository[SysUser]):
                 update_data["password"] = get_password_hash(user_data.password)
                 
             await self.update(id_=user_id, obj_in=update_data)
-        
-        # 如果有角色更新
-        if user_data.role_codes:
-            # 查询角色ID
-            role_query = select(SysRole.id).where(
+
+        await self.db.commit()
+        return await self.get(user_id)
+
+    async def replace_user_roles(
+        self,
+        user_id: int,
+        role_codes: List[str],
+        updated_by: str
+    ) -> SysUser:
+        """用指定角色代码完整替换用户角色。"""
+        user = await self.get(user_id)
+        if not user:
+            return None
+
+        normalized_role_codes = list(dict.fromkeys(role_codes))
+        if "ROLE_SUPER_ADMIN" not in normalized_role_codes:
+            await self._ensure_super_admin_can_be_removed(user_id)
+
+        role_query = select(SysRole.id).where(
+            and_(
+                SysRole.role_code.in_(normalized_role_codes),
+                SysRole.delete_flag == 'N'
+            )
+        )
+        role_result = await self.db.execute(role_query)
+        role_ids = [row[0] for row in role_result.fetchall()]
+
+        await self.db.execute(
+            update(SysUserRole)
+            .where(SysUserRole.user_id == user_id)
+            .values(delete_flag="Y", last_updated_by=updated_by, last_update_login=updated_by)
+        )
+
+        for role_id in role_ids:
+            existing_query = select(SysUserRole).where(
                 and_(
-                    SysRole.role_code.in_(user_data.role_codes),
-                    SysRole.delete_flag == 'N'
+                    SysUserRole.user_id == user_id,
+                    SysUserRole.role_id == role_id,
+                    SysUserRole.delete_flag == 'Y'
                 )
             )
-            role_result = await self.db.execute(role_query)
-            role_ids = [row[0] for row in role_result.fetchall()]
-            
-            # 删除原有用户角色关联
-            await self.db.execute(
-                update(SysUserRole)
-                .where(SysUserRole.user_id == user_id)
-                .values(delete_flag="Y", last_updated_by=updated_by, last_update_login=updated_by)
-            )
-            
-            # 创建新的用户角色关联
-            for role_id in role_ids:
-                # 检查是否存在已被软删除的相同用户-角色关联
-                existing_query = select(SysUserRole).where(
-                    and_(
-                        SysUserRole.user_id == user_id,
-                        SysUserRole.role_id == role_id,
-                        SysUserRole.delete_flag == 'Y'
-                    )
-                )
-                existing_result = await self.db.execute(existing_query)
-                existing_user_role = existing_result.scalar_one_or_none()
-                
-                if existing_user_role:
-                    # 如果存在被软删除的记录，则恢复该记录
-                    existing_user_role.delete_flag = 'N'
-                    existing_user_role.last_updated_by = updated_by
-                    existing_user_role.last_update_login = updated_by
-                    existing_user_role.last_update_date = func.now()
-                else:
-                    # 如果不存在，则创建新记录
-                    user_role = SysUserRole(
+            existing_result = await self.db.execute(existing_query)
+            existing_user_role = existing_result.scalar_one_or_none()
+
+            if existing_user_role:
+                existing_user_role.delete_flag = 'N'
+                existing_user_role.last_updated_by = updated_by
+                existing_user_role.last_update_login = updated_by
+                existing_user_role.last_update_date = func.now()
+            else:
+                self.db.add(
+                    SysUserRole(
                         user_id=user_id,
                         role_id=role_id,
                         created_by=updated_by,
                         last_updated_by=updated_by,
                         last_update_login=updated_by
                     )
-                    self.db.add(user_role)
-        
+                )
+
         await self.db.commit()
         return await self.get(user_id)
     
@@ -474,6 +513,9 @@ class UserRepository(BaseRepository[SysUser]):
         Returns:
             更新后的用户实例
         """
+        if "ROLE_SUPER_ADMIN" in role_codes:
+            await self._ensure_super_admin_can_be_removed(user_id)
+
         # 查询角色ID
         role_query = select(SysRole.id).where(
             and_(
@@ -508,3 +550,31 @@ class UserRepository(BaseRepository[SysUser]):
         
         await self.db.commit()
         return await self.get(user_id) 
+
+    async def _ensure_super_admin_can_be_removed(self, user_id: int) -> None:
+        """阻止误删默认管理员或系统最后一个超管角色。"""
+        current_codes = await self.get_active_role_codes(user_id)
+        if "ROLE_SUPER_ADMIN" not in current_codes:
+            return
+
+        user = await self.get(user_id)
+        if user and user.user_name == "admin":
+            raise ValueError("默认管理员 admin 必须保留 ROLE_SUPER_ADMIN")
+
+        super_admin_count_query = (
+            select(func.count(func.distinct(SysUserRole.user_id)))
+            .select_from(SysUserRole)
+            .join(SysRole, SysRole.id == SysUserRole.role_id)
+            .join(SysUser, SysUser.id == SysUserRole.user_id)
+            .where(
+                and_(
+                    SysRole.role_code == "ROLE_SUPER_ADMIN",
+                    SysRole.delete_flag == 'N',
+                    SysUserRole.delete_flag == 'N',
+                    SysUser.delete_flag == 'N'
+                )
+            )
+        )
+        result = await self.db.execute(super_admin_count_query)
+        if (result.scalar_one() or 0) <= 1:
+            raise ValueError("系统至少需要保留一个启用的 ROLE_SUPER_ADMIN 用户")

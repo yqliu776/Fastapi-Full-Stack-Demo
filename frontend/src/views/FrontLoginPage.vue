@@ -1,17 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
-import { ADMIN_HOME_PATH } from '@/config/adminRoute';
 
 const username = ref('');
 const password = ref('');
 const isLoading = ref(false);
-const showPassword = ref(false);
+const successMessage = ref<string | null>(null);
 
-const userStore = useUserStore();
-const router = useRouter();
 const route = useRoute();
+const router = useRouter();
+const userStore = useUserStore();
+
+onMounted(() => {
+  if (route.query.registered === 'true') {
+    successMessage.value = '注册成功，请登录';
+    if (route.query.username) {
+      username.value = String(route.query.username);
+    }
+  }
+});
 
 async function handleLogin() {
   if (!username.value || !password.value) {
@@ -19,36 +27,51 @@ async function handleLogin() {
   }
 
   isLoading.value = true;
-  const success = await userStore.login(username.value, password.value);
-
-  if (success) {
-    router.push((route.query.redirect as string) || ADMIN_HOME_PATH);
-  }
+  successMessage.value = null;
+  const ok = await userStore.login(username.value, password.value, { loadAdminMenus: false });
   isLoading.value = false;
+
+  if (ok) {
+    router.push((route.query.redirect as string) || '/user');
+  }
+}
+
+function clearSuccessMessage() {
+  successMessage.value = null;
 }
 </script>
 
 <template>
-  <div class="login-page">
+  <div class="front-auth-page">
     <div class="deco deco-1"></div>
     <div class="deco deco-2"></div>
     <div class="deco deco-3"></div>
 
-    <div class="login-card">
+    <div class="auth-card">
       <div class="brand">
         <div class="brand-logo">
-          <el-icon :size="26"><Monitor /></el-icon>
+          <el-icon :size="26"><User /></el-icon>
         </div>
         <div class="brand-text">
-          <h1>管理系统</h1>
-          <p>Fast Full Stack Demo · 后台控制台</p>
+          <h1>前台登录</h1>
+          <p>登录前台业务账号</p>
         </div>
       </div>
 
       <div class="welcome">
         <h2>欢迎回来</h2>
-        <p>请输入您的账号和密码继续访问</p>
+        <p>请输入您的账号和密码继续访问用户中心</p>
       </div>
+
+      <el-alert
+        v-if="successMessage"
+        :title="successMessage"
+        type="success"
+        :closable="true"
+        show-icon
+        class="mb-4"
+        @close="clearSuccessMessage"
+      />
 
       <el-alert
         v-if="userStore.error"
@@ -60,11 +83,7 @@ async function handleLogin() {
         @close="userStore.clearError()"
       />
 
-      <el-form
-        class="login-form"
-        label-position="top"
-        @submit.prevent="handleLogin"
-      >
+      <el-form class="auth-form" label-position="top" @submit.prevent="handleLogin">
         <el-form-item>
           <el-input
             v-model="username"
@@ -80,7 +99,7 @@ async function handleLogin() {
           <el-input
             v-model="password"
             size="large"
-            :type="showPassword ? 'text' : 'password'"
+            type="password"
             placeholder="密码"
             :prefix-icon="'Lock'"
             autocomplete="current-password"
@@ -99,6 +118,12 @@ async function handleLogin() {
         >
           {{ isLoading ? '登录中...' : '登 录' }}
         </el-button>
+
+        <div class="auth-links">
+          <router-link to="/register" class="link">注册账号</router-link>
+          <span class="divider"></span>
+          <router-link to="/" class="link">返回首页</router-link>
+        </div>
       </el-form>
     </div>
 
@@ -107,7 +132,7 @@ async function handleLogin() {
 </template>
 
 <style scoped>
-.login-page {
+.front-auth-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -121,7 +146,6 @@ async function handleLogin() {
   padding: 24px;
 }
 
-/* 装饰光斑 */
 .deco {
   position: absolute;
   border-radius: 50%;
@@ -154,7 +178,7 @@ async function handleLogin() {
   background: radial-gradient(circle, rgba(56, 189, 248, 0.4), transparent 70%);
 }
 
-.login-card {
+.auth-card {
   position: relative;
   z-index: 1;
   width: min(420px, 100%);
@@ -215,13 +239,13 @@ async function handleLogin() {
   color: var(--el-text-color-secondary);
 }
 
-.login-form :deep(.el-input__wrapper) {
+.auth-form :deep(.el-input__wrapper) {
   padding: 4px 14px;
   border-radius: 10px;
   box-shadow: 0 0 0 1px var(--el-border-color) inset;
 }
 
-.login-form :deep(.el-input__wrapper.is-focus) {
+.auth-form :deep(.el-input__wrapper.is-focus) {
   box-shadow: 0 0 0 1px var(--brand-primary) inset;
 }
 
@@ -241,6 +265,30 @@ async function handleLogin() {
 .submit-btn:focus {
   background: var(--brand-gradient);
   opacity: 0.92;
+}
+
+.auth-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.divider {
+  width: 1px;
+  height: 14px;
+  background: var(--app-border);
+}
+
+.link {
+  font-size: 14px;
+  color: var(--brand-primary);
+  font-weight: 500;
+}
+
+.link:hover {
+  color: var(--brand-primary-dark);
 }
 
 .copyright {

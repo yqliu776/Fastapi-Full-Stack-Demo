@@ -18,6 +18,43 @@ from app.core.connects import db
 # 创建路由
 user_router = APIRouter(prefix="/users", tags=["用户管理"])
 
+# 前台业务用户注册接口
+@user_router.post("/register", response_model=ResponseModel, summary="前台业务用户注册")
+async def register_user(
+    user_data: UserCreate,
+    auth_service: AuthService = Depends()
+) -> ResponseModel:
+    """
+    前台业务用户自助注册接口。
+    """
+    start_time = time.time()
+
+    if await auth_service.user_repository.check_username_exists(user_data.user_name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="用户名已存在"
+        )
+
+    user = await auth_service.user_repository.create_user_with_role(
+        user_data=user_data,
+        role_code="ROLE_USER",
+        created_by="front_register"
+    )
+
+    process_time = time.time() - start_time
+    return ResponseModel.success(
+        data=UserResponse(
+            id=user.id,
+            user_name=user.user_name,
+            email=user.email,
+            phone_number=user.phone_number,
+            creation_date=user.creation_date,
+            last_update_date=user.last_update_date
+        ),
+        message="注册成功",
+        process_time=process_time
+    )
+
 # 根路径用户列表接口
 @user_router.get(
     "/", 
@@ -55,51 +92,6 @@ async def get_users(
         phone=phone,
         current_user=current_user,
         auth_service=auth_service
-    )
-
-# 用户注册接口
-@user_router.post("/register", response_model=ResponseModel, summary="用户注册")
-async def register_user(
-    user_data: UserCreate,
-    auth_service: AuthService = Depends()
-) -> ResponseModel:
-    """
-    用户注册接口
-    
-    Args:
-        user_data: 用户注册信息
-        auth_service: 认证服务实例
-    
-    Returns:
-        ResponseModel: 包含用户基本信息的响应
-    """
-    start_time = time.time()
-    
-    # 检查用户名是否存在
-    if await auth_service.user_repository.check_username_exists(user_data.user_name):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="用户名已存在"
-        )
-    
-    # 创建用户(默认给予普通用户角色)
-    user = await auth_service.user_repository.create_user_with_role(
-        user_data=user_data,
-        role_code="user",  # 默认角色代码
-        created_by="system"
-    )
-    
-    process_time = time.time() - start_time
-    return ResponseModel.success(
-        data=UserResponse(
-            id=user.id,
-            user_name=user.user_name,
-            email=user.email,
-            phone_number=user.phone_number,
-            creation_date=user.creation_date
-        ),
-        message="注册成功",
-        process_time=process_time
     )
 
 # 管理员创建用户接口
@@ -274,8 +266,7 @@ async def update_user(
     user_id: int,
     user_data: UserUpdate,
     current_user = Depends(get_current_user),
-    auth_service: AuthService = Depends(),
-    rbac_service: RbacService = Depends()
+    auth_service: AuthService = Depends()
 ) -> ResponseModel:
     """
     更新用户信息接口
@@ -299,15 +290,6 @@ async def update_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="用户不存在"
         )
-    
-    # 如果要更新角色，检查角色是否存在
-    if user_data.role_codes:
-        for role_code in user_data.role_codes:
-            if not await rbac_service.role_repository.check_role_code_exists(role_code):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"角色代码不存在: {role_code}"
-                )
     
     # 更新用户信息
     updated_user = await auth_service.user_repository.update_user_with_roles(
@@ -469,15 +451,18 @@ async def assign_user_roles(
                 detail=f"角色代码不存在: {role_code}"
             )
     
-    # 创建用户更新数据对象
-    user_data = UserUpdate(role_codes=role_data.role_codes)
-    
     # 更新用户角色
-    updated_user = await auth_service.user_repository.update_user_with_roles(
-        user_id=user_id,
-        user_data=user_data,
-        updated_by=current_user.user_name
-    )
+    try:
+        await auth_service.user_repository.replace_user_roles(
+            user_id=user_id,
+            role_codes=role_data.role_codes,
+            updated_by=current_user.user_name
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc)
+        ) from exc
     
     # 获取更新后的用户详情
     user_with_roles = await auth_service.user_repository.get_user_with_roles(user_id)
@@ -535,11 +520,17 @@ async def remove_user_roles(
             )
     
     # 删除用户指定角色
-    await auth_service.user_repository.remove_user_roles(
-        user_id=user_id,
-        role_codes=role_data.role_codes,
-        updated_by=current_user.user_name
-    )
+    try:
+        await auth_service.user_repository.remove_user_roles(
+            user_id=user_id,
+            role_codes=role_data.role_codes,
+            updated_by=current_user.user_name
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc)
+        ) from exc
     
     # 获取更新后的用户详情
     user_with_roles = await auth_service.user_repository.get_user_with_roles(user_id)

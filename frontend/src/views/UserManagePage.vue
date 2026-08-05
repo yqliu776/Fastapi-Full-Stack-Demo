@@ -206,8 +206,16 @@ const openEditModal = (user: User) => {
 const updateUser = async () => {
   if (!currentUser.value) return;
 
+  const updatePayload: UserUpdate = {
+    email: userForm.email,
+    phone_number: userForm.phone_number,
+    delete_flag: userForm.delete_flag,
+    last_updated_by: userForm.last_updated_by,
+    last_update_login: userForm.last_update_login
+  };
+
   try {
-    const response = await userService.updateUser(currentUser.value.id, userForm);
+    const response = await userService.updateUser(currentUser.value.id, updatePayload);
     if (response.code === 200) {
       showEditModal.value = false;
       loadUsers();

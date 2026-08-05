@@ -1,8 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, delete
+from sqlalchemy.orm.attributes import set_committed_value
 from typing import Optional, List
 
-from app.modules.models import SysRole, SysPermission, SysMenu, SysRolePermission, SysRoleMenu
+from app.modules.models import SysRole, SysPermission, SysMenu, SysUser, SysRolePermission, SysRoleMenu, SysUserRole
 from .base_repository import BaseRepository
 from app.core.utils import RedisUtil
 
@@ -56,8 +57,20 @@ class RoleRepository(BaseRepository[SysRole]):
         role = result.scalar_one_or_none()
         
         if role:
-            # 加载权限关系
-            await self.db.refresh(role, ["permissions"])
+            permissions_query = (
+                select(SysPermission)
+                .join(SysRolePermission, SysRolePermission.permission_id == SysPermission.id)
+                .where(
+                    and_(
+                        SysRolePermission.role_id == role_id,
+                        SysRolePermission.delete_flag == 'N',
+                        SysPermission.delete_flag == 'N'
+                    )
+                )
+                .order_by(SysPermission.id)
+            )
+            permissions_result = await self.db.execute(permissions_query)
+            set_committed_value(role, "permissions", list(permissions_result.scalars().all()))
             
         return role
     
@@ -81,8 +94,20 @@ class RoleRepository(BaseRepository[SysRole]):
         role = result.scalar_one_or_none()
         
         if role:
-            # 加载菜单关系
-            await self.db.refresh(role, ["menus"])
+            menus_query = (
+                select(SysMenu)
+                .join(SysRoleMenu, SysRoleMenu.menu_id == SysMenu.id)
+                .where(
+                    and_(
+                        SysRoleMenu.role_id == role_id,
+                        SysRoleMenu.delete_flag == 'N',
+                        SysMenu.delete_flag == 'N'
+                    )
+                )
+                .order_by(SysMenu.parent_id.is_(None).desc(), SysMenu.parent_id, SysMenu.sort_order)
+            )
+            menus_result = await self.db.execute(menus_query)
+            set_committed_value(role, "menus", list(menus_result.scalars().all()))
             
         return role
         
@@ -106,8 +131,48 @@ class RoleRepository(BaseRepository[SysRole]):
         role = result.scalar_one_or_none()
         
         if role:
-            # 加载所有关联关系
-            await self.db.refresh(role, ["permissions", "menus", "users"])
+            permissions_query = (
+                select(SysPermission)
+                .join(SysRolePermission, SysRolePermission.permission_id == SysPermission.id)
+                .where(
+                    and_(
+                        SysRolePermission.role_id == role_id,
+                        SysRolePermission.delete_flag == 'N',
+                        SysPermission.delete_flag == 'N'
+                    )
+                )
+                .order_by(SysPermission.id)
+            )
+            menus_query = (
+                select(SysMenu)
+                .join(SysRoleMenu, SysRoleMenu.menu_id == SysMenu.id)
+                .where(
+                    and_(
+                        SysRoleMenu.role_id == role_id,
+                        SysRoleMenu.delete_flag == 'N',
+                        SysMenu.delete_flag == 'N'
+                    )
+                )
+                .order_by(SysMenu.parent_id.is_(None).desc(), SysMenu.parent_id, SysMenu.sort_order)
+            )
+            users_query = (
+                select(SysUser)
+                .join(SysUserRole, SysUserRole.user_id == SysUser.id)
+                .where(
+                    and_(
+                        SysUserRole.role_id == role_id,
+                        SysUserRole.delete_flag == 'N',
+                        SysUser.delete_flag == 'N'
+                    )
+                )
+                .order_by(SysUser.id)
+            )
+            permissions_result = await self.db.execute(permissions_query)
+            menus_result = await self.db.execute(menus_query)
+            users_result = await self.db.execute(users_query)
+            set_committed_value(role, "permissions", list(permissions_result.scalars().all()))
+            set_committed_value(role, "menus", list(menus_result.scalars().all()))
+            set_committed_value(role, "users", list(users_result.scalars().all()))
             
         return role
     

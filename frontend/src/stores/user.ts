@@ -44,19 +44,21 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function login(username: string, password: string) {
+  async function login(username: string, password: string, options: { loadAdminMenus?: boolean } = {}) {
     try {
       loading.value = true;
       error.value = null;
       const response = await apiLogin(username, password);
       if (response.code === 200) {
         await fetchUserInfo();
-        
-        // 登录成功后获取菜单数据并初始化路由
-        const menuStore = useMenuStore();
-        await menuStore.fetchMenus();
-        await menuStore.fetchMenuTree();
-        menuStore.addRoutes();
+
+        if (options.loadAdminMenus !== false) {
+          // 登录后台时获取菜单数据并初始化路由
+          const menuStore = useMenuStore();
+          await menuStore.fetchMenus();
+          await menuStore.fetchMenuTree();
+          menuStore.addRoutes();
+        }
         
         return true;
       } else {
@@ -79,12 +81,12 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  function logout() {
+  function logout(redirectPath?: string) {
     userInfo.value = null;
     // 清除菜单数据
     const menuStore = useMenuStore();
     menuStore.resetState();
-    apiLogout();
+    apiLogout(redirectPath);
   }
 
   function clearError() {

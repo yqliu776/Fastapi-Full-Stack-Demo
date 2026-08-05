@@ -4,7 +4,6 @@ import { getToken } from '@/services/authService'
 import {
   ADMIN_HOME_PATH,
   ADMIN_LOGIN_PATH,
-  ADMIN_REGISTER_PATH,
   ADMIN_ROUTE_PREFIX,
   ADMIN_SYSTEM_PATH
 } from '@/config/adminRoute'
@@ -19,6 +18,24 @@ const router = createRouter({
       meta: { requiresAuth: false, title: '前台首页' }
     },
     {
+      path: '/register',
+      name: 'frontRegister',
+      component: () => import('@/views/RegisterPage.vue'),
+      meta: { requiresAuth: false, title: '注册' }
+    },
+    {
+      path: '/login',
+      name: 'frontLogin',
+      component: () => import('@/views/FrontLoginPage.vue'),
+      meta: { requiresAuth: false, title: '前台登录' }
+    },
+    {
+      path: '/user',
+      name: 'frontUser',
+      component: () => import('@/views/FrontUserPage.vue'),
+      meta: { requiresFrontAuth: true, title: '用户中心' }
+    },
+    {
       path: ADMIN_ROUTE_PREFIX,
       redirect: ADMIN_HOME_PATH
     },
@@ -27,12 +44,6 @@ const router = createRouter({
       name: 'login',
       component: () => import('@/views/LoginPage.vue'),
       meta: { requiresAuth: false, title: '登录' }
-    },
-    {
-      path: ADMIN_REGISTER_PATH,
-      name: 'register',
-      component: () => import('@/views/RegisterPage.vue'),
-      meta: { requiresAuth: false, title: '注册' }
     },
     {
       path: ADMIN_HOME_PATH,
@@ -84,15 +95,21 @@ export function resetDynamicRoutesFlag() {
 // 导航守卫
 router.beforeEach(async (to, from, next) => {
   const isAdminRoute = to.path === ADMIN_ROUTE_PREFIX || to.path.startsWith(`${ADMIN_ROUTE_PREFIX}/`);
-  const isPublicAdminRoute = to.path === ADMIN_LOGIN_PATH || to.path === ADMIN_REGISTER_PATH;
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth === true) || (isAdminRoute && !isPublicAdminRoute);
+  const isPublicAdminRoute = to.path === ADMIN_LOGIN_PATH;
+  const requiresAdminAuth = to.matched.some(record => record.meta.requiresAuth === true) || (isAdminRoute && !isPublicAdminRoute);
+  const requiresFrontAuth = to.matched.some(record => record.meta.requiresFrontAuth === true);
+  const isFrontGuestRoute = to.path === '/login' || to.path === '/register';
   const isAuthenticated = !!getToken();
   
-  if (requiresAuth && !isAuthenticated) {
+  if (requiresFrontAuth && !isAuthenticated) {
+    next({ path: '/login', query: { redirect: to.fullPath } });
+  } else if (isFrontGuestRoute && isAuthenticated) {
+    next('/user');
+  } else if (requiresAdminAuth && !isAuthenticated) {
     next({ path: ADMIN_LOGIN_PATH, query: { redirect: to.fullPath } });
   } else if (to.path === ADMIN_LOGIN_PATH && isAuthenticated) {
     next(ADMIN_HOME_PATH);
-  } else if (isAuthenticated && requiresAuth && !dynamicRoutesAdded) {
+  } else if (isAuthenticated && requiresAdminAuth && !dynamicRoutesAdded) {
     // 如果已登录但尚未加载动态路由，则加载动态路由
     try {
       

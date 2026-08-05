@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
+from sqlalchemy.orm.attributes import set_committed_value
 from typing import Optional, List
 
 from app.modules.models import SysMenu, SysRole, SysRoleMenu, SysUserRole
@@ -54,8 +55,20 @@ class MenuRepository(BaseRepository[SysMenu]):
         menu = result.scalar_one_or_none()
         
         if menu:
-            # 加载角色关系
-            await self.db.refresh(menu, ["roles"])
+            roles_query = (
+                select(SysRole)
+                .join(SysRoleMenu, SysRoleMenu.role_id == SysRole.id)
+                .where(
+                    and_(
+                        SysRoleMenu.menu_id == menu_id,
+                        SysRoleMenu.delete_flag == 'N',
+                        SysRole.delete_flag == 'N'
+                    )
+                )
+                .order_by(SysRole.id)
+            )
+            roles_result = await self.db.execute(roles_query)
+            set_committed_value(menu, "roles", list(roles_result.scalars().all()))
             
         return menu
     
@@ -171,6 +184,22 @@ class MenuRepository(BaseRepository[SysMenu]):
         Returns:
             菜单模型实例列表
         """
+        super_admin_query = (
+            select(SysRole.id)
+            .join(SysUserRole, SysUserRole.role_id == SysRole.id)
+            .where(
+                and_(
+                    SysUserRole.user_id == user_id,
+                    SysUserRole.delete_flag == 'N',
+                    SysRole.role_code == 'ROLE_SUPER_ADMIN',
+                    SysRole.delete_flag == 'N'
+                )
+            )
+        )
+        super_admin_result = await self.db.execute(super_admin_query)
+        if super_admin_result.scalar_one_or_none() is not None:
+            return await self.get_menu_tree()
+
         query = (
             select(SysMenu)
             .distinct()

@@ -85,16 +85,16 @@ export async function getUserInfo() {
   }
 }
 
-export async function logout() {
+export async function logout(redirectPath: string = ADMIN_LOGIN_PATH) {
   try {
     await apiClient.post('/auth/logout').catch(() => {});
     clearTokens();
     const { resetDynamicRoutesFlag } = await import('@/router');
     resetDynamicRoutesFlag();
-    window.location.href = ADMIN_LOGIN_PATH;
+    window.location.href = redirectPath;
   } catch (error) {
     console.error('登出过程中发生错误:', error);
-    window.location.href = ADMIN_LOGIN_PATH;
+    window.location.href = redirectPath;
   }
 }
 
@@ -110,4 +110,4 @@ export async function register(user_name: string, email: string, phone_number: s
   } catch (error) {
     return Promise.reject(error);
   }
-} 
+}

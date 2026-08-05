@@ -71,9 +71,19 @@ const parentChildPreview = computed(() => {
   return `${parentName} / ${currentName}`;
 });
 
-const normalizeMenuPayload = () => ({
+const normalizeCreateMenuPayload = (): MenuCreate => ({
   ...menuForm,
   component_key: menuForm.component_key || undefined
+});
+
+const normalizeUpdateMenuPayload = (): MenuUpdate => ({
+  menu_name: menuForm.menu_name,
+  menu_path: menuForm.menu_path,
+  component_key: menuForm.component_key || undefined,
+  parent_id: menuForm.parent_id,
+  sort_order: menuForm.sort_order,
+  last_updated_by: menuForm.last_updated_by,
+  last_update_login: menuForm.last_update_login
 });
 
 // 加载菜单列表
@@ -149,7 +159,7 @@ const createMenu = async () => {
     return;
   }
   try {
-    const response = await menuService.createMenu(normalizeMenuPayload());
+    const response = await menuService.createMenu(normalizeCreateMenuPayload());
     if (response.code === 200) {
       showCreateModal.value = false;
       loadMenus();
@@ -191,7 +201,7 @@ const updateMenu = async () => {
   }
 
   try {
-    const response = await menuService.updateMenu(currentMenu.value.id, normalizeMenuPayload());
+    const response = await menuService.updateMenu(currentMenu.value.id, normalizeUpdateMenuPayload());
     if (response.code === 200) {
       showEditModal.value = false;
       loadMenus();

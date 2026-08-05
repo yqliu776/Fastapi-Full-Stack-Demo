@@ -10,6 +10,10 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8090';
 const goConsole = () => {
   router.push(getToken() ? ADMIN_HOME_PATH : ADMIN_LOGIN_PATH);
 };
+
+const goUser = () => {
+  router.push(getToken() ? '/user' : '/login');
+};
 </script>
 
 <template>
@@ -25,6 +29,13 @@ const goConsole = () => {
         覆盖现代化 Web 应用的完整技术栈与最佳实践。
       </p>
       <div class="hero-actions">
+        <el-button type="primary" size="large" round @click="goUser">
+          {{ getToken() ? '进入用户中心' : '前台登录' }}
+          <el-icon class="el-icon--right"><User /></el-icon>
+        </el-button>
+        <el-button size="large" round @click="router.push('/register')">
+          注册账号
+        </el-button>
         <el-button type="primary" size="large" round @click="goConsole">
           进入管理后台
           <el-icon class="el-icon--right"><ArrowRight /></el-icon>
@@ -38,7 +49,7 @@ const goConsole = () => {
           <el-icon :size="22"><Lock /></el-icon>
         </div>
         <h3>安全认证</h3>
-        <p>JWT 令牌、OAuth2 支持，开箱即用的登录注册与权限守卫。</p>
+        <p>JWT 令牌、OAuth2 支持，开箱即用的登录与权限守卫。</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">
@@ -114,6 +125,8 @@ const goConsole = () => {
 
 .hero-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: center;
 }
 

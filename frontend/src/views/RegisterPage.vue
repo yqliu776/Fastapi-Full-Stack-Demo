@@ -2,7 +2,6 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { register } from '@/services/authService';
-import { ADMIN_LOGIN_PATH } from '@/config/adminRoute';
 
 const router = useRouter();
 
@@ -14,6 +13,7 @@ const confirmPassword = ref('');
 const showPassword = ref(false);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
+const success = ref<string | null>(null);
 
 function validateUsername(value: string): boolean {
   return /^[a-zA-Z0-9_]+$/.test(value);
@@ -87,6 +87,7 @@ async function handleRegister() {
 
   isLoading.value = true;
   error.value = null;
+  success.value = null;
 
   try {
     const response = await register(
@@ -97,13 +98,16 @@ async function handleRegister() {
     );
 
     if (response.code === 200) {
-      router.push({
-        path: ADMIN_LOGIN_PATH,
-        query: {
-          registered: 'true',
-          username: username.value
-        }
-      });
+      success.value = '注册成功';
+      setTimeout(() => {
+        router.push({
+          path: '/login',
+          query: {
+            registered: 'true',
+            username: username.value
+          }
+        });
+      }, 600);
     } else {
       error.value = response.message || '注册失败，请稍后重试';
     }
@@ -123,6 +127,10 @@ async function handleRegister() {
 function clearError() {
   error.value = null;
 }
+
+function clearSuccess() {
+  success.value = null;
+}
 </script>
 
 <template>
@@ -137,7 +145,7 @@ function clearError() {
         </div>
         <div class="brand-text">
           <h1>创建账号</h1>
-          <p>注册一个新账号加入管理系统</p>
+          <p>注册前台业务账号</p>
         </div>
       </div>
 
@@ -149,6 +157,16 @@ function clearError() {
         show-icon
         class="mb-4"
         @close="clearError"
+      />
+
+      <el-alert
+        v-if="success"
+        :title="success"
+        type="success"
+        :closable="true"
+        show-icon
+        class="mb-4"
+        @close="clearSuccess"
       />
 
       <el-form class="register-form" label-position="top" @submit.prevent="handleRegister">
@@ -221,9 +239,9 @@ function clearError() {
           {{ isLoading ? '注册中...' : '注 册' }}
         </el-button>
 
-        <div class="login-link">
-          <router-link :to="ADMIN_LOGIN_PATH" class="link">
-            已有账号？返回登录
+        <div class="home-link">
+          <router-link to="/login" class="link">
+            已有账号？去登录
           </router-link>
         </div>
       </el-form>
@@ -357,7 +375,7 @@ function clearError() {
   opacity: 0.92;
 }
 
-.login-link {
+.home-link {
   margin-top: 18px;
   text-align: center;
 }

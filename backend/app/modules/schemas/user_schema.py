@@ -35,7 +35,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    """用户创建模型（用于用户注册）"""
+    """用户创建模型"""
     
     password: str = Field(..., min_length=6, description="用户密码")
     
@@ -60,7 +60,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone_number: Optional[str] = None
     password: Optional[str] = None
-    role_codes: Optional[List[str]] = None
+    delete_flag: Optional[str] = Field(None, pattern="^[NY]$", description="删除标识，Y/N")
     
     model_config = {
         "from_attributes": True
@@ -87,6 +87,7 @@ class UserResponse(UserBase, TimestampMixin):
     """用户基本信息响应模型"""
     
     id: int
+    delete_flag: str = "N"
     
     model_config = {
         "from_attributes": True
@@ -107,6 +108,7 @@ class UserResponseWithRoles(UserResponse):
             "user_name": obj.user_name,
             "email": obj.email,
             "phone_number": obj.phone_number,
+            "delete_flag": obj.delete_flag,
             "creation_date": obj.creation_date,
             "last_update_date": obj.last_update_date,
             "roles": []
@@ -142,7 +144,7 @@ class UserRoleAssign(BaseModel):
     model_config = {
         "json_schema_extra": {
             "example": {
-                "role_codes": ["admin", "user"]
+                "role_codes": ["ROLE_SUPER_ADMIN", "ROLE_USER"]
             }
         }
     } 
@@ -156,7 +158,7 @@ class UserRoleRemove(BaseModel):
     model_config = {
         "json_schema_extra": {
             "example": {
-                "role_codes": ["admin"]
+                "role_codes": ["ROLE_USER"]
             }
         }
     } 

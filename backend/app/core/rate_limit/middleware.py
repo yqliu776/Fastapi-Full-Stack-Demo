@@ -26,11 +26,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.rate_limit_rules = {
             # 全局限流规则
             "/auth/login": RateLimitConfig(limit=10, window=60, enabled=True),  # 登录接口
-            "/auth/register": RateLimitConfig(limit=5, window=60, enabled=True),  # 注册接口
             "/auth/refresh": RateLimitConfig(limit=20, window=60, enabled=True),  # 刷新token
 
-            # 用户管理相关
-            "/users/register": RateLimitConfig(limit=5, window=3600, enabled=True),  # 用户注册
+            # 前台业务用户注册
+            "/users/register": RateLimitConfig(limit=5, window=3600, enabled=True),
 
             # 默认规则
             "default": RateLimitConfig(

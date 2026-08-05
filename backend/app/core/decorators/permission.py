@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Request, status
 from typing import List, Optional, Callable
 from functools import wraps
-from jose import jwt
+from jose import JWTError, jwt
 
 from app.core.settings import settings
 from app.services import AuthService, RbacService, oauth2_scheme
@@ -19,7 +19,7 @@ def has_permission(required_permissions: List[str]):
     权限验证装饰器，检查当前用户是否拥有所需权限
     
     Args:
-        required_permissions: 所需的权限代码列表，用户必须拥有所有列出的权限
+        required_permissions: 所需的权限代码列表，用户拥有任意一个即可通过
     
     Returns:
         依赖函数，用于FastAPI路由的权限验证
@@ -67,8 +67,14 @@ def has_permission(required_permissions: List[str]):
 
             user_id = payload.get("user_id")
             if user_id is not None:
+                role_codes = await auth_service.user_repository.get_active_role_codes(user_id)
+                if "ROLE_SUPER_ADMIN" in role_codes:
+                    return True
                 permissions = await auth_service.get_permission_codes_for_user(user_id)
             else:
+                role_codes = payload.get("roles") or []
+                if "ROLE_SUPER_ADMIN" in role_codes:
+                    return True
                 permissions: Optional[List[str]] = payload.get("permissions") or []
 
             if not permissions:
@@ -77,10 +83,6 @@ def has_permission(required_permissions: List[str]):
                     detail="无权限信息"
                 )
             
-            # 检查用户是否拥有超级管理员权限
-            if "ROLE_SUPER_ADMIN" in permissions:
-                return True
-
             route_permission = await rbac_service.get_api_permission_for_route(
                 request.method,
                 _get_route_path_pattern(request)
@@ -91,17 +93,15 @@ def has_permission(required_permissions: List[str]):
             if not effective_permissions:
                 return True
                 
-            # 检查用户是否拥有所需权限
-            for permission in effective_permissions:
-                if permission not in permissions:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="您没有执行此操作的权限"
-                    )
+            if not any(permission in permissions for permission in effective_permissions):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="您没有执行此操作的权限"
+                )
                     
             return True
             
-        except jwt.JWTError:
+        except JWTError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="无效的身份凭证",

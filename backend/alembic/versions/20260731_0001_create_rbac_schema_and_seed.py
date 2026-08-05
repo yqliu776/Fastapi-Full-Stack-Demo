@@ -140,13 +140,22 @@ def seed_defaults() -> None:
         "version_num": 1,
     }
 
-    bind.execute(sys_roles.insert().values(
-        role_name="超级管理员",
-        role_code="ROLE_SUPER_ADMIN",
-        creation_date=now,
-        last_update_date=now,
-        **audit,
-    ))
+    bind.execute(sys_roles.insert(), [
+        {
+            "role_name": "超级管理员",
+            "role_code": "ROLE_SUPER_ADMIN",
+            "creation_date": now,
+            "last_update_date": now,
+            **audit,
+        },
+        {
+            "role_name": "普通用户",
+            "role_code": "ROLE_USER",
+            "creation_date": now,
+            "last_update_date": now,
+            **audit,
+        },
+    ])
 
     bind.execute(sys_permissions.insert(), [
         {

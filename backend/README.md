@@ -4,7 +4,7 @@ FastAPI 后端服务，提供 JWT 认证、用户管理、RBAC 角色/权限/菜
 
 ## 功能范围
 
-- 认证与会话：登录、注册、OAuth2 登录入口、Access Token / Refresh Token 刷新、登出。
+- 认证与会话：登录、前台业务用户注册、OAuth2 登录入口、Access Token / Refresh Token 刷新、登出。
 - 用户中心：用户列表、详情、创建、更新、删除、重置密码、角色绑定。
 - RBAC 权限：角色、权限、菜单、角色权限、角色菜单、API 权限绑定。
 - 动态菜单：为前端提供当前用户菜单列表和菜单树，支持 `component_key` 驱动页面组件映射。
