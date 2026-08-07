@@ -70,6 +70,7 @@ frontend/
 │   ├── router/           # 路由配置
 │   ├── stores/           # Pinia状态管理
 │   ├── services/         # 业务接口服务
+│   ├── types/            # 全局类型定义（单一数据源）
 │   ├── utils/            # 工具函数
 │   ├── views/            # 页面视图组件
 │   ├── App.vue           # 根组件

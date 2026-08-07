@@ -219,13 +219,14 @@ GitHub 仓库地址：[yqliu776/Fastapi-Full-Stack-Demo](https://github.com/yqli
 - 后端文档：[backend/README.md](backend/README.md)
 - 前端文档：[frontend/README.md](frontend/README.md)
 - 项目开发规范：[docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)
+- 阶段性变更记录：[docs/CHANGELOG.md](docs/CHANGELOG.md)
 
 ## 历史问题与近期维护
 
 - 已统一本地后端端口为 `8090`，避免 Windows 上 `7981-8080` 保留端口段导致 `8000` 无法绑定的问题。
 - 本地开发默认使用 MySQL 8 + Redis 7，不再以 PostgreSQL 作为默认开发数据库。
 - 前端后台路由默认前缀为 `/admin-console`，动态路由会在登录、刷新和登出后按菜单权限重新加载。
-- OAuth 刷新令牌、Cookie 安全属性、动态路由重置、限流接口鉴权等历史审查问题已在代码审查记录中追踪。
+- OAuth 刷新令牌、Cookie 安全属性、动态路由重置、限流接口鉴权等历史审查问题已在 2026-08-07 阶段修复完成，详见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
 - IDEA 项目文件已通过 `.gitignore` 忽略，并从 Git 跟踪中移除，避免后续提交包含 `.idea/` 本地配置。
 
 ## 贡献指南
