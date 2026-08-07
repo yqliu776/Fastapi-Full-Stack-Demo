@@ -220,7 +220,6 @@ npm run test:unit
 - 后端使用说明：`backend/README.md`
 - 前端使用说明：`frontend/README.md`
 - 数据库迁移说明：`docs/ALEMBIC_USAGE.md`
-- 历史审查记录：`docs/CODE_REVIEW.md`
 
 ## 安全规范
 

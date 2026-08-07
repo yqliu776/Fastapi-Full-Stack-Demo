@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     DEBUG: bool = True
     FORMATTED_OUTPUT: bool = True  # 是否使用格式化的 JSON 输出
+    LOG_MAX_RESPONSE_BODY_BYTES: int = 8192  # 调试日志中响应体最大采集字节数，超限截断
     
     # 时区设置
     USE_CHINA_TIMEZONE: bool = True  # 是否使用中国时区（UTC+8）

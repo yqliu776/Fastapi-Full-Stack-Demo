@@ -219,11 +219,9 @@ GitHub 仓库地址：[yqliu776/Fastapi-Full-Stack-Demo](https://github.com/yqli
 - 后端文档：[backend/README.md](backend/README.md)
 - 前端文档：[frontend/README.md](frontend/README.md)
 - 项目开发规范：[docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md)
-- 历史代码审查记录：[docs/CODE_REVIEW.md](docs/CODE_REVIEW.md)
 
 ## 历史问题与近期维护
 
-- 历史审查记录保留在 [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md)：共记录 52 项问题，严重 12 / 高 15 / 中 16 / 低 9，截至 2026-03-24 为已修复 50 项、跳过 2 项、待修复 0 项。
 - 已统一本地后端端口为 `8090`，避免 Windows 上 `7981-8080` 保留端口段导致 `8000` 无法绑定的问题。
 - 本地开发默认使用 MySQL 8 + Redis 7，不再以 PostgreSQL 作为默认开发数据库。
 - 前端后台路由默认前缀为 `/admin-console`，动态路由会在登录、刷新和登出后按菜单权限重新加载。
