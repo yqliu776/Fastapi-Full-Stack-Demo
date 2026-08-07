@@ -1,86 +1,26 @@
 import apiClient from '@/api/client';
+import type {
+  User,
+  UserCreate,
+  UserUpdate,
+  UserRoleOperation,
+  UserRoleAssign,
+  UserRoleRemove,
+  UserPasswordUpdate
+} from '@/types/user';
+import type { ListResponse, SingleResponse, OperationResponse } from '@/types/api';
 
-// 用户接口定义
-export interface User {
-  id: number;
-  user_name: string;
-  email: string;
-  phone_number: string;  // 从phone改为phone_number匹配后端返回字段
-  status: string; // 用户状态，N启用/Y禁用
-  delete_flag?: string; // 删除标识，N正常/Y已软删除
-  creation_date: string;
-  last_update_date: string;
-  roles: { id: number; role_name: string; role_code: string }[]; // 用户关联的角色列表
-}
-
-export interface UserCreate {
-  user_name: string;
-  email: string;
-  phone_number: string;
-  password: string;
-  status: string;
-  created_by: string;
-  last_updated_by: string;
-  last_update_login: string;
-  role_codes: string[]; // 用户角色代码列表，如 ["ROLE_USER"]
-}
-
-export interface UserUpdate {
-  user_name?: string;
-  email?: string;
-  phone_number?: string;
-  status?: string;
-  last_updated_by: string;
-  last_update_login: string;
-}
-
-export interface UserRoleOperation {
-  role_ids: number[];
-  operator: string;
-  operation_login: string;
-  user_id: number;
-}
-
-// 角色分配请求数据定义
-export interface UserRoleAssign {
-  role_codes: string[];
-  operator?: string;
-  operation_login?: string;
-}
-
-// 角色移除请求数据定义
-export interface UserRoleRemove {
-  role_codes: string[];
-  operator?: string;
-  operation_login?: string;
-}
-
-export interface UserPasswordUpdate {
-  password: string;
-  last_updated_by: string;
-  last_update_login: string;
-}
-
-export interface ListResponse<T> {
-  code: number;
-  message: string;
-  data: {
-    items: T[];
-    total: number;
-  };
-}
-
-export interface SingleResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-}
-
-// 操作响应类型
-export interface OperationResponse {
-  success: boolean;
-  message?: string;
-}
+// 用户接口定义（单一数据源：src/types/user.ts）
+export type {
+  User,
+  UserCreate,
+  UserUpdate,
+  UserRoleOperation,
+  UserRoleAssign,
+  UserRoleRemove,
+  UserPasswordUpdate
+};
+export type { ListResponse, SingleResponse, OperationResponse };
 
 // 用户管理API
 export const userService = {

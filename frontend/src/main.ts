@@ -5,19 +5,17 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 import App from './App.vue'
 import router from './router'
+import { registerIcons } from '@/utils/icons'
 import '@/utils/theme'
 
 // 创建应用实例
 const app = createApp(App)
 
-// 注册所有Element Plus图标
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-  app.component(key, component)
-}
+// 按需注册 Element Plus 图标
+registerIcons(app)
 
 // 创建并安装Pinia
 const pinia = createPinia()

@@ -1,61 +1,10 @@
 import apiClient from '@/api/client';
+import type { Menu, MenuCreate, MenuUpdate } from '@/types/menu';
+import type { ListResponse, SingleResponse, OperationResponse } from '@/types/api';
 
-// 菜单接口定义
-export interface Menu {
-  id: number;
-  menu_name: string;
-  menu_code: string;
-  menu_path: string;
-  component_key?: string;
-  parent_id?: number;
-  sort_order: number;
-  delete_flag?: string; // 删除标识，N正常/Y已软删除
-  creation_date: string;
-  last_update_date: string;
-  children?: Menu[];
-}
-
-export interface MenuCreate {
-  menu_name: string;
-  menu_code: string;
-  menu_path: string;
-  component_key?: string;
-  parent_id?: number;
-  sort_order?: number;
-  created_by: string;
-  last_updated_by: string;
-  last_update_login: string;
-}
-
-export interface MenuUpdate {
-  menu_name?: string;
-  menu_path?: string;
-  component_key?: string;
-  parent_id?: number;
-  sort_order?: number;
-  last_updated_by: string;
-  last_update_login: string;
-}
-
-export interface ListResponse<T> {
-  code: number;
-  message: string;
-  data: {
-    items: T[];
-    total: number;
-  };
-}
-
-export interface SingleResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-}
-
-export interface OperationResponse {
-  success: boolean;
-  message: string;
-}
+// 菜单接口定义（单一数据源：src/types/menu.ts）
+export type { Menu, MenuCreate, MenuUpdate };
+export type { ListResponse, SingleResponse, OperationResponse };
 
 // 菜单管理API
 export const menuService = {

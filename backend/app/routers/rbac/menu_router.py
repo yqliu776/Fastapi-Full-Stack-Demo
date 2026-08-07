@@ -33,11 +33,7 @@ async def create_menu(
         创建后的菜单响应
     """
     menu = await rbac_service.create_menu(menu_data)
-    return ResponseModel(
-        code=200,
-        message="菜单创建成功",
-        data=menu
-    )
+    return ResponseModel.success(data=menu, message="菜单创建成功")
 
 
 @router.get(
@@ -67,11 +63,7 @@ async def get_menus(
         菜单列表响应
     """
     menus = await rbac_service.get_all_menus(skip, limit, menu_name, deleted)
-    return ResponseModel(
-        code=200,
-        message="获取菜单列表成功",
-        data=menus
-    )
+    return ResponseModel.success(data=menus, message="获取菜单列表成功")
 
 
 @router.post(
@@ -95,11 +87,7 @@ async def restore_menu(
         恢复后的菜单响应
     """
     menu = await rbac_service.restore_menu(menu_id)
-    return ResponseModel(
-        code=200,
-        message="菜单恢复成功",
-        data=menu
-    )
+    return ResponseModel.success(data=menu, message="菜单恢复成功")
 
 
 @router.delete(
@@ -123,11 +111,7 @@ async def purge_menu(
         删除结果
     """
     await rbac_service.purge_menu(menu_id)
-    return ResponseModel(
-        code=200,
-        message="菜单已彻底删除",
-        data={"success": True}
-    )
+    return ResponseModel.success(data={"success": True}, message="菜单已彻底删除")
 
 
 @router.get(
@@ -149,11 +133,7 @@ async def get_menu_tree(
         菜单树节点列表
     """
     menu_tree = await rbac_service.get_menu_tree()
-    return ResponseModel(
-        code=200,
-        message="获取菜单树成功",
-        data=menu_tree
-    )
+    return ResponseModel.success(data=menu_tree, message="获取菜单树成功")
 
 
 @router.get(
@@ -177,11 +157,7 @@ async def get_menus_by_role(
         菜单列表响应
     """
     menus = await rbac_service.get_menus_by_role_id(role_id)
-    return ResponseModel(
-        code=200,
-        message="获取角色菜单成功",
-        data=menus
-    )
+    return ResponseModel.success(data=menus, message="获取角色菜单成功")
 
 
 @router.get(
@@ -206,11 +182,7 @@ async def get_current_user_menus(
         ResponseModel: 统一响应模型，data 为当前用户可访问菜单列表。
     """
     menus = await rbac_service.get_menus_by_user_id(current_user.id)
-    return ResponseModel(
-        code=200,
-        message="获取当前用户菜单成功",
-        data=menus
-    )
+    return ResponseModel.success(data=menus, message="获取当前用户菜单成功")
 
 
 @router.get(
@@ -235,11 +207,7 @@ async def get_current_user_menu_tree(
         ResponseModel: 统一响应模型，data 为当前用户可访问菜单树。
     """
     menu_tree = await rbac_service.get_menu_tree_by_user_id(current_user.id)
-    return ResponseModel(
-        code=200,
-        message="获取当前用户菜单树成功",
-        data=menu_tree
-    )
+    return ResponseModel.success(data=menu_tree, message="获取当前用户菜单树成功")
 
 
 @router.get(
@@ -263,11 +231,7 @@ async def get_menu(
         菜单详情响应
     """
     menu = await rbac_service.get_menu(menu_id)
-    return ResponseModel(
-        code=200,
-        message="获取菜单详情成功",
-        data=menu
-    )
+    return ResponseModel.success(data=menu, message="获取菜单详情成功")
 
 
 @router.put(
@@ -293,11 +257,7 @@ async def update_menu(
         更新后的菜单响应
     """
     menu = await rbac_service.update_menu(menu_id, menu_data)
-    return ResponseModel(
-        code=200,
-        message="菜单更新成功",
-        data=menu
-    )
+    return ResponseModel.success(data=menu, message="菜单更新成功")
 
 
 @router.delete(
@@ -321,8 +281,10 @@ async def delete_menu(
         删除结果
     """
     result = await rbac_service.delete_menu(menu_id)
-    return ResponseModel(
-        code=200 if result else 400,
-        message="菜单删除成功" if result else "菜单删除失败",
-        data={"success": result}
-    ) 
+    if not result:
+        return ResponseModel.error(
+            code=400,
+            message="菜单删除失败",
+            data={"success": result}
+        )
+    return ResponseModel.success(data={"success": result}, message="菜单删除成功")

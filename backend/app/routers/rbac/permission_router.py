@@ -33,11 +33,7 @@ async def create_permission(
         创建后的权限响应
     """
     permission = await rbac_service.create_permission(permission_data)
-    return ResponseModel(
-        code=200,
-        message="权限创建成功",
-        data=permission
-    )
+    return ResponseModel.success(data=permission, message="权限创建成功")
 
 
 @router.get(
@@ -69,11 +65,7 @@ async def get_permissions(
         权限列表响应
     """
     permissions = await rbac_service.get_all_permissions(skip, limit, permission_name, permission_code, deleted)
-    return ResponseModel(
-        code=200,
-        message="获取权限列表成功",
-        data=permissions
-    )
+    return ResponseModel.success(data=permissions, message="获取权限列表成功")
 
 
 @router.get(
@@ -116,11 +108,7 @@ async def get_api_permission_bindings(
         permission_code=permission_code,
         deleted=deleted
     )
-    return ResponseModel(
-        code=200,
-        message="获取API权限绑定列表成功",
-        data=bindings
-    )
+    return ResponseModel.success(data=bindings, message="获取API权限绑定列表成功")
 
 
 @router.post(
@@ -146,11 +134,7 @@ async def create_api_permission_binding(
         ResponseModel: 统一响应模型，data 为创建后的API权限绑定。
     """
     binding = await rbac_service.create_api_permission(binding_data)
-    return ResponseModel(
-        code=200,
-        message="API权限绑定创建成功",
-        data=binding
-    )
+    return ResponseModel.success(data=binding, message="API权限绑定创建成功")
 
 
 @router.put(
@@ -178,11 +162,7 @@ async def update_api_permission_binding(
         ResponseModel: 统一响应模型，data 为更新后的API权限绑定。
     """
     binding = await rbac_service.update_api_permission(api_permission_id, binding_data)
-    return ResponseModel(
-        code=200,
-        message="API权限绑定更新成功",
-        data=binding
-    )
+    return ResponseModel.success(data=binding, message="API权限绑定更新成功")
 
 
 @router.delete(
@@ -208,11 +188,13 @@ async def delete_api_permission_binding(
         ResponseModel: 统一响应模型，data 包含删除成功标记。
     """
     result = await rbac_service.delete_api_permission(api_permission_id)
-    return ResponseModel(
-        code=200 if result else 400,
-        message="API权限绑定删除成功" if result else "API权限绑定删除失败",
-        data={"success": result}
-    )
+    if not result:
+        return ResponseModel.error(
+            code=400,
+            message="API权限绑定删除失败",
+            data={"success": result}
+        )
+    return ResponseModel.success(data={"success": result}, message="API权限绑定删除成功")
 
 
 @router.get(
@@ -236,11 +218,7 @@ async def get_permissions_by_role(
         权限列表响应
     """
     permissions = await rbac_service.get_permissions_by_role_id(role_id)
-    return ResponseModel(
-        code=200,
-        message="获取角色权限成功",
-        data=permissions
-    )
+    return ResponseModel.success(data=permissions, message="获取角色权限成功")
 
 
 @router.get(
@@ -264,11 +242,7 @@ async def get_permission(
         权限详情响应
     """
     permission = await rbac_service.get_permission(permission_id)
-    return ResponseModel(
-        code=200,
-        message="获取权限详情成功",
-        data=permission
-    )
+    return ResponseModel.success(data=permission, message="获取权限详情成功")
 
 
 @router.put(
@@ -294,11 +268,7 @@ async def update_permission(
         更新后的权限响应
     """
     permission = await rbac_service.update_permission(permission_id, permission_data)
-    return ResponseModel(
-        code=200,
-        message="权限更新成功",
-        data=permission
-    )
+    return ResponseModel.success(data=permission, message="权限更新成功")
 
 
 @router.delete(
@@ -322,11 +292,13 @@ async def delete_permission(
         删除结果
     """
     result = await rbac_service.delete_permission(permission_id)
-    return ResponseModel(
-        code=200 if result else 400,
-        message="权限删除成功" if result else "权限删除失败",
-        data={"success": result}
-    )
+    if not result:
+        return ResponseModel.error(
+            code=400,
+            message="权限删除失败",
+            data={"success": result}
+        )
+    return ResponseModel.success(data={"success": result}, message="权限删除成功")
 
 
 @router.post(
@@ -350,11 +322,7 @@ async def restore_permission(
         恢复后的权限响应
     """
     permission = await rbac_service.restore_permission(permission_id)
-    return ResponseModel(
-        code=200,
-        message="权限恢复成功",
-        data=permission
-    )
+    return ResponseModel.success(data=permission, message="权限恢复成功")
 
 
 @router.delete(
@@ -378,11 +346,7 @@ async def purge_permission(
         删除结果
     """
     await rbac_service.purge_permission(permission_id)
-    return ResponseModel(
-        code=200,
-        message="权限已彻底删除",
-        data={"success": True}
-    )
+    return ResponseModel.success(data={"success": True}, message="权限已彻底删除")
 
 
 @router.post(
@@ -399,11 +363,7 @@ async def restore_api_permission_binding(
     恢复已软删除的API权限绑定。
     """
     binding = await rbac_service.restore_api_permission(api_permission_id)
-    return ResponseModel(
-        code=200,
-        message="API权限绑定恢复成功",
-        data=binding
-    )
+    return ResponseModel.success(data=binding, message="API权限绑定恢复成功")
 
 
 @router.delete(
@@ -420,8 +380,4 @@ async def purge_api_permission_binding(
     彻底删除API权限绑定（物理删除，不可恢复）。
     """
     await rbac_service.purge_api_permission(api_permission_id)
-    return ResponseModel(
-        code=200,
-        message="API权限绑定已彻底删除",
-        data={"success": True}
-    ) 
+    return ResponseModel.success(data={"success": True}, message="API权限绑定已彻底删除")

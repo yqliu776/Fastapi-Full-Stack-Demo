@@ -1,19 +1,31 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 import re
 import hashlib
 import time
-from collections import defaultdict, deque
 
 from app.core.models import ResponseModel
 from app.core.utils import logger
 from app.core.settings import settings
+from app.core.connects import redis_client
 
 
 class BotDetectionMiddleware(BaseHTTPMiddleware):
-    """机器人检测中间件 - 用于检测和阻止爬虫行为"""
+    """机器人检测中间件 - 用于检测和阻止爬虫行为。
+
+    检测数据（请求指纹、封禁状态）存储在 Redis 中，多 Worker/多实例部署时共享，
+    攻击请求无法通过分散请求到不同实例绕过。
+    """
+
+    # Redis 键前缀
+    FINGERPRINT_KEY_PREFIX = "bot:fingerprint:"
+    BLOCK_KEY_PREFIX = "bot:block:"
+    # 每个指纹最多保留的请求时间戳数量
+    MAX_TIMESTAMPS = 100
+    # 指纹数据保留时长（秒）
+    FINGERPRINT_TTL = 60
 
     def __init__(self, app):
         """初始化机器人检测中间件"""
@@ -34,13 +46,6 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
             r'mobile', r'android', r'iphone', r'ipad'
         ]
 
-        # 请求指纹存储 - 用于检测自动化行为
-        self.request_fingerprints = defaultdict(lambda: {
-            'timestamps': deque(maxlen=100),
-            'patterns': defaultdict(int),
-            'suspicious_score': 0
-        })
-
         # 配置参数
         self.config = {
             'max_requests_per_minute': settings.BOT_DETECTION_MAX_REQUESTS_PER_MINUTE,
@@ -52,12 +57,12 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
             'honeypot_detection': settings.BOT_DETECTION_ENABLE_HONEYPOT
         }
 
-        # 蜜罐陷阱路径
+        # 蜜罐陷阱路径（仅保留不会被正常路由命中的明确陷阱路径）
+        # 使用精确匹配，避免 /test、/dev、/staging 等开发路径误伤正常请求
         self.honeypot_paths = [
             '/admin.php', '/wp-admin', '/config.php', '/.env',
-            '/phpmyadmin', '/mysql', '/backup', '/old',
-            '/test', '/dev', '/staging', '/api/private',
-            '/_debug', '/__debug__', '/.git', '/.svn'
+            '/phpmyadmin', '/mysql', '/_debug', '/__debug__',
+            '/.git', '/.svn'
         ]
 
     TRUSTED_PROXIES: set = {"127.0.0.1", "::1"}
@@ -65,7 +70,7 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
     def get_client_ip(self, request: Request) -> str:
         """获取客户端真实IP地址，仅在可信代理后才使用 X-Forwarded-For"""
         client_host = request.client.host if request.client else "unknown"
-        
+
         if client_host in self.TRUSTED_PROXIES:
             forwarded_for = request.headers.get("X-Forwarded-For")
             if forwarded_for:
@@ -122,23 +127,19 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
             "user_agent_length": len(user_agent)
         }
 
-    def detect_automated_behavior(self, client_ip: str, fingerprint: str, current_time: float) -> Dict[str, Any]:
-        """检测自动化行为模式"""
-        fingerprint_data = self.request_fingerprints[f"{client_ip}:{fingerprint}"]
-
-        # 添加当前时间戳
-        fingerprint_data['timestamps'].append(current_time)
-
-        # 分析请求模式
-        timestamps = fingerprint_data['timestamps']
-
+    def analyze_patterns(
+        self,
+        timestamps: List[float],
+        current_time: float
+    ) -> Dict[str, Any]:
+        """根据请求时间戳序列分析自动化行为模式（纯函数，便于测试）"""
         if len(timestamps) < 2:
             return {"is_automated": False, "score": 0}
 
         # 计算请求间隔
         intervals = []
         for i in range(1, len(timestamps)):
-            interval = (timestamps[i] - timestamps[i-1]) * 1000  # 转换为毫秒
+            interval = (timestamps[i] - timestamps[i - 1]) * 1000  # 转换为毫秒
             intervals.append(interval)
 
         # 检测异常模式
@@ -146,7 +147,9 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
 
         # 1. 检测过于规律的请求间隔（机器人特征）
         if len(intervals) >= 3:
-            interval_variance = sum(abs(intervals[i] - intervals[i-1]) for i in range(1, len(intervals))) / len(intervals)
+            interval_variance = sum(
+                abs(intervals[i] - intervals[i - 1]) for i in range(1, len(intervals))
+            ) / len(intervals)
             if interval_variance < 50:  # 间隔变化小于50ms，非常可疑
                 suspicious_patterns += 3
 
@@ -165,8 +168,6 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
         if recent_second_requests > self.config['max_requests_per_second']:
             suspicious_patterns += 3
 
-        fingerprint_data['suspicious_score'] = suspicious_patterns
-
         return {
             "is_automated": suspicious_patterns >= self.config['suspicious_score_threshold'],
             "score": suspicious_patterns,
@@ -175,12 +176,56 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
             "recent_second_requests": recent_second_requests
         }
 
+    async def detect_automated_behavior(
+        self,
+        client_ip: str,
+        fingerprint: str,
+        current_time: float
+    ) -> Dict[str, Any]:
+        """检测自动化行为模式，请求时间戳窗口存储于 Redis 实现跨实例共享"""
+        try:
+            redis = await redis_client.get_redis()
+            key = f"{self.FINGERPRINT_KEY_PREFIX}{client_ip}:{fingerprint}"
+
+            # 记录当前请求时间戳，仅保留最近 MAX_TIMESTAMPS 条
+            await redis.lpush(key, str(current_time))
+            await redis.ltrim(key, 0, self.MAX_TIMESTAMPS - 1)
+            await redis.expire(key, self.FINGERPRINT_TTL)
+
+            raw_timestamps = await redis.lrange(key, 0, -1)
+            timestamps = sorted(float(ts) for ts in raw_timestamps)
+
+            return self.analyze_patterns(timestamps, current_time)
+        except Exception as e:
+            logger.error(f"自动化行为检测失败（Redis不可用时放行）: {str(e)}")
+            return {"is_automated": False, "score": 0}
+
+    async def is_blocked(self, client_ip: str) -> Optional[int]:
+        """检查IP是否已被封禁，返回剩余封禁秒数；未封禁返回None"""
+        try:
+            redis = await redis_client.get_redis()
+            key = f"{self.BLOCK_KEY_PREFIX}{client_ip}"
+            exists = await redis.exists(key)
+            if not exists:
+                return None
+            ttl = await redis.ttl(key)
+            return ttl if ttl > 0 else None
+        except Exception as e:
+            logger.error(f"检查封禁状态失败: {str(e)}")
+            return None
+
+    async def block_ip(self, client_ip: str, seconds: int) -> None:
+        """封禁指定IP，时长为 seconds 秒"""
+        try:
+            redis = await redis_client.get_redis()
+            key = f"{self.BLOCK_KEY_PREFIX}{client_ip}"
+            await redis.set(key, "1", ex=seconds)
+        except Exception as e:
+            logger.error(f"封禁IP失败: {str(e)}")
+
     def check_honeypot_trap(self, path: str) -> bool:
-        """检查是否触发了蜜罐陷阱"""
-        for honeypot_path in self.honeypot_paths:
-            if path.startswith(honeypot_path) or honeypot_path in path:
-                return True
-        return False
+        """检查是否触发了蜜罐陷阱（精确匹配，避免误伤正常路径）"""
+        return path in self.honeypot_paths
 
     def should_challenge_with_captcha(self, detection_results: Dict[str, Any]) -> bool:
         """判断是否需要进行验证码挑战"""
@@ -222,12 +267,27 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
         }
 
         try:
+            # 0. 已封禁IP直接拒绝
+            block_ttl = await self.is_blocked(client_ip)
+            if block_ttl is not None:
+                logger.warning(f"已封禁IP再次访问: IP={client_ip}, Path={path}")
+                response = ResponseModel(
+                    code=403,
+                    message="访问被拒绝",
+                    data={"reason": "ip_blocked", "blocked": True, "retry_after": int(block_ttl)}
+                )
+                return JSONResponse(
+                    status_code=403,
+                    content=response.model_dump(),
+                    headers={"X-Bot-Detected": "true", "X-Block-Reason": "ip-blocked"}
+                )
+
             # 1. 用户代理分析
             user_agent_analysis = self.analyze_user_agent(user_agent)
             detection_results["user_agent_analysis"] = user_agent_analysis
 
             # 2. 行为模式分析
-            behavior_analysis = self.detect_automated_behavior(client_ip, fingerprint, current_time)
+            behavior_analysis = await self.detect_automated_behavior(client_ip, fingerprint, current_time)
             detection_results["behavior_analysis"] = behavior_analysis
 
             # 3. 蜜罐陷阱检测
@@ -254,6 +314,7 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
             # 如果触发了蜜罐陷阱，直接封禁
             if honeypot_triggered:
                 logger.warning(f"蜜罐陷阱被触发: IP={client_ip}, Path={path}")
+                await self.block_ip(client_ip, self.config['block_duration_seconds'])
                 response = ResponseModel(
                     code=403,
                     message="访问被拒绝",
@@ -285,6 +346,23 @@ class BotDetectionMiddleware(BaseHTTPMiddleware):
                         content=response.model_dump(),
                         headers={"X-Bot-Detected": "true", "X-Challenge-Required": "captcha"}
                     )
+
+                # 未启用验证码时直接封禁
+                await self.block_ip(client_ip, self.config['block_duration_seconds'])
+                response = ResponseModel(
+                    code=403,
+                    message="访问被拒绝",
+                    data={
+                        "reason": "automated_behavior",
+                        "blocked": True,
+                        "retry_after": self.config['block_duration_seconds']
+                    }
+                )
+                return JSONResponse(
+                    status_code=403,
+                    content=response.model_dump(),
+                    headers={"X-Bot-Detected": "true", "X-Block-Reason": "automated"}
+                )
 
             # 继续处理请求
             response = await call_next(request)

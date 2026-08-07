@@ -34,11 +34,7 @@ async def create_role(
         创建后的角色响应
     """
     role = await rbac_service.create_role(role_data)
-    return ResponseModel(
-        code=200,
-        message="角色创建成功",
-        data=role
-    )
+    return ResponseModel.success(data=role, message="角色创建成功")
 
 
 @router.put(
@@ -64,11 +60,7 @@ async def update_role(
         更新后的角色响应
     """
     role = await rbac_service.update_role(role_id, role_data)
-    return ResponseModel(
-        code=200,
-        message="角色更新成功",
-        data=role
-    )
+    return ResponseModel.success(data=role, message="角色更新成功")
 
 
 @router.delete(
@@ -92,11 +84,13 @@ async def delete_role(
         删除结果
     """
     result = await rbac_service.delete_role(role_id)
-    return ResponseModel(
-        code=200 if result else 400,
-        message="角色删除成功" if result else "角色删除失败",
-        data={"success": result}
-    )
+    if not result:
+        return ResponseModel.error(
+            code=400,
+            message="角色删除失败",
+            data={"success": result}
+        )
+    return ResponseModel.success(data={"success": result}, message="角色删除成功")
 
 
 @router.get(
@@ -120,11 +114,7 @@ async def get_role(
         角色详情响应
     """
     role = await rbac_service.get_role(role_id)
-    return ResponseModel(
-        code=200,
-        message="获取角色详情成功",
-        data=role
-    )
+    return ResponseModel.success(data=role, message="获取角色详情成功")
 
 
 @router.get(
@@ -156,11 +146,7 @@ async def get_roles(
         角色列表响应
     """
     roles = await rbac_service.get_all_roles(skip, limit, role_name, role_code, deleted)
-    return ResponseModel(
-        code=200,
-        message="获取角色列表成功",
-        data=roles
-    )
+    return ResponseModel.success(data=roles, message="获取角色列表成功")
 
 
 @router.post(
@@ -184,11 +170,7 @@ async def restore_role(
         恢复后的角色响应
     """
     role = await rbac_service.restore_role(role_id)
-    return ResponseModel(
-        code=200,
-        message="角色恢复成功",
-        data=role
-    )
+    return ResponseModel.success(data=role, message="角色恢复成功")
 
 
 @router.delete(
@@ -212,11 +194,7 @@ async def purge_role(
         删除结果
     """
     await rbac_service.purge_role(role_id)
-    return ResponseModel(
-        code=200,
-        message="角色已彻底删除",
-        data={"success": True}
-    )
+    return ResponseModel.success(data={"success": True}, message="角色已彻底删除")
 
 
 @router.post(

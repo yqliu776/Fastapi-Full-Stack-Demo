@@ -1002,7 +1002,7 @@ class RbacService:
         Raises:
             HTTPException: 菜单不存在时抛出异常
         """
-        # 获取菜单及其所有关联
+        # 获取菜单及其角色关联
         menu = await self.menu_repository.get_menu_with_roles(menu_id)
         if not menu:
             raise HTTPException(
@@ -1010,83 +1010,50 @@ class RbacService:
                 detail=f"菜单ID '{menu_id}' 不存在"
             )
         
-        # 构建菜单基本信息
-        menu_dict = {
-            "id": menu.id,
-            "menu_name": menu.menu_name,
-            "menu_code": menu.menu_code,
-            "menu_path": menu.menu_path,
-            "component_key": menu.component_key,
-            "parent_id": menu.parent_id,
-            "sort_order": menu.sort_order,
-            "creation_date": menu.creation_date,
-            "last_update_date": menu.last_update_date,
-            "success": True,
-            "message": "获取菜单详情成功"
-        }
-        
+        # 一次性获取全部菜单，在内存中构建以当前菜单为根的子树，避免逐层数据库查询
+        all_menus = await self.menu_repository.get_menu_tree()
+        menu_dict = self._build_menu_subtree(menu_id, all_menus)
+
         # 转换角色列表
         roles_list = []
         if hasattr(menu, "roles") and menu.roles:
             for role in menu.roles:
-                # 确保每个角色都是字典格式
                 roles_list.append({
                     "id": role.id,
                     "role_name": role.role_name,
                     "role_code": role.role_code
                 })
-        
-        # 获取子菜单
-        children = await self.menu_repository.get_menus_by_parent_id(menu_id)
-        
-        # 转换子菜单列表
-        children_list = []
-        if children:
-            for child in children:
-                # 构建子菜单基本信息
-                child_dict = {
-                    "id": child.id,
-                    "menu_name": child.menu_name,
-                    "menu_code": child.menu_code,
-                    "menu_path": child.menu_path,
-                    "component_key": child.component_key,
-                    "parent_id": child.parent_id,
-                    "sort_order": child.sort_order,
-                    "creation_date": child.creation_date,
-                    "last_update_date": child.last_update_date
-                }
-                
-                # 获取孙菜单
-                grandchildren = await self.menu_repository.get_menus_by_parent_id(child.id)
-                
-                # 转换孙菜单列表
-                grandchildren_list = []
-                if grandchildren:
-                    for grandchild in grandchildren:
-                        # 确保每个孙菜单都是字典格式
-                        grandchildren_list.append({
-                            "id": grandchild.id,
-                            "menu_name": grandchild.menu_name,
-                            "menu_code": grandchild.menu_code,
-                            "menu_path": grandchild.menu_path,
-                            "component_key": grandchild.component_key,
-                            "parent_id": grandchild.parent_id,
-                            "sort_order": grandchild.sort_order,
-                            "creation_date": grandchild.creation_date,
-                            "last_update_date": grandchild.last_update_date,
-                            "children": []
-                        })
-                
-                # 添加孙菜单到子菜单
-                child_dict["children"] = grandchildren_list
-                children_list.append(child_dict)
-        
-        # 构建完整的菜单详情响应
+
         menu_dict["roles"] = roles_list
-        menu_dict["children"] = children_list
-        
+        menu_dict["success"] = True
+        menu_dict["message"] = "获取菜单详情成功"
+
         # 使用字典直接创建MenuDetail模型
         return MenuDetail.model_validate(menu_dict)
+
+    def _build_menu_subtree(self, root_id: int, all_menus: List[SysMenu]) -> dict:
+        """在内存中构建以 root_id 为根的菜单子树字典"""
+        menu_map = {}
+        for menu in all_menus:
+            menu_map[menu.id] = {
+                "id": menu.id,
+                "menu_name": menu.menu_name,
+                "menu_code": menu.menu_code,
+                "menu_path": menu.menu_path,
+                "component_key": menu.component_key,
+                "parent_id": menu.parent_id,
+                "sort_order": menu.sort_order,
+                "creation_date": menu.creation_date,
+                "last_update_date": menu.last_update_date,
+                "children": []
+            }
+
+        for menu_id, menu_dict in menu_map.items():
+            parent_id = menu_dict["parent_id"]
+            if parent_id is not None and parent_id in menu_map:
+                menu_map[parent_id]["children"].append(menu_dict)
+
+        return menu_map[root_id]
     
     async def get_all_menus(
         self,

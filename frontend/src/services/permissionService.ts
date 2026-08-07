@@ -1,81 +1,24 @@
 import apiClient from '@/api/client';
+import type {
+  Permission,
+  PermissionCreate,
+  PermissionUpdate,
+  ApiPermission,
+  ApiPermissionCreate,
+  ApiPermissionUpdate
+} from '@/types/permission';
+import type { ListResponse, SingleResponse, OperationResponse } from '@/types/api';
 
-// 权限接口定义
-export interface Permission {
-  id: number;
-  permission_name: string;
-  permission_code: string;
-  delete_flag?: string; // 删除标识，N正常/Y已软删除
-  creation_date: string;
-  last_update_date: string;
-}
-
-export interface PermissionCreate {
-  permission_name: string;
-  permission_code: string;
-  created_by: string;
-  last_updated_by: string;
-  last_update_login: string;
-}
-
-export interface PermissionUpdate {
-  permission_name?: string;
-  last_updated_by: string;
-  last_update_login: string;
-}
-
-export interface ApiPermission {
-  id: number;
-  method: string;
-  path_pattern: string;
-  permission_code: string;
-  description?: string | null;
-  enabled: boolean;
-  delete_flag?: string; // 删除标识，N正常/Y已软删除
-  creation_date: string;
-  last_update_date: string;
-}
-
-export interface ApiPermissionCreate {
-  method: string;
-  path_pattern: string;
-  permission_code: string;
-  description?: string;
-  enabled: boolean;
-  created_by: string;
-  last_updated_by: string;
-  last_update_login: string;
-}
-
-export interface ApiPermissionUpdate {
-  method?: string;
-  path_pattern?: string;
-  permission_code?: string;
-  description?: string;
-  enabled?: boolean;
-  last_updated_by: string;
-  last_update_login: string;
-}
-
-export interface ListResponse<T> {
-  code: number;
-  message: string;
-  data: {
-    items: T[];
-    total: number;
-  };
-}
-
-export interface SingleResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-}
-
-export interface OperationResponse {
-  success: boolean;
-  message: string;
-}
+// 权限接口定义（单一数据源：src/types/permission.ts）
+export type {
+  Permission,
+  PermissionCreate,
+  PermissionUpdate,
+  ApiPermission,
+  ApiPermissionCreate,
+  ApiPermissionUpdate
+};
+export type { ListResponse, SingleResponse, OperationResponse };
 
 // 权限管理API
 export const permissionService = {

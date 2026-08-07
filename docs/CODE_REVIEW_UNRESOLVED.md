@@ -1,184 +1,125 @@
+# 代码审查未解决问题清单（状态跟踪）
+
+> 本文件跟踪代码审查发现的遗留问题。已解决项标 `✅`，延后项标注延后原因与前置条件。
+> 最近一次执行：按 `docs/DEVELOPMENT_GUIDE.md` 规范完成批量修复（详见下文各条目）。
 
 ---
 
-## 一、高（High）— 仍待处理
+## 一、高（High）
 
-### H-03 注册接口无速率限制和验证码（未解决）
+### H-03 注册接口无速率限制和验证码（限流已解决，验证码延后）
 
-**文件：** `backend/app/routers/user/users_router.py:22`
+**文件：** `backend/app/routers/user/users_router.py:22`、`backend/app/core/rate_limit/middleware.py:32`
 
-```python
-@user_router.post("/register", response_model=ResponseModel, summary="前台业务用户注册")
-async def register_user(user_data: UserCreate, auth_service: AuthService = Depends()):
-```
-
-注册接口未挂任何限流中间件、验证码或依赖注入限制，可被脚本批量注册垃圾账号。
-
-**建议：** 为该端点叠加 `RateLimitMiddleware` 或注入依赖做频率限制，并接入验证码校验。
+**现状：**
+- ✅ 速率限制已确认生效：`RateLimitMiddleware` 在 `app_lifecycle.py` 全局挂载，`/users/register` 已配置 `RateLimitConfig(limit=5, window=3600)`（每 IP 每小时 5 次），可有效阻止脚本批量注册。
+- ⏳ 验证码校验：项目暂无验证码基础设施（Bot 中间件仅返回 429 挑战响应，无真实验证码生成/校验）。**延后**：需独立实现验证码服务（生成、Redis 存储、校验接口）并接入前端注册页，不在此次范围内。
 
 ---
 
-### H-07 Bot 检测中间件状态不跨实例共享（未解决）
+### H-07 Bot 检测中间件状态不跨实例共享（✅ 已解决）
 
-**文件：** `backend/app/core/middleware/bot_detection_middleware.py:38-42`
+**文件：** `backend/app/core/middleware/bot_detection_middleware.py`
 
-```python
-self.request_fingerprints = defaultdict(lambda: {
-    'timestamps': deque(maxlen=100),
-    'patterns': defaultdict(int),
-    'suspicious_score': 0
-})
-```
-
-指纹与可疑分数仍存于进程内存，多 Worker/多实例部署时各自独立统计，攻击请求分散即可绕过。
-
-**建议：** 迁移到 Redis 存储检测数据（含 `block_duration` 封禁状态）。
+**修复内容：**
+- 请求指纹（时间戳窗口）从进程内存迁移至 Redis（`bot:fingerprint:{ip}:{fp}`，List + TTL + LTRIM 保留最近 100 条），多 Worker/多实例共享检测数据。
+- 封禁状态迁移至 Redis（`bot:block:{ip}`，TTL = `block_duration_seconds`），并**真正执行封禁**：dispatch 入口先查封禁态，命中直接返回 403；蜜罐命中或高度可疑且未启用验证码时自动封禁 IP。
+- Redis 不可用时 fail-open（放行请求），保持现有容错语义。
 
 ---
 
-## 二、中（Medium）— 仍待处理
+## 二、中（Medium）
 
-### M-02 前端类型定义分散且不一致（未解决）
+### M-02 前端类型定义分散且不一致（✅ 已解决）
 
-**文件：**
-- `frontend/src/services/roleService.ts:19` — `Menu.sort_order?: number`（optional）
-- `frontend/src/services/menuService.ts:11` — `sort_order: number`（required）
-- `OperationResponse` 在 `menuService.ts:55`、`permissionService.ts:75`、`roleService.ts:89`、`userService.ts:80` 重复定义
+**文件：** `frontend/src/types/`（新建 `api.ts`、`menu.ts`、`permission.ts`、`role.ts`、`user.ts`）
 
-**建议：** 收敛到 `src/types/` 目录，单一数据源。
-
----
-
-### M-09 `get_me` 接口计时无意义（未解决）
-
-**文件：** `backend/app/routers/auth/auth_router.py:142-143`
-
-```python
-start_time = time.time()
-process_time = time.time() - start_time  # 两行之间无任何操作
-```
-
-**建议：** 删除无意义计时，或统计实际业务耗时。
+**修复内容：**
+- 收敛到 `src/types/` 单一数据源；`roleService.ts`、`menuService.ts`、`permissionService.ts`、`userService.ts` 改为从 `src/types/` 导入并 `export type` 再导出，保持既有消费者导入不破坏。
+- `Menu.sort_order` 统一为必填 `number`（与后端始终返回一致）；`OperationResponse`/`ListResponse`/`SingleResponse` 重复定义收敛到 `src/types/api.ts`。
 
 ---
 
-### M-10 `get_current_user` 跨层直接访问 Repository（未解决）
+### M-09 `get_me` 接口计时无意义（✅ 已解决）
 
-**文件：** `backend/app/routers/auth/auth_router.py:55`
+**文件：** `backend/app/routers/auth/auth_router.py:139-144`
 
-```python
-user = await auth_service.user_repository.get_user_with_roles(user_id)
-```
-
-Router 层直接访问 Service 内部的 Repository，违反分层架构。应在 Service 层暴露方法。
+删除 `get_user_info` 中的空计时（`start_time`/`process_time`），直接返回 `ResponseModel.success(...)`。
 
 ---
 
-### M-11 后端响应格式不一致（未解决）
+### M-10 `get_current_user` 跨层直接访问 Repository（✅ 已解决）
 
-**文件：** `backend/app/routers/rbac/role_router.py`
+**文件：** `backend/app/services/auth_service.py`、`backend/app/routers/auth/auth_router.py:55`
 
-同一文件内混用两种风格：
-- `ResponseModel(code=200, message=..., data=...)`（第 37-41、67-71、95-99 等）
-- `ResponseModel.success(data=..., message=...)`（第 264、300、347、397、438、485 行）
-
-**建议：** 统一为 `ResponseModel.success(...)` 一种风格。
+`AuthService` 新增 `get_user_with_roles(user_id)` 作为统一入口；Router 层 `get_current_user` 改为调用该方法，不再直接访问 `auth_service.user_repository`。
 
 ---
 
-### M-15 前端全量注册 Element Plus 图标（未解决）
+### M-11 后端响应格式不一致（✅ 已解决）
 
-**文件：** `frontend/src/main.ts:17-20`
+**文件：** `backend/app/routers/rbac/role_router.py`、`menu_router.py`、`permission_router.py`
 
-```typescript
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-  app.component(key, component)
-}
-```
-
-注册全部图标，显著增加 bundle 体积。**建议：** 按需导入/注册。
+三个 RBAC router 全部统一为 `ResponseModel.success(...)` / `ResponseModel.error(...)`；删除类接口的失败分支改用 `error(code=400, ...)`，不再混用 `ResponseModel(code=200,...)` 构造风格。
 
 ---
 
-### M-16 `declarative_base()` 使用已弃用 API（未解决）
+### M-15 前端全量注册 Element Plus 图标（✅ 已解决）
 
-**文件：** `backend/app/core/connects/database.py:2,31`
+**文件：** `frontend/src/utils/icons.ts`（新建）、`frontend/src/main.ts`
 
-```python
-from sqlalchemy.ext.declarative import declarative_base
-self._base = declarative_base()
-```
-
-**建议：** 改用 SQLAlchemy 2.0 的 `DeclarativeBase`。
+按需注册审计出的 42 个实际使用图标（覆盖模板标签、动态字符串、`el-button :icon` 字符串用法），移除 `main.ts` 全量循环。构建产物 index chunk 由 1161 kB 降至 1024 kB（gzip 375→339 kB）。
 
 ---
 
-## 三、低（Low）— 仍待处理
+### M-16 `declarative_base()` 使用已弃用 API（✅ 已解决）
 
-### L-03 `datetime.now` 缺少时区信息（未解决）
+**文件：** `backend/app/core/connects/database.py`、`backend/app/modules/models/base_model.py`
+
+改用 SQLAlchemy 2.0 `DeclarativeBase`（模块级 `class Base(DeclarativeBase)`），`declared_attr` 从 `sqlalchemy.orm` 导入；`MovedIn20Warning` 消失，模型表结构不变，无需迁移。
+
+---
+
+## 三、低（Low）
+
+### L-03 `datetime.now` 缺少时区信息（✅ 已解决）
 
 **文件：** `backend/app/modules/models/base_model.py:16-18`
 
-```python
-creation_date = Column(DateTime, nullable=False, default=datetime.now)
-last_update_date = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now)
-```
-
-生成 naive datetime，跨时区部署时时间不一致。**建议：** 统一使用 `datetime.now(timezone.utc)` 或项目已有的 `tzu.get_now()`。
+`creation_date`/`last_update_date` 默认值改用项目已有的 `tzu.get_now()`（时区感知，遵循 `USE_CHINA_TIMEZONE` 配置）。
 
 ---
 
-### L-04 蜜罐路径可能与正常路由冲突（未解决）
+### L-04 蜜罐路径可能与正常路由冲突（✅ 已解决）
 
-**文件：** `backend/app/core/middleware/bot_detection_middleware.py:56-61`
+**文件：** `backend/app/core/middleware/bot_detection_middleware.py`
 
-```python
-self.honeypot_paths = [
-    '/admin.php', '/wp-admin', '/config.php', '/.env',
-    '/phpmyadmin', '/mysql', '/backup', '/old',
-    '/test', '/dev', '/staging', '/api/private',
-    '/_debug', '/__debug__', '/.git', '/.svn'
-]
-```
-
-`/test`、`/dev`、`/staging`、`/api/private` 等路径可能命中开发/测试环境正常路由，导致正常请求被拦截。`check_honeypot_trap`（第 178-183 行）使用 `startswith`/子串匹配，误伤面更大。
-
-**建议：** 收紧为精确匹配 + 仅对高可疑来源启用，或移除常见开发路径。
+- `check_honeypot_trap` 改为**精确匹配**（`path in honeypot_paths`），移除 `startswith`/子串匹配的误伤。
+- 蜜罐列表移除 `/test`、`/dev`、`/staging`、`/api/private`、`/old` 等易命中开发/测试路径的项，仅保留明确陷阱路径（`/.env`、`/.git`、`/.svn`、`/wp-admin`、`/admin.php`、`/phpmyadmin`、`/config.php`、`/mysql`、`/_debug`、`/__debug__`）。
 
 ---
 
 ## 四、部分修复（复核补充）
 
-以下项原文档未标 `✅`，经复核**功能上已基本修复**，但仍有遗留点：
+### M-05 权限缓存失效函数从未被调用（✅ 已解决）
 
-### M-05 权限缓存失效函数从未被调用（部分修复）
+删除 `auth_service._invalidate_role_permissions_cache` 死代码；失效逻辑保持由 `role_repository` 各写路径统一处理（第 247、273、419、499、521 行）。
 
-`backend/app/services/auth_service.py:185-193` 的 `_invalidate_role_permissions_cache` 仍是**死代码**（全仓库无调用点）；
-实际失效已由 `backend/app/modules/repositories/role_repository.py` 在多个写路径手动删除缓存（第 247、273、419、499、521 行）。
+### M-06 菜单树递归数据库查询（✅ 已解决）
 
-**遗留：** 删除服务层死代码，或将失效逻辑收敛到 Service 层统一处理。
+`get_menu` 详情接口改为一次 `get_menu_tree()` 查询 + 内存构建以 `menu_id` 为根的子树（新增 `_build_menu_subtree`），消除子/孙菜单逐层 N+1 查询；`MenuDetail.children` 递归类型天然支持任意层级。
 
-### M-06 菜单树递归数据库查询（部分修复）
+### C-09 前端 Cookie 缺少安全属性（延后）
 
-`rbac_service.get_menu_tree`（第 1152-1211 行）已改为一次查询 + 内存建树；
-但 `get_menu` 详情接口（第 1040-1082 行）仍对子菜单、孙菜单逐层发起查询。
-
-**遗留：** 详情接口同样一次查出全部子孙后再组装。
-
-### C-09 前端 Cookie 缺少安全属性（部分修复）
-
-`frontend/src/services/authService.ts:8-13` 已按 HTTPS 条件追加 `Secure`，并保留 `SameSite=Strict`；
-但 Cookie 仍由前端 `document.cookie` 写入，**无法设置 `HttpOnly`**，也无 CSRF Token 防护。
-
-**遗留：** 若需 `HttpOnly`，须改由后端通过 `Set-Cookie` 响应头下发 Token。
+当前已有 `Secure`（HTTPS 下）+ `SameSite=Strict`。Cookie 由前端 `document.cookie` 写入，无法设置 `HttpOnly`。**延后**：若要 `HttpOnly`，须改由后端 `Set-Cookie` 响应头下发 Token，并同步增加 CSRF 防护，涉及登录/刷新流程整体改造。
 
 ---
 
-## 处理建议
+## 处理建议（当前状态）
 
 | 优先级 | 条目 | 说明 |
 |--------|------|------|
-| 立即 | H-03、H-07 | 安全/抗滥用，直接影响线上可用性 |
-| 迭代 | M-02、M-09、M-10、M-11、M-15、M-16 | 架构、性能、一致性优化 |
-| 随手 | L-03、L-04 | 时区、误伤路由，改动小 |
-| 顺手 | M-05、M-06、C-09 遗留点 | 死代码清理与局部重构 |
+| 立即 | H-03、H-07 | H-07 已解决；H-03 限流已生效，验证码延后 |
+| 迭代 | M-02、M-09、M-10、M-11、M-15、M-16 | 已全部解决 |
+| 随手 | L-03、L-04 | 已全部解决 |
+| 顺手 | M-05、M-06、C-09 | M-05/M-06 已解决；C-09 延后 |

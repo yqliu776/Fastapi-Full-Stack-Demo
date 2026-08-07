@@ -156,7 +156,6 @@
   "/.env"
   "/phpmyadmin"
   "/.git"
-  "/api/private"
   "/_debug"
  )
 

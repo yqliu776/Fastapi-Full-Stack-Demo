@@ -24,7 +24,11 @@ class AuthService:
         self.role_repository = RoleRepository(db_session)
         self.permission_repository = PermissionRepository(db_session)
         self.redis_util = RedisUtil()
-    
+
+    async def get_user_with_roles(self, user_id: int) -> Optional[SysUser]:
+        """获取用户及其角色信息（Service 层统一入口，Router 不直接访问 Repository）"""
+        return await self.user_repository.get_user_with_roles(user_id)
+
     async def authenticate_user(self, username: str, password: str) -> Optional[SysUser]:
         """
         验证用户凭据
@@ -182,16 +186,6 @@ class AuthService:
         
         return all_codes
     
-    async def _invalidate_role_permissions_cache(self, role_id: int):
-        """
-        使角色权限缓存失效
-        
-        Args:
-            role_id: 角色ID
-        """
-        cache_key = f"role_permissions:{role_id}"
-        await self.redis_util.delete(cache_key)
-
     async def get_permission_codes_for_user(self, user_id: int) -> list:
         """按当前用户角色获取实时权限代码列表。"""
         role_query = (

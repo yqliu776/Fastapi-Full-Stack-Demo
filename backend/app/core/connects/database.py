@@ -1,10 +1,14 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 from typing import AsyncGenerator
 import asyncio
 
 from app.core.settings import settings
 from app.core.utils import logger
+
+
+class Base(DeclarativeBase):
+    """SQLAlchemy 声明性基类（SQLAlchemy 2.0 风格），所有模型继承此类"""
 
 
 class Database:
@@ -17,7 +21,6 @@ class Database:
     属性:
         engine: SQLAlchemy异步引擎实例
         AsyncSessionLocal: 异步会话制造工厂
-        _base: SQLAlchemy声明性基类
     """
 
     def __init__(self):
@@ -28,7 +31,6 @@ class Database:
         """
         self.engine = None
         self.AsyncSessionLocal = None
-        self._base = declarative_base()
 
     def init_db(self):
         """初始化数据库连接
@@ -86,15 +88,6 @@ class Database:
             logger.error(f"数据库连接初始化失败: {str(e)}")
             raise
 
-    @property
-    def base(self):
-        """获取SQLAlchemy声明性基类
-        
-        Returns:
-            declarative_base: SQLAlchemy声明性基类，用于创建模型类
-        """
-        return self._base
-
     _init_lock = asyncio.Lock()
 
     async def get_db(self) -> AsyncGenerator[AsyncSession, None]:
@@ -122,4 +115,3 @@ class Database:
 
 # 创建数据库实例
 db = Database()
-Base = db.base

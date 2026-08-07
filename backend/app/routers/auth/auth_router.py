@@ -52,7 +52,7 @@ async def get_current_user(
             raise credentials_exception
             
         # 获取用户详细信息
-        user = await auth_service.user_repository.get_user_with_roles(user_id)
+        user = await auth_service.get_user_with_roles(user_id)
         if user is None:
             raise credentials_exception
 
@@ -139,12 +139,9 @@ async def get_user_info(current_user: UserDetail = Depends(get_current_user)) ->
     Returns:
         ResponseModel: 用户详细信息
     """
-    start_time = time.time()
-    process_time = time.time() - start_time
     return ResponseModel.success(
         data=current_user,
-        message="获取用户信息成功",
-        process_time=process_time
+        message="获取用户信息成功"
     )
 
 @router.post("/logout", response_model=ResponseModel, summary="用户登出")

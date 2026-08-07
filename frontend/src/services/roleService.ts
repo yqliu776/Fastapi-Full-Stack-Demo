@@ -1,95 +1,29 @@
 import apiClient from '@/api/client';
+import type {
+  Role,
+  RoleCreate,
+  RoleUpdate,
+  RolePermissionOperation,
+  RoleMenuOperation,
+  RolePermissionReplace,
+  RoleMenuReplace
+} from '@/types/role';
+import type { Permission } from '@/types/permission';
+import type { Menu } from '@/types/menu';
+import type { ListResponse, SingleResponse, OperationResponse } from '@/types/api';
 
-// 接口类型定义
-export interface Permission {
-  id: number;
-  permission_name: string;
-  permission_code: string;
-  creation_date: string;
-  last_update_date: string;
-}
-
-export interface Menu {
-  id: number;
-  menu_name: string;
-  menu_code: string;
-  menu_path: string;
-  component_key?: string;
-  parent_id?: number;
-  sort_order?: number;
-  creation_date: string;
-  last_update_date: string;
-  children?: Menu[];
-}
-
-// 角色接口定义
-export interface Role {
-  id: number;
-  role_name: string;
-  role_code: string;
-  delete_flag?: string; // 删除标识，N正常/Y已软删除
-  creation_date: string;
-  last_update_date: string;
-  permissions: Permission[]; // 角色拥有的权限列表
-  menus: Menu[]; // 角色拥有的菜单列表
-}
-
-export interface RoleCreate {
-  role_name: string;
-  role_code: string;
-  created_by: string;
-  last_updated_by: string;
-  last_update_login: string;
-}
-
-export interface RoleUpdate {
-  role_name?: string;
-  last_updated_by: string;
-  last_update_login: string;
-}
-
-export interface RolePermissionOperation {
-  permission_ids: number[];
-  operator: string;
-  operation_login: string;
-  role_id: number;
-}
-
-export interface RoleMenuOperation {
-  menu_ids: number[];
-  operator: string;
-  operation_login: string;
-  role_id: number;
-}
-
-export interface RolePermissionReplace {
-  permission_ids: number[];
-}
-
-export interface RoleMenuReplace {
-  menu_ids: number[];
-}
-
-export interface ListResponse<T> {
-  code: number;
-  message: string;
-  data: {
-    items: T[];
-    total: number;
-  };
-}
-
-export interface SingleResponse<T> {
-  code: number;
-  message: string;
-  data: T;
-}
-
-// 操作响应类型
-export interface OperationResponse {
-  success: boolean;
-  message?: string;
-}
+// 接口类型定义（单一数据源：src/types/）
+export type {
+  Role,
+  RoleCreate,
+  RoleUpdate,
+  RolePermissionOperation,
+  RoleMenuOperation,
+  RolePermissionReplace,
+  RoleMenuReplace
+};
+export type { Permission, Menu };
+export type { ListResponse, SingleResponse, OperationResponse };
 
 // 角色管理API
 export const roleService = {
